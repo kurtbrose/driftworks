@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 1024,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "baked",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "6f502ed79b7cd8f6a0d0c931514594329906d489d44603db5555008d134f14bd"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "6d0387cfbed0b93f7c50b693239f07ba0c4f44529e431e8cd26f0d66e8918b96"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "21b58d93ed3fb9049de2f1610cfc4063c45fc6bcf5c2f8f531c868545091a1e6"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "ce6f79d2cf34531027848761c5c17e466caf2ed957ef81b0ec6e9fd95fed6979"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "e1b58673ea6f038045c2a1d81e61dc8f8c4456f9271640fba6ced6fc44d8d3d2"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "78cf307318a8f69b8c46a55f0aa4a3ad3ea65ccf6040b7098aa98e848781b876"
+    }
+  },
+  "sources": {
+    "assets/backgrounds/features/warm-sun-v1.png": {
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    },
+    "assets/backgrounds/planet-hero-v1/master.png": {
+      "sha256": "7e01a17efd7627ffebe13c62b6b78ca575937c0bddbe4237fedad5d21f5b6dde"
+    }
+  },
+  "completeEnvironment": true,
+  "recipeSha256": "9d5df5137c77f05c135c380f49427954c2fb2bb98488868727abafbd97cc2ece"
+}

@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "renderer": "tools/skybox-source.js",
+  "rendererSha256": "f038397ef911ace3a0c809748619535d386950776d92ae3da6285df10457df5a",
+  "id": "style-7",
+  "mission": "default",
+  "style": 7,
+  "sky": {
+    "kind": "selectable",
+    "features": []
+  },
+  "timestamp": 0,
+  "seed": 58319,
+  "exposure": 1,
+  "camera": {
+    "px": {
+      "back": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nx": {
+      "back": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "py": {
+      "back": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        -1
+      ]
+    },
+    "ny": {
+      "back": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ]
+    },
+    "pz": {
+      "back": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nz": {
+      "back": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "stars": "All background stars baked with the complete environment",
+  "sources": {
+    "assets/backgrounds/all-sky-milky-way.jpg": {
+      "sha256": "9055c7a801035211706565d838a6fa52ac9e670168b788e0008bd947e55e5c0e"
+    },
+    "assets/backgrounds/features/blue-filament-v1.png": {
+      "sha256": "ace0324f6d336727c8f72222f500b250eac8f573aa4759a2bb02029945f490bc"
+    },
+    "assets/backgrounds/features/blue-nebula-v1.png": {
+      "sha256": "163c20c23c9b0d580c7814d228e03c7716fd3d7911a65434a45d0555069c3eda"
+    },
+    "assets/backgrounds/features/spiral-galaxy-v1.png": {
+      "sha256": "d95f1234e8a8c8f568d0b3835247ad5536891d33f80a1a2115e307f875c6086d"
+    },
+    "assets/backgrounds/features/warm-sun-v1.png": {
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    },
+    "assets/backgrounds/hero-layout-v1.json": {
+      "sha256": "d2de961079c31d0c59b7a6ea25e9e3f3705f4a7a246f2f7c165281735f694a42"
+    },
+    "assets/backgrounds/sky-lighting-v1-galaxy.png": {
+      "sha256": "a60641ed178db2e16640db25c407fefb2c5a220aecbbac7c6d37041c5ce254eb"
+    },
+    "assets/backgrounds/sky-lighting-v1-galaxy.rgba32f.bin": {
+      "sha256": "8d021fe74a3e22f5a64ee57fd4c14e19534fb9cc271b5cbb9314f8030b3a5ce5"
+    },
+    "assets/backgrounds/sky-lighting-v1-nebula.png": {
+      "sha256": "f868be300353f9b6bb968bd0fb804385c0750e237b2e058ee7d2367f3af4680d"
+    },
+    "assets/backgrounds/sky-lighting-v1-nebula.rgba32f.bin": {
+      "sha256": "11ed57dce17c0714f853dc7e238a6abfdcaf807d1acd87af52802a7bc425a4b6"
+    },
+    "assets/backgrounds/sky-lighting-v1-river.png": {
+      "sha256": "dfe715a64da1468fa3053f6c4a6293e88a42549a06b1e80d7a9f138945f46a00"
+    },
+    "assets/backgrounds/sky-lighting-v1-river.rgba32f.bin": {
+      "sha256": "d76f3ec50053d87458f7679eff864f31170c1586848644962bc401685fb53da7"
+    },
+    "assets/backgrounds/sky-lighting-v1-sun.png": {
+      "sha256": "397f41f9a6b66c2ff21fda4148db3a12b34ae4f0c325467d43ace23463cb46a3"
+    },
+    "assets/backgrounds/sky-lighting-v1-sun.rgba32f.bin": {
+      "sha256": "6fad9a81613a6cf14d2a419f0865a20e69332c8b931ffdfb66e64504d6e47e15"
+    },
+    "assets/backgrounds/sky-lighting-v1-woven.png": {
+      "sha256": "af6f25e296b84eb38514896286f90e0f2b143847fac65a18e69d2b9226cd1e6e"
+    },
+    "assets/backgrounds/sky-lighting-v1-woven.rgba32f.bin": {
+      "sha256": "d3373f10d4477f19bdc75854a72b0b81a563e2457fe40fec5a1e97ebee6a585e"
+    },
+    "assets/backgrounds/sky-lighting-v1.json": {
+      "sha256": "b93d0f730b242343456fc464b543d93422cfb26657864699b8e498266477d3d1"
+    }
+  }
+}

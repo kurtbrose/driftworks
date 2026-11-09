@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "renderer": "tools/skybox-source.js",
+  "rendererSha256": "f038397ef911ace3a0c809748619535d386950776d92ae3da6285df10457df5a",
+  "id": "style-12",
+  "mission": "default",
+  "style": 12,
+  "sky": {
+    "kind": "selectable",
+    "features": []
+  },
+  "timestamp": 0,
+  "seed": 58319,
+  "exposure": 1,
+  "camera": {
+    "px": {
+      "back": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nx": {
+      "back": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "py": {
+      "back": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        -1
+      ]
+    },
+    "ny": {
+      "back": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ]
+    },
+    "pz": {
+      "back": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nz": {
+      "back": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "stars": "All background stars baked with the complete environment",
+  "sources": {
+    "assets/backgrounds/all-sky-milky-way.jpg": {
+      "sha256": "9055c7a801035211706565d838a6fa52ac9e670168b788e0008bd947e55e5c0e"
+    },
+    "assets/backgrounds/impact-v1/between-12.png": {
+      "sha256": "177c83aee818e30379e0904f90fcaeefcf5fba0a735199e930a801c459bdee12"
+    },
+    "assets/backgrounds/impact-v1/between-32.png": {
+      "sha256": "3e5bf5c1479d4f0f3f1dcefa0386889dafebbe9c4700c6e90ffd9fa9ce62cf83"
+    },
+    "assets/backgrounds/impact-v1/between-60.png": {
+      "sha256": "9e215bcdab4a86feca62a1158415045115cfe27e6dfbbbc253893e8a7b696b91"
+    },
+    "assets/backgrounds/impact-v1/between-90.png": {
+      "sha256": "a4605aeb8897a32380f3e26bcf3da04c38aa866abc86b086d1f5aeb30577f14a"
+    },
+    "assets/backgrounds/impact-v1/flash.png": {
+      "sha256": "f95a129050e98bfbcb90c021533a2b54b5fe9be1dd5c2e8384518856b6b72db3"
+    },
+    "assets/backgrounds/impact-v1/master.png": {
+      "sha256": "b8fa2623177438f4839db4c27d5978bd3679008e20a28475ef0f8d9937d6bbe8"
+    },
+    "assets/backgrounds/impact-v1/plume.png": {
+      "sha256": "e468287210716df23995b9feb1a106273c521ee35c3787d1641c556bfea427c8"
+    },
+    "assets/backgrounds/impact-v1/surround-v1.png": {
+      "sha256": "449ccb03f564c680632d2907f874e1a517d12ae928b8e66136f86f657f4c0574"
+    }
+  }
+}

@@ -41,9 +41,9 @@ const profiles = {
   ellisStudy: {entries: ['@flightStudy', 'experiments/ellis-study.js'], omit: ['experiments/ellis-feedback.js']},
   ellisCapture: {entries: ['@flightStudy'], omit: ['experiments/ellis-feedback.js']},
   asteroidPatrol: {entries: ['@flight'], omit: [
-    'experiments/gpu-diagnostics.js', 'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/ellis-renderer.js',
+    'experiments/gpu-diagnostics.js', 'experiments/thin-shell-optics.js', 'experiments/ellis-renderer.js',
     'assets/ships/ohio-vehicles/meshes.js', 'experiments/evacuation-mission.js',
-    'experiments/evacuation-scenery.js', 'experiments/gas-giant-flight.js',
+    'experiments/evacuation-scenery.js',
     'src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js', 'experiments/hyperbolic-battle.js', 'experiments/ellis-feedback.js'
   ], before: [{src: 'experiments/flight.js', entries: ['experiments/ellis-feedback.js']}]},
   tactical: {entries: [
@@ -63,7 +63,7 @@ const profiles = {
     'src/asset-versions.js', '@simulation', 'src/asteroid-art.js', '@session', '@audio',
     '@meshes', 'src/explosions.js', 'src/asteroid-terrain.js', 'src/station-models.js', 'src/tactical/picking.js', 'src/tactical/input3d.js', 'src/scene3d.js', 'src/ship-models.js', 'src/ship-art.js', 'src/game.js',
     'tests/scenario.js', 'tests/population-tests.js', 'experiments/dom.js',
-    'experiments/retail-profiles.js', '@missions', 'src/sky-lighting.js', 'src/sky-system.js', 'src/impact-cues.js', 'experiments/skybox.js',
+    'experiments/retail-profiles.js', '@missions', 'experiments/ellis-optics.js', 'src/sky-lighting.js', 'src/sky-system.js', 'src/impact-cues.js', 'experiments/skybox.js',
     'experiments/retail-weapons.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', '@flightRuntime',
     'experiments/performance.js', 'experiments/input.js', 'experiments/flight-model.js',
     'experiments/radar.js', '@fleet', 'experiments/target-camera.js', '@dialogue',
@@ -103,7 +103,7 @@ const profiles = {
     'experiments/flight-scenery.js', '@flightView', 'experiments/gpu-ui.js', 'experiments/flight-hud.js',
     {imports: {three: 'vendor/three/build/three.module.js'}},
     {src: 'assets/characters/quaternius-astronaut/poses.js', type: 'module'},
-    '@flightAi', 'experiments/flight-watch.js', {src: 'experiments/gas-giant-flight.js', type: 'module'},
+    '@flightAi', 'experiments/flight-watch.js',
     'src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js', 'experiments/hyperbolic-battle.js', 'experiments/hyperbolic-flyby.js', 'experiments/flight-studies.js', {src:'experiments/multiplayer-flight.js',type:'module'}, 'experiments/flight.js'
   ]}
 };
@@ -120,7 +120,7 @@ const dependencies = {
   'src/scene3d.js': ['src/wormholes.js','src/station-models.js','src/tactical/picking.js','src/tactical/input3d.js','src/asteroid-terrain.js', 'src/sim.js', 'src/asteroid-art.js', 'src/mesh-builder.js', 'src/mining-rig.js'],
   'src/tactical/input3d.js': ['src/sim.js','src/tactical/picking.js'],
   'src/station-models.js': ['src/mesh-builder.js'],
-  'experiments/skybox.js': ['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js'],
+  'experiments/skybox.js': ['experiments/ellis-optics.js','src/sky-lighting.js','src/sky-system.js','src/impact-cues.js'],
   'experiments/flight-hud.js': ['src/flight-prediction.js'],
   'src/ship-art.js': ['src/sim.js', 'src/asteroid-art.js'],
   'src/audio.js': ['src/engine-audio.js','src/audio-mixer.js','src/ohio-soundtrack.js'],

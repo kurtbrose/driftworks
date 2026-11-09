@@ -731,3 +731,10 @@ Lost mounts stop firing; lost engines reduce powered maneuvering. Zero integrity
 disables every system and emits one capital explosion; wrecks remain collidable.
 Reset restores all health. Targeting currently uses battery AI and manual fighter
 aim; a player subsystem lock selector is not yet implemented.
+
+### Baked flight backgrounds
+
+The sky renderer preloads every declared complete source/destination cube before
+the launch gate opens. Its shared Ellis pass samples those static environments
+for normal and linked views; no background composition runs in gameplay. See
+the [offline sky boundary](skybox-authoring.md#production-loading-and-offline-sources).

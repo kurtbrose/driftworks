@@ -386,7 +386,7 @@
         teams:{ally:{status:'Ford Folks',target:'Ford Folks',radio:'Ford Folks'},enemy:{status:'Chevy Crew',target:'Chevy Crew',radio:'Chevy Crew'}},
         comms:{calls:calls,named:named,friendlyAddress:['bud','neighbor'],hostileAddress:['hotshot'],ambientCast:true},
         portraits:{folder:'ohio',cast:'ohio'},
-        sky:{kind:'landmarks',features:[{asset:'ohio-planet-v1.png',yaw:90,pitch:4,roll:0,widthDeg:44,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}]},
+        sky:{environment:'ohio',kind:'landmarks',features:[{asset:'ohio-planet-v1.png',yaw:90,pitch:4,roll:0,widthDeg:44,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}]},
         scenery:[{kind:'highway-sign',asset:'../assets/backgrounds/ohio-highway-sign.svg'},
             {kind:'roadside',scale:1/3,anchor:[0,-300],offset:[0,-350],asset:'../assets/environments/ohio-roadside-v1/catalog.json',placements:[
                 {model:'Barn',x:-450,y:-420,size:340,yaw:.12},

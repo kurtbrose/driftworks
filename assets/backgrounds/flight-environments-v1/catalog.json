@@ -1,0 +1,2702 @@
+{
+  "version": 1,
+  "size": 1024,
+  "styles": [
+    "style-0",
+    "style-1",
+    "style-2",
+    "style-3",
+    "style-4",
+    "style-5",
+    "style-6",
+    "style-7",
+    "style-8",
+    "style-9",
+    "style-10",
+    "style-11",
+    "style-12"
+  ],
+  "missions": {
+    "gas-giant": "jade",
+    "jade-rime": "rime",
+    "fleet-evacuation": "fleet",
+    "ohio": "ohio",
+    "planet-hero": "planet-110",
+    "planet-hero-80": "planet-80",
+    "planet-hero-140": "planet-140",
+    "planet-orbital-watch": "orbital",
+    "planet-orbital-static": "orbital",
+    "evacuation": "impact-0",
+    "planet-orbital-cube": "impact-0",
+    "planet-impact-watch": "impact-0",
+    "planet-impact-baked": "impact-0"
+  },
+  "spaces": {
+    "asteroid": "asteroid",
+    "rime": "rime",
+    "reception": "reception",
+    "hostile": "hostile"
+  },
+  "impact": [
+    "impact-0",
+    "impact-1",
+    "impact-2",
+    "impact-3",
+    "impact-4",
+    "impact-5",
+    "impact-6",
+    "impact-7",
+    "impact-8"
+  ],
+  "environments": {
+    "style-0": {
+      "faces": [
+        "style-0/px.png",
+        "style-0/nx.png",
+        "style-0/py.png",
+        "style-0/ny.png",
+        "style-0/pz.png",
+        "style-0/nz.png"
+      ],
+      "manifest": "style-0/manifest.json",
+      "cameraSources": []
+    },
+    "style-1": {
+      "faces": [
+        "style-1/px.png",
+        "style-1/nx.png",
+        "style-1/py.png",
+        "style-1/ny.png",
+        "style-1/pz.png",
+        "style-1/nz.png"
+      ],
+      "manifest": "style-1/manifest.json",
+      "cameraSources": []
+    },
+    "style-2": {
+      "faces": [
+        "style-2/px.png",
+        "style-2/nx.png",
+        "style-2/py.png",
+        "style-2/ny.png",
+        "style-2/pz.png",
+        "style-2/nz.png"
+      ],
+      "manifest": "style-2/manifest.json",
+      "cameraSources": []
+    },
+    "style-3": {
+      "faces": [
+        "style-3/px.png",
+        "style-3/nx.png",
+        "style-3/py.png",
+        "style-3/ny.png",
+        "style-3/pz.png",
+        "style-3/nz.png"
+      ],
+      "manifest": "style-3/manifest.json",
+      "cameraSources": []
+    },
+    "style-4": {
+      "faces": [
+        "style-4/px.png",
+        "style-4/nx.png",
+        "style-4/py.png",
+        "style-4/ny.png",
+        "style-4/pz.png",
+        "style-4/nz.png"
+      ],
+      "manifest": "style-4/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.2868745383116614,
+            0.9562484610388713,
+            0.057374907662332275
+          ],
+          "radius": 0.0028,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "style-5": {
+      "faces": [
+        "style-5/px.png",
+        "style-5/nx.png",
+        "style-5/py.png",
+        "style-5/ny.png",
+        "style-5/pz.png",
+        "style-5/nz.png"
+      ],
+      "manifest": "style-5/manifest.json",
+      "cameraSources": []
+    },
+    "style-6": {
+      "faces": [
+        "style-6/px.png",
+        "style-6/nx.png",
+        "style-6/py.png",
+        "style-6/ny.png",
+        "style-6/pz.png",
+        "style-6/nz.png"
+      ],
+      "manifest": "style-6/manifest.json",
+      "cameraSources": []
+    },
+    "style-7": {
+      "faces": [
+        "style-7/px.png",
+        "style-7/nx.png",
+        "style-7/py.png",
+        "style-7/ny.png",
+        "style-7/pz.png",
+        "style-7/nz.png"
+      ],
+      "manifest": "style-7/manifest.json",
+      "cameraSources": []
+    },
+    "style-8": {
+      "faces": [
+        "style-8/px.png",
+        "style-8/nx.png",
+        "style-8/py.png",
+        "style-8/ny.png",
+        "style-8/pz.png",
+        "style-8/nz.png"
+      ],
+      "manifest": "style-8/manifest.json",
+      "cameraSources": []
+    },
+    "style-9": {
+      "faces": [
+        "style-9/px.png",
+        "style-9/nx.png",
+        "style-9/py.png",
+        "style-9/ny.png",
+        "style-9/pz.png",
+        "style-9/nz.png"
+      ],
+      "manifest": "style-9/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.275595372,
+            0.961115295,
+            0.017452406
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "style-10": {
+      "faces": [
+        "style-10/px.png",
+        "style-10/nx.png",
+        "style-10/py.png",
+        "style-10/ny.png",
+        "style-10/pz.png",
+        "style-10/nz.png"
+      ],
+      "manifest": "style-10/manifest.json",
+      "cameraSources": []
+    },
+    "style-11": {
+      "faces": [
+        "style-11/px.png",
+        "style-11/nx.png",
+        "style-11/py.png",
+        "style-11/ny.png",
+        "style-11/pz.png",
+        "style-11/nz.png"
+      ],
+      "manifest": "style-11/manifest.json",
+      "cameraSources": []
+    },
+    "style-12": {
+      "faces": [
+        "style-12/px.png",
+        "style-12/nx.png",
+        "style-12/py.png",
+        "style-12/ny.png",
+        "style-12/pz.png",
+        "style-12/nz.png"
+      ],
+      "manifest": "style-12/manifest.json",
+      "cameraSources": []
+    },
+    "jade": {
+      "faces": [
+        "jade/px.png",
+        "jade/nx.png",
+        "jade/py.png",
+        "jade/ny.png",
+        "jade/pz.png",
+        "jade/nz.png"
+      ],
+      "manifest": "jade/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ],
+      "animation": {
+        "frames": [
+          "jade",
+          "jade-weather-0",
+          "jade-weather-1",
+          "jade-weather-2",
+          "jade-weather-3",
+          "jade-weather-4",
+          "jade-weather-5",
+          "jade-weather-6",
+          "jade-weather-7"
+        ],
+        "keys": [
+          {
+            "time": 0,
+            "frame": 0,
+            "amount": 0
+          },
+          {
+            "time": 0.5,
+            "frame": 4,
+            "amount": 0
+          },
+          {
+            "time": 0.525,
+            "frame": 4,
+            "amount": 0.9
+          },
+          {
+            "time": 0.6,
+            "frame": 4,
+            "amount": 0.55
+          },
+          {
+            "time": 0.6799999999999999,
+            "frame": 4,
+            "amount": 0.24
+          },
+          {
+            "time": 0.71,
+            "frame": 4,
+            "amount": 0.68
+          },
+          {
+            "time": 0.78,
+            "frame": 4,
+            "amount": 0.25
+          },
+          {
+            "time": 0.87,
+            "frame": 4,
+            "amount": 0.08
+          },
+          {
+            "time": 0.9,
+            "frame": 4,
+            "amount": 0.35
+          },
+          {
+            "time": 1,
+            "frame": 4,
+            "amount": 0.08
+          },
+          {
+            "time": 1.2,
+            "frame": 4,
+            "amount": 0
+          },
+          {
+            "time": 1.9,
+            "frame": 1,
+            "amount": 0
+          },
+          {
+            "time": 1.9249999999999998,
+            "frame": 1,
+            "amount": 0.9
+          },
+          {
+            "time": 2,
+            "frame": 1,
+            "amount": 0.55
+          },
+          {
+            "time": 2.08,
+            "frame": 1,
+            "amount": 0.24
+          },
+          {
+            "time": 2.11,
+            "frame": 1,
+            "amount": 0.68
+          },
+          {
+            "time": 2.1799999999999997,
+            "frame": 1,
+            "amount": 0.25
+          },
+          {
+            "time": 2.27,
+            "frame": 1,
+            "amount": 0.08
+          },
+          {
+            "time": 2.3,
+            "frame": 1,
+            "amount": 0.35
+          },
+          {
+            "time": 2.4,
+            "frame": 1,
+            "amount": 0.08
+          },
+          {
+            "time": 2.5999999999999996,
+            "frame": 1,
+            "amount": 0
+          },
+          {
+            "time": 3.3,
+            "frame": 7,
+            "amount": 0
+          },
+          {
+            "time": 3.3249999999999997,
+            "frame": 7,
+            "amount": 0.9
+          },
+          {
+            "time": 3.4,
+            "frame": 7,
+            "amount": 0.55
+          },
+          {
+            "time": 3.48,
+            "frame": 7,
+            "amount": 0.24
+          },
+          {
+            "time": 3.51,
+            "frame": 7,
+            "amount": 0.68
+          },
+          {
+            "time": 3.58,
+            "frame": 7,
+            "amount": 0.25
+          },
+          {
+            "time": 3.67,
+            "frame": 7,
+            "amount": 0.08
+          },
+          {
+            "time": 3.6999999999999997,
+            "frame": 7,
+            "amount": 0.35
+          },
+          {
+            "time": 3.8,
+            "frame": 7,
+            "amount": 0.08
+          },
+          {
+            "time": 4,
+            "frame": 7,
+            "amount": 0
+          },
+          {
+            "time": 4.699999999999999,
+            "frame": 3,
+            "amount": 0
+          },
+          {
+            "time": 4.725,
+            "frame": 3,
+            "amount": 0.9
+          },
+          {
+            "time": 4.799999999999999,
+            "frame": 3,
+            "amount": 0.55
+          },
+          {
+            "time": 4.879999999999999,
+            "frame": 3,
+            "amount": 0.24
+          },
+          {
+            "time": 4.909999999999999,
+            "frame": 3,
+            "amount": 0.68
+          },
+          {
+            "time": 4.9799999999999995,
+            "frame": 3,
+            "amount": 0.25
+          },
+          {
+            "time": 5.069999999999999,
+            "frame": 3,
+            "amount": 0.08
+          },
+          {
+            "time": 5.1,
+            "frame": 3,
+            "amount": 0.35
+          },
+          {
+            "time": 5.199999999999999,
+            "frame": 3,
+            "amount": 0.08
+          },
+          {
+            "time": 5.3999999999999995,
+            "frame": 3,
+            "amount": 0
+          },
+          {
+            "time": 6.1,
+            "frame": 8,
+            "amount": 0
+          },
+          {
+            "time": 6.125,
+            "frame": 8,
+            "amount": 0.9
+          },
+          {
+            "time": 6.199999999999999,
+            "frame": 8,
+            "amount": 0.55
+          },
+          {
+            "time": 6.279999999999999,
+            "frame": 8,
+            "amount": 0.24
+          },
+          {
+            "time": 6.31,
+            "frame": 8,
+            "amount": 0.68
+          },
+          {
+            "time": 6.38,
+            "frame": 8,
+            "amount": 0.25
+          },
+          {
+            "time": 6.47,
+            "frame": 8,
+            "amount": 0.08
+          },
+          {
+            "time": 6.5,
+            "frame": 8,
+            "amount": 0.35
+          },
+          {
+            "time": 6.6,
+            "frame": 8,
+            "amount": 0.08
+          },
+          {
+            "time": 6.8,
+            "frame": 8,
+            "amount": 0
+          },
+          {
+            "time": 7.5,
+            "frame": 2,
+            "amount": 0
+          },
+          {
+            "time": 7.525,
+            "frame": 2,
+            "amount": 0.9
+          },
+          {
+            "time": 7.6,
+            "frame": 2,
+            "amount": 0.55
+          },
+          {
+            "time": 7.68,
+            "frame": 2,
+            "amount": 0.24
+          },
+          {
+            "time": 7.71,
+            "frame": 2,
+            "amount": 0.68
+          },
+          {
+            "time": 7.78,
+            "frame": 2,
+            "amount": 0.25
+          },
+          {
+            "time": 7.87,
+            "frame": 2,
+            "amount": 0.08
+          },
+          {
+            "time": 7.9,
+            "frame": 2,
+            "amount": 0.35
+          },
+          {
+            "time": 8,
+            "frame": 2,
+            "amount": 0.08
+          },
+          {
+            "time": 8.2,
+            "frame": 2,
+            "amount": 0
+          },
+          {
+            "time": 8.899999999999999,
+            "frame": 6,
+            "amount": 0
+          },
+          {
+            "time": 8.924999999999999,
+            "frame": 6,
+            "amount": 0.9
+          },
+          {
+            "time": 8.999999999999998,
+            "frame": 6,
+            "amount": 0.55
+          },
+          {
+            "time": 9.079999999999998,
+            "frame": 6,
+            "amount": 0.24
+          },
+          {
+            "time": 9.11,
+            "frame": 6,
+            "amount": 0.68
+          },
+          {
+            "time": 9.179999999999998,
+            "frame": 6,
+            "amount": 0.25
+          },
+          {
+            "time": 9.269999999999998,
+            "frame": 6,
+            "amount": 0.08
+          },
+          {
+            "time": 9.299999999999999,
+            "frame": 6,
+            "amount": 0.35
+          },
+          {
+            "time": 9.399999999999999,
+            "frame": 6,
+            "amount": 0.08
+          },
+          {
+            "time": 9.599999999999998,
+            "frame": 6,
+            "amount": 0
+          },
+          {
+            "time": 10.299999999999999,
+            "frame": 5,
+            "amount": 0
+          },
+          {
+            "time": 10.325,
+            "frame": 5,
+            "amount": 0.9
+          },
+          {
+            "time": 10.399999999999999,
+            "frame": 5,
+            "amount": 0.55
+          },
+          {
+            "time": 10.479999999999999,
+            "frame": 5,
+            "amount": 0.24
+          },
+          {
+            "time": 10.51,
+            "frame": 5,
+            "amount": 0.68
+          },
+          {
+            "time": 10.579999999999998,
+            "frame": 5,
+            "amount": 0.25
+          },
+          {
+            "time": 10.669999999999998,
+            "frame": 5,
+            "amount": 0.08
+          },
+          {
+            "time": 10.7,
+            "frame": 5,
+            "amount": 0.35
+          },
+          {
+            "time": 10.799999999999999,
+            "frame": 5,
+            "amount": 0.08
+          },
+          {
+            "time": 10.999999999999998,
+            "frame": 5,
+            "amount": 0
+          },
+          {
+            "time": 12,
+            "frame": 0,
+            "amount": 0
+          }
+        ],
+        "duration": 12
+      }
+    },
+    "rime": {
+      "faces": [
+        "rime/px.png",
+        "rime/nx.png",
+        "rime/py.png",
+        "rime/ny.png",
+        "rime/pz.png",
+        "rime/nz.png"
+      ],
+      "manifest": "rime/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ],
+      "animation": {
+        "frames": [
+          "rime",
+          "rime-weather-0",
+          "rime-weather-1",
+          "rime-weather-2",
+          "rime-weather-3",
+          "rime-weather-4",
+          "rime-weather-5",
+          "rime-weather-6",
+          "rime-weather-7"
+        ],
+        "keys": [
+          {
+            "time": 0,
+            "frame": 0,
+            "amount": 0
+          },
+          {
+            "time": 0.5,
+            "frame": 4,
+            "amount": 0
+          },
+          {
+            "time": 0.525,
+            "frame": 4,
+            "amount": 0.9
+          },
+          {
+            "time": 0.6,
+            "frame": 4,
+            "amount": 0.55
+          },
+          {
+            "time": 0.6799999999999999,
+            "frame": 4,
+            "amount": 0.24
+          },
+          {
+            "time": 0.71,
+            "frame": 4,
+            "amount": 0.68
+          },
+          {
+            "time": 0.78,
+            "frame": 4,
+            "amount": 0.25
+          },
+          {
+            "time": 0.87,
+            "frame": 4,
+            "amount": 0.08
+          },
+          {
+            "time": 0.9,
+            "frame": 4,
+            "amount": 0.35
+          },
+          {
+            "time": 1,
+            "frame": 4,
+            "amount": 0.08
+          },
+          {
+            "time": 1.2,
+            "frame": 4,
+            "amount": 0
+          },
+          {
+            "time": 1.9,
+            "frame": 1,
+            "amount": 0
+          },
+          {
+            "time": 1.9249999999999998,
+            "frame": 1,
+            "amount": 0.9
+          },
+          {
+            "time": 2,
+            "frame": 1,
+            "amount": 0.55
+          },
+          {
+            "time": 2.08,
+            "frame": 1,
+            "amount": 0.24
+          },
+          {
+            "time": 2.11,
+            "frame": 1,
+            "amount": 0.68
+          },
+          {
+            "time": 2.1799999999999997,
+            "frame": 1,
+            "amount": 0.25
+          },
+          {
+            "time": 2.27,
+            "frame": 1,
+            "amount": 0.08
+          },
+          {
+            "time": 2.3,
+            "frame": 1,
+            "amount": 0.35
+          },
+          {
+            "time": 2.4,
+            "frame": 1,
+            "amount": 0.08
+          },
+          {
+            "time": 2.5999999999999996,
+            "frame": 1,
+            "amount": 0
+          },
+          {
+            "time": 3.3,
+            "frame": 7,
+            "amount": 0
+          },
+          {
+            "time": 3.3249999999999997,
+            "frame": 7,
+            "amount": 0.9
+          },
+          {
+            "time": 3.4,
+            "frame": 7,
+            "amount": 0.55
+          },
+          {
+            "time": 3.48,
+            "frame": 7,
+            "amount": 0.24
+          },
+          {
+            "time": 3.51,
+            "frame": 7,
+            "amount": 0.68
+          },
+          {
+            "time": 3.58,
+            "frame": 7,
+            "amount": 0.25
+          },
+          {
+            "time": 3.67,
+            "frame": 7,
+            "amount": 0.08
+          },
+          {
+            "time": 3.6999999999999997,
+            "frame": 7,
+            "amount": 0.35
+          },
+          {
+            "time": 3.8,
+            "frame": 7,
+            "amount": 0.08
+          },
+          {
+            "time": 4,
+            "frame": 7,
+            "amount": 0
+          },
+          {
+            "time": 4.699999999999999,
+            "frame": 3,
+            "amount": 0
+          },
+          {
+            "time": 4.725,
+            "frame": 3,
+            "amount": 0.9
+          },
+          {
+            "time": 4.799999999999999,
+            "frame": 3,
+            "amount": 0.55
+          },
+          {
+            "time": 4.879999999999999,
+            "frame": 3,
+            "amount": 0.24
+          },
+          {
+            "time": 4.909999999999999,
+            "frame": 3,
+            "amount": 0.68
+          },
+          {
+            "time": 4.9799999999999995,
+            "frame": 3,
+            "amount": 0.25
+          },
+          {
+            "time": 5.069999999999999,
+            "frame": 3,
+            "amount": 0.08
+          },
+          {
+            "time": 5.1,
+            "frame": 3,
+            "amount": 0.35
+          },
+          {
+            "time": 5.199999999999999,
+            "frame": 3,
+            "amount": 0.08
+          },
+          {
+            "time": 5.3999999999999995,
+            "frame": 3,
+            "amount": 0
+          },
+          {
+            "time": 6.1,
+            "frame": 8,
+            "amount": 0
+          },
+          {
+            "time": 6.125,
+            "frame": 8,
+            "amount": 0.9
+          },
+          {
+            "time": 6.199999999999999,
+            "frame": 8,
+            "amount": 0.55
+          },
+          {
+            "time": 6.279999999999999,
+            "frame": 8,
+            "amount": 0.24
+          },
+          {
+            "time": 6.31,
+            "frame": 8,
+            "amount": 0.68
+          },
+          {
+            "time": 6.38,
+            "frame": 8,
+            "amount": 0.25
+          },
+          {
+            "time": 6.47,
+            "frame": 8,
+            "amount": 0.08
+          },
+          {
+            "time": 6.5,
+            "frame": 8,
+            "amount": 0.35
+          },
+          {
+            "time": 6.6,
+            "frame": 8,
+            "amount": 0.08
+          },
+          {
+            "time": 6.8,
+            "frame": 8,
+            "amount": 0
+          },
+          {
+            "time": 7.5,
+            "frame": 2,
+            "amount": 0
+          },
+          {
+            "time": 7.525,
+            "frame": 2,
+            "amount": 0.9
+          },
+          {
+            "time": 7.6,
+            "frame": 2,
+            "amount": 0.55
+          },
+          {
+            "time": 7.68,
+            "frame": 2,
+            "amount": 0.24
+          },
+          {
+            "time": 7.71,
+            "frame": 2,
+            "amount": 0.68
+          },
+          {
+            "time": 7.78,
+            "frame": 2,
+            "amount": 0.25
+          },
+          {
+            "time": 7.87,
+            "frame": 2,
+            "amount": 0.08
+          },
+          {
+            "time": 7.9,
+            "frame": 2,
+            "amount": 0.35
+          },
+          {
+            "time": 8,
+            "frame": 2,
+            "amount": 0.08
+          },
+          {
+            "time": 8.2,
+            "frame": 2,
+            "amount": 0
+          },
+          {
+            "time": 8.899999999999999,
+            "frame": 6,
+            "amount": 0
+          },
+          {
+            "time": 8.924999999999999,
+            "frame": 6,
+            "amount": 0.9
+          },
+          {
+            "time": 8.999999999999998,
+            "frame": 6,
+            "amount": 0.55
+          },
+          {
+            "time": 9.079999999999998,
+            "frame": 6,
+            "amount": 0.24
+          },
+          {
+            "time": 9.11,
+            "frame": 6,
+            "amount": 0.68
+          },
+          {
+            "time": 9.179999999999998,
+            "frame": 6,
+            "amount": 0.25
+          },
+          {
+            "time": 9.269999999999998,
+            "frame": 6,
+            "amount": 0.08
+          },
+          {
+            "time": 9.299999999999999,
+            "frame": 6,
+            "amount": 0.35
+          },
+          {
+            "time": 9.399999999999999,
+            "frame": 6,
+            "amount": 0.08
+          },
+          {
+            "time": 9.599999999999998,
+            "frame": 6,
+            "amount": 0
+          },
+          {
+            "time": 10.299999999999999,
+            "frame": 5,
+            "amount": 0
+          },
+          {
+            "time": 10.325,
+            "frame": 5,
+            "amount": 0.9
+          },
+          {
+            "time": 10.399999999999999,
+            "frame": 5,
+            "amount": 0.55
+          },
+          {
+            "time": 10.479999999999999,
+            "frame": 5,
+            "amount": 0.24
+          },
+          {
+            "time": 10.51,
+            "frame": 5,
+            "amount": 0.68
+          },
+          {
+            "time": 10.579999999999998,
+            "frame": 5,
+            "amount": 0.25
+          },
+          {
+            "time": 10.669999999999998,
+            "frame": 5,
+            "amount": 0.08
+          },
+          {
+            "time": 10.7,
+            "frame": 5,
+            "amount": 0.35
+          },
+          {
+            "time": 10.799999999999999,
+            "frame": 5,
+            "amount": 0.08
+          },
+          {
+            "time": 10.999999999999998,
+            "frame": 5,
+            "amount": 0
+          },
+          {
+            "time": 12,
+            "frame": 0,
+            "amount": 0
+          }
+        ],
+        "duration": 12
+      }
+    },
+    "fleet": {
+      "faces": [
+        "fleet/px.png",
+        "fleet/nx.png",
+        "fleet/py.png",
+        "fleet/ny.png",
+        "fleet/pz.png",
+        "fleet/nz.png"
+      ],
+      "manifest": "fleet/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ],
+      "animation": {
+        "frames": [
+          "fleet",
+          "fleet-weather-0",
+          "fleet-weather-1",
+          "fleet-weather-2",
+          "fleet-weather-3",
+          "fleet-weather-4",
+          "fleet-weather-5",
+          "fleet-weather-6",
+          "fleet-weather-7"
+        ],
+        "keys": [
+          {
+            "time": 0,
+            "frame": 0,
+            "amount": 0
+          },
+          {
+            "time": 0.5,
+            "frame": 4,
+            "amount": 0
+          },
+          {
+            "time": 0.525,
+            "frame": 4,
+            "amount": 0.9
+          },
+          {
+            "time": 0.6,
+            "frame": 4,
+            "amount": 0.55
+          },
+          {
+            "time": 0.6799999999999999,
+            "frame": 4,
+            "amount": 0.24
+          },
+          {
+            "time": 0.71,
+            "frame": 4,
+            "amount": 0.68
+          },
+          {
+            "time": 0.78,
+            "frame": 4,
+            "amount": 0.25
+          },
+          {
+            "time": 0.87,
+            "frame": 4,
+            "amount": 0.08
+          },
+          {
+            "time": 0.9,
+            "frame": 4,
+            "amount": 0.35
+          },
+          {
+            "time": 1,
+            "frame": 4,
+            "amount": 0.08
+          },
+          {
+            "time": 1.2,
+            "frame": 4,
+            "amount": 0
+          },
+          {
+            "time": 1.9,
+            "frame": 1,
+            "amount": 0
+          },
+          {
+            "time": 1.9249999999999998,
+            "frame": 1,
+            "amount": 0.9
+          },
+          {
+            "time": 2,
+            "frame": 1,
+            "amount": 0.55
+          },
+          {
+            "time": 2.08,
+            "frame": 1,
+            "amount": 0.24
+          },
+          {
+            "time": 2.11,
+            "frame": 1,
+            "amount": 0.68
+          },
+          {
+            "time": 2.1799999999999997,
+            "frame": 1,
+            "amount": 0.25
+          },
+          {
+            "time": 2.27,
+            "frame": 1,
+            "amount": 0.08
+          },
+          {
+            "time": 2.3,
+            "frame": 1,
+            "amount": 0.35
+          },
+          {
+            "time": 2.4,
+            "frame": 1,
+            "amount": 0.08
+          },
+          {
+            "time": 2.5999999999999996,
+            "frame": 1,
+            "amount": 0
+          },
+          {
+            "time": 3.3,
+            "frame": 7,
+            "amount": 0
+          },
+          {
+            "time": 3.3249999999999997,
+            "frame": 7,
+            "amount": 0.9
+          },
+          {
+            "time": 3.4,
+            "frame": 7,
+            "amount": 0.55
+          },
+          {
+            "time": 3.48,
+            "frame": 7,
+            "amount": 0.24
+          },
+          {
+            "time": 3.51,
+            "frame": 7,
+            "amount": 0.68
+          },
+          {
+            "time": 3.58,
+            "frame": 7,
+            "amount": 0.25
+          },
+          {
+            "time": 3.67,
+            "frame": 7,
+            "amount": 0.08
+          },
+          {
+            "time": 3.6999999999999997,
+            "frame": 7,
+            "amount": 0.35
+          },
+          {
+            "time": 3.8,
+            "frame": 7,
+            "amount": 0.08
+          },
+          {
+            "time": 4,
+            "frame": 7,
+            "amount": 0
+          },
+          {
+            "time": 4.699999999999999,
+            "frame": 3,
+            "amount": 0
+          },
+          {
+            "time": 4.725,
+            "frame": 3,
+            "amount": 0.9
+          },
+          {
+            "time": 4.799999999999999,
+            "frame": 3,
+            "amount": 0.55
+          },
+          {
+            "time": 4.879999999999999,
+            "frame": 3,
+            "amount": 0.24
+          },
+          {
+            "time": 4.909999999999999,
+            "frame": 3,
+            "amount": 0.68
+          },
+          {
+            "time": 4.9799999999999995,
+            "frame": 3,
+            "amount": 0.25
+          },
+          {
+            "time": 5.069999999999999,
+            "frame": 3,
+            "amount": 0.08
+          },
+          {
+            "time": 5.1,
+            "frame": 3,
+            "amount": 0.35
+          },
+          {
+            "time": 5.199999999999999,
+            "frame": 3,
+            "amount": 0.08
+          },
+          {
+            "time": 5.3999999999999995,
+            "frame": 3,
+            "amount": 0
+          },
+          {
+            "time": 6.1,
+            "frame": 8,
+            "amount": 0
+          },
+          {
+            "time": 6.125,
+            "frame": 8,
+            "amount": 0.9
+          },
+          {
+            "time": 6.199999999999999,
+            "frame": 8,
+            "amount": 0.55
+          },
+          {
+            "time": 6.279999999999999,
+            "frame": 8,
+            "amount": 0.24
+          },
+          {
+            "time": 6.31,
+            "frame": 8,
+            "amount": 0.68
+          },
+          {
+            "time": 6.38,
+            "frame": 8,
+            "amount": 0.25
+          },
+          {
+            "time": 6.47,
+            "frame": 8,
+            "amount": 0.08
+          },
+          {
+            "time": 6.5,
+            "frame": 8,
+            "amount": 0.35
+          },
+          {
+            "time": 6.6,
+            "frame": 8,
+            "amount": 0.08
+          },
+          {
+            "time": 6.8,
+            "frame": 8,
+            "amount": 0
+          },
+          {
+            "time": 7.5,
+            "frame": 2,
+            "amount": 0
+          },
+          {
+            "time": 7.525,
+            "frame": 2,
+            "amount": 0.9
+          },
+          {
+            "time": 7.6,
+            "frame": 2,
+            "amount": 0.55
+          },
+          {
+            "time": 7.68,
+            "frame": 2,
+            "amount": 0.24
+          },
+          {
+            "time": 7.71,
+            "frame": 2,
+            "amount": 0.68
+          },
+          {
+            "time": 7.78,
+            "frame": 2,
+            "amount": 0.25
+          },
+          {
+            "time": 7.87,
+            "frame": 2,
+            "amount": 0.08
+          },
+          {
+            "time": 7.9,
+            "frame": 2,
+            "amount": 0.35
+          },
+          {
+            "time": 8,
+            "frame": 2,
+            "amount": 0.08
+          },
+          {
+            "time": 8.2,
+            "frame": 2,
+            "amount": 0
+          },
+          {
+            "time": 8.899999999999999,
+            "frame": 6,
+            "amount": 0
+          },
+          {
+            "time": 8.924999999999999,
+            "frame": 6,
+            "amount": 0.9
+          },
+          {
+            "time": 8.999999999999998,
+            "frame": 6,
+            "amount": 0.55
+          },
+          {
+            "time": 9.079999999999998,
+            "frame": 6,
+            "amount": 0.24
+          },
+          {
+            "time": 9.11,
+            "frame": 6,
+            "amount": 0.68
+          },
+          {
+            "time": 9.179999999999998,
+            "frame": 6,
+            "amount": 0.25
+          },
+          {
+            "time": 9.269999999999998,
+            "frame": 6,
+            "amount": 0.08
+          },
+          {
+            "time": 9.299999999999999,
+            "frame": 6,
+            "amount": 0.35
+          },
+          {
+            "time": 9.399999999999999,
+            "frame": 6,
+            "amount": 0.08
+          },
+          {
+            "time": 9.599999999999998,
+            "frame": 6,
+            "amount": 0
+          },
+          {
+            "time": 10.299999999999999,
+            "frame": 5,
+            "amount": 0
+          },
+          {
+            "time": 10.325,
+            "frame": 5,
+            "amount": 0.9
+          },
+          {
+            "time": 10.399999999999999,
+            "frame": 5,
+            "amount": 0.55
+          },
+          {
+            "time": 10.479999999999999,
+            "frame": 5,
+            "amount": 0.24
+          },
+          {
+            "time": 10.51,
+            "frame": 5,
+            "amount": 0.68
+          },
+          {
+            "time": 10.579999999999998,
+            "frame": 5,
+            "amount": 0.25
+          },
+          {
+            "time": 10.669999999999998,
+            "frame": 5,
+            "amount": 0.08
+          },
+          {
+            "time": 10.7,
+            "frame": 5,
+            "amount": 0.35
+          },
+          {
+            "time": 10.799999999999999,
+            "frame": 5,
+            "amount": 0.08
+          },
+          {
+            "time": 10.999999999999998,
+            "frame": 5,
+            "amount": 0
+          },
+          {
+            "time": 12,
+            "frame": 0,
+            "amount": 0
+          }
+        ],
+        "duration": 12
+      }
+    },
+    "cinematic": {
+      "faces": [
+        "cinematic/px.png",
+        "cinematic/nx.png",
+        "cinematic/py.png",
+        "cinematic/ny.png",
+        "cinematic/pz.png",
+        "cinematic/nz.png"
+      ],
+      "manifest": "cinematic/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "asteroid": {
+      "faces": [
+        "asteroid/px.png",
+        "asteroid/nx.png",
+        "asteroid/py.png",
+        "asteroid/ny.png",
+        "asteroid/pz.png",
+        "asteroid/nz.png"
+      ],
+      "manifest": "asteroid/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "ohio": {
+      "faces": [
+        "ohio/px.png",
+        "ohio/nx.png",
+        "ohio/py.png",
+        "ohio/ny.png",
+        "ohio/pz.png",
+        "ohio/nz.png"
+      ],
+      "manifest": "ohio/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.6123724356957947,
+            -0.6123724356957945,
+            0.49999999999999994
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "planet-110": {
+      "faces": [
+        "planet-110/px.png",
+        "planet-110/nx.png",
+        "planet-110/py.png",
+        "planet-110/ny.png",
+        "planet-110/pz.png",
+        "planet-110/nz.png"
+      ],
+      "manifest": "planet-110/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "planet-80": {
+      "faces": [
+        "planet-80/px.png",
+        "planet-80/nx.png",
+        "planet-80/py.png",
+        "planet-80/ny.png",
+        "planet-80/pz.png",
+        "planet-80/nz.png"
+      ],
+      "manifest": "planet-80/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "planet-140": {
+      "faces": [
+        "planet-140/px.png",
+        "planet-140/nx.png",
+        "planet-140/py.png",
+        "planet-140/ny.png",
+        "planet-140/pz.png",
+        "planet-140/nz.png"
+      ],
+      "manifest": "planet-140/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "orbital": {
+      "faces": [
+        "orbital/px.png",
+        "orbital/nx.png",
+        "orbital/py.png",
+        "orbital/ny.png",
+        "orbital/pz.png",
+        "orbital/nz.png"
+      ],
+      "manifest": "orbital/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "reception": {
+      "faces": [
+        "reception/px.png",
+        "reception/nx.png",
+        "reception/py.png",
+        "reception/ny.png",
+        "reception/pz.png",
+        "reception/nz.png"
+      ],
+      "manifest": "reception/manifest.json",
+      "cameraSources": []
+    },
+    "hostile": {
+      "faces": [
+        "hostile/px.png",
+        "hostile/nx.png",
+        "hostile/py.png",
+        "hostile/ny.png",
+        "hostile/pz.png",
+        "hostile/nz.png"
+      ],
+      "manifest": "hostile/manifest.json",
+      "cameraSources": []
+    },
+    "impact-0": {
+      "faces": [
+        "impact-0/px.png",
+        "impact-0/nx.png",
+        "impact-0/py.png",
+        "impact-0/ny.png",
+        "impact-0/pz.png",
+        "impact-0/nz.png"
+      ],
+      "manifest": "impact-0/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-1": {
+      "faces": [
+        "impact-1/px.png",
+        "impact-1/nx.png",
+        "impact-1/py.png",
+        "impact-1/ny.png",
+        "impact-1/pz.png",
+        "impact-1/nz.png"
+      ],
+      "manifest": "impact-1/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-2": {
+      "faces": [
+        "impact-2/px.png",
+        "impact-2/nx.png",
+        "impact-2/py.png",
+        "impact-2/ny.png",
+        "impact-2/pz.png",
+        "impact-2/nz.png"
+      ],
+      "manifest": "impact-2/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-3": {
+      "faces": [
+        "impact-3/px.png",
+        "impact-3/nx.png",
+        "impact-3/py.png",
+        "impact-3/ny.png",
+        "impact-3/pz.png",
+        "impact-3/nz.png"
+      ],
+      "manifest": "impact-3/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-4": {
+      "faces": [
+        "impact-4/px.png",
+        "impact-4/nx.png",
+        "impact-4/py.png",
+        "impact-4/ny.png",
+        "impact-4/pz.png",
+        "impact-4/nz.png"
+      ],
+      "manifest": "impact-4/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-5": {
+      "faces": [
+        "impact-5/px.png",
+        "impact-5/nx.png",
+        "impact-5/py.png",
+        "impact-5/ny.png",
+        "impact-5/pz.png",
+        "impact-5/nz.png"
+      ],
+      "manifest": "impact-5/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-6": {
+      "faces": [
+        "impact-6/px.png",
+        "impact-6/nx.png",
+        "impact-6/py.png",
+        "impact-6/ny.png",
+        "impact-6/pz.png",
+        "impact-6/nz.png"
+      ],
+      "manifest": "impact-6/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-7": {
+      "faces": [
+        "impact-7/px.png",
+        "impact-7/nx.png",
+        "impact-7/py.png",
+        "impact-7/ny.png",
+        "impact-7/pz.png",
+        "impact-7/nz.png"
+      ],
+      "manifest": "impact-7/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "impact-8": {
+      "faces": [
+        "impact-8/px.png",
+        "impact-8/nx.png",
+        "impact-8/py.png",
+        "impact-8/ny.png",
+        "impact-8/pz.png",
+        "impact-8/nz.png"
+      ],
+      "manifest": "impact-8/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            -0.5792279653395693,
+            -0.5792279653395691,
+            0.573576436351046
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-0": {
+      "faces": [
+        "jade-weather-0/px.png",
+        "jade-weather-0/nx.png",
+        "jade-weather-0/py.png",
+        "jade-weather-0/ny.png",
+        "jade-weather-0/pz.png",
+        "jade-weather-0/nz.png"
+      ],
+      "manifest": "jade-weather-0/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-1": {
+      "faces": [
+        "jade-weather-1/px.png",
+        "jade-weather-1/nx.png",
+        "jade-weather-1/py.png",
+        "jade-weather-1/ny.png",
+        "jade-weather-1/pz.png",
+        "jade-weather-1/nz.png"
+      ],
+      "manifest": "jade-weather-1/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-2": {
+      "faces": [
+        "jade-weather-2/px.png",
+        "jade-weather-2/nx.png",
+        "jade-weather-2/py.png",
+        "jade-weather-2/ny.png",
+        "jade-weather-2/pz.png",
+        "jade-weather-2/nz.png"
+      ],
+      "manifest": "jade-weather-2/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-3": {
+      "faces": [
+        "jade-weather-3/px.png",
+        "jade-weather-3/nx.png",
+        "jade-weather-3/py.png",
+        "jade-weather-3/ny.png",
+        "jade-weather-3/pz.png",
+        "jade-weather-3/nz.png"
+      ],
+      "manifest": "jade-weather-3/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-4": {
+      "faces": [
+        "jade-weather-4/px.png",
+        "jade-weather-4/nx.png",
+        "jade-weather-4/py.png",
+        "jade-weather-4/ny.png",
+        "jade-weather-4/pz.png",
+        "jade-weather-4/nz.png"
+      ],
+      "manifest": "jade-weather-4/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-5": {
+      "faces": [
+        "jade-weather-5/px.png",
+        "jade-weather-5/nx.png",
+        "jade-weather-5/py.png",
+        "jade-weather-5/ny.png",
+        "jade-weather-5/pz.png",
+        "jade-weather-5/nz.png"
+      ],
+      "manifest": "jade-weather-5/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-6": {
+      "faces": [
+        "jade-weather-6/px.png",
+        "jade-weather-6/nx.png",
+        "jade-weather-6/py.png",
+        "jade-weather-6/ny.png",
+        "jade-weather-6/pz.png",
+        "jade-weather-6/nz.png"
+      ],
+      "manifest": "jade-weather-6/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "jade-weather-7": {
+      "faces": [
+        "jade-weather-7/px.png",
+        "jade-weather-7/nx.png",
+        "jade-weather-7/py.png",
+        "jade-weather-7/ny.png",
+        "jade-weather-7/pz.png",
+        "jade-weather-7/nz.png"
+      ],
+      "manifest": "jade-weather-7/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-0": {
+      "faces": [
+        "rime-weather-0/px.png",
+        "rime-weather-0/nx.png",
+        "rime-weather-0/py.png",
+        "rime-weather-0/ny.png",
+        "rime-weather-0/pz.png",
+        "rime-weather-0/nz.png"
+      ],
+      "manifest": "rime-weather-0/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-1": {
+      "faces": [
+        "rime-weather-1/px.png",
+        "rime-weather-1/nx.png",
+        "rime-weather-1/py.png",
+        "rime-weather-1/ny.png",
+        "rime-weather-1/pz.png",
+        "rime-weather-1/nz.png"
+      ],
+      "manifest": "rime-weather-1/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-2": {
+      "faces": [
+        "rime-weather-2/px.png",
+        "rime-weather-2/nx.png",
+        "rime-weather-2/py.png",
+        "rime-weather-2/ny.png",
+        "rime-weather-2/pz.png",
+        "rime-weather-2/nz.png"
+      ],
+      "manifest": "rime-weather-2/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-3": {
+      "faces": [
+        "rime-weather-3/px.png",
+        "rime-weather-3/nx.png",
+        "rime-weather-3/py.png",
+        "rime-weather-3/ny.png",
+        "rime-weather-3/pz.png",
+        "rime-weather-3/nz.png"
+      ],
+      "manifest": "rime-weather-3/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-4": {
+      "faces": [
+        "rime-weather-4/px.png",
+        "rime-weather-4/nx.png",
+        "rime-weather-4/py.png",
+        "rime-weather-4/ny.png",
+        "rime-weather-4/pz.png",
+        "rime-weather-4/nz.png"
+      ],
+      "manifest": "rime-weather-4/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-5": {
+      "faces": [
+        "rime-weather-5/px.png",
+        "rime-weather-5/nx.png",
+        "rime-weather-5/py.png",
+        "rime-weather-5/ny.png",
+        "rime-weather-5/pz.png",
+        "rime-weather-5/nz.png"
+      ],
+      "manifest": "rime-weather-5/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-6": {
+      "faces": [
+        "rime-weather-6/px.png",
+        "rime-weather-6/nx.png",
+        "rime-weather-6/py.png",
+        "rime-weather-6/ny.png",
+        "rime-weather-6/pz.png",
+        "rime-weather-6/nz.png"
+      ],
+      "manifest": "rime-weather-6/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "rime-weather-7": {
+      "faces": [
+        "rime-weather-7/px.png",
+        "rime-weather-7/nx.png",
+        "rime-weather-7/py.png",
+        "rime-weather-7/ny.png",
+        "rime-weather-7/pz.png",
+        "rime-weather-7/nz.png"
+      ],
+      "manifest": "rime-weather-7/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-0": {
+      "faces": [
+        "fleet-weather-0/px.png",
+        "fleet-weather-0/nx.png",
+        "fleet-weather-0/py.png",
+        "fleet-weather-0/ny.png",
+        "fleet-weather-0/pz.png",
+        "fleet-weather-0/nz.png"
+      ],
+      "manifest": "fleet-weather-0/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-1": {
+      "faces": [
+        "fleet-weather-1/px.png",
+        "fleet-weather-1/nx.png",
+        "fleet-weather-1/py.png",
+        "fleet-weather-1/ny.png",
+        "fleet-weather-1/pz.png",
+        "fleet-weather-1/nz.png"
+      ],
+      "manifest": "fleet-weather-1/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-2": {
+      "faces": [
+        "fleet-weather-2/px.png",
+        "fleet-weather-2/nx.png",
+        "fleet-weather-2/py.png",
+        "fleet-weather-2/ny.png",
+        "fleet-weather-2/pz.png",
+        "fleet-weather-2/nz.png"
+      ],
+      "manifest": "fleet-weather-2/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-3": {
+      "faces": [
+        "fleet-weather-3/px.png",
+        "fleet-weather-3/nx.png",
+        "fleet-weather-3/py.png",
+        "fleet-weather-3/ny.png",
+        "fleet-weather-3/pz.png",
+        "fleet-weather-3/nz.png"
+      ],
+      "manifest": "fleet-weather-3/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-4": {
+      "faces": [
+        "fleet-weather-4/px.png",
+        "fleet-weather-4/nx.png",
+        "fleet-weather-4/py.png",
+        "fleet-weather-4/ny.png",
+        "fleet-weather-4/pz.png",
+        "fleet-weather-4/nz.png"
+      ],
+      "manifest": "fleet-weather-4/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-5": {
+      "faces": [
+        "fleet-weather-5/px.png",
+        "fleet-weather-5/nx.png",
+        "fleet-weather-5/py.png",
+        "fleet-weather-5/ny.png",
+        "fleet-weather-5/pz.png",
+        "fleet-weather-5/nz.png"
+      ],
+      "manifest": "fleet-weather-5/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-6": {
+      "faces": [
+        "fleet-weather-6/px.png",
+        "fleet-weather-6/nx.png",
+        "fleet-weather-6/py.png",
+        "fleet-weather-6/ny.png",
+        "fleet-weather-6/pz.png",
+        "fleet-weather-6/nz.png"
+      ],
+      "manifest": "fleet-weather-6/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    },
+    "fleet-weather-7": {
+      "faces": [
+        "fleet-weather-7/px.png",
+        "fleet-weather-7/nx.png",
+        "fleet-weather-7/py.png",
+        "fleet-weather-7/ny.png",
+        "fleet-weather-7/pz.png",
+        "fleet-weather-7/nz.png"
+      ],
+      "manifest": "fleet-weather-7/manifest.json",
+      "cameraSources": [
+        {
+          "direction": [
+            0.8830222215594891,
+            0.3213938048432697,
+            0.3420201433256687
+          ],
+          "radius": 0.003909537524467298,
+          "strength": 0.45,
+          "color": [
+            1,
+            0.95,
+            0.82
+          ]
+        }
+      ]
+    }
+  }
+}

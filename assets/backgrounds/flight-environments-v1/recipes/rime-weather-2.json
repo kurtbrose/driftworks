@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "renderer": "tools/skybox-source.js",
+  "rendererSha256": "d4b366f7586bcbdd8a7a233c804a67975a4af766ed1d01c2665f9ee2e8fa1c41",
+  "id": "rime-weather-2",
+  "mission": "jade-rime",
+  "style": 7,
+  "weatherCell": 2,
+  "sky": {
+    "kind": "landmarks",
+    "features": [
+      {
+        "asset": "gas-giant-lightning-v1/dark.png",
+        "yaw": 90,
+        "pitch": 0,
+        "roll": 0,
+        "widthDeg": 110,
+        "gain": 1
+      },
+      {
+        "asset": "features/warm-sun-v1.png",
+        "yaw": 20,
+        "pitch": 20,
+        "roll": 0,
+        "widthDeg": 7,
+        "gain": 1
+      }
+    ],
+    "environment": "rime",
+    "gasGiant": true,
+    "jadeSystem": {
+      "planetRadiusKm": 68000,
+      "planetMassKg": 1.7e+27,
+      "planeNormal": [
+        0.42261826174069944,
+        0,
+        0.9063077870366499
+      ],
+      "observer": [
+        1818.889497439955,
+        -621405.26226906,
+        -848.1621019939477
+      ],
+      "frame": [
+        [
+          -0.02923917965758971,
+          -0.7945927787428193,
+          0.6064382790875885
+        ],
+        [
+          -0.33456530317942895,
+          0.5794841035564565,
+          0.7431448254773941
+        ],
+        [
+          -0.9419188544038216,
+          -0.18116426163880855,
+          -0.28278681373688086
+        ]
+      ],
+      "moons": [
+        {
+          "name": "Cinder",
+          "diameterKm": 3620,
+          "orbitKm": 390000,
+          "phaseDeg": 110,
+          "position": [
+            -332143.7884592671,
+            133387.8558970108,
+            154881.1921671701
+          ]
+        },
+        {
+          "name": "Rime",
+          "diameterKm": 3100,
+          "orbitKm": 620000,
+          "phaseDeg": 0,
+          "position": [
+            0,
+            -620000,
+            0
+          ]
+        },
+        {
+          "name": "Umber",
+          "diameterKm": 5180,
+          "orbitKm": 1030000,
+          "phaseDeg": 80,
+          "position": [
+            -919315.1033477008,
+            -178857.62299693833,
+            428683.6729485869
+          ]
+        },
+        {
+          "name": "Serein",
+          "diameterKm": 4740,
+          "orbitKm": 1770000,
+          "phaseDeg": 250,
+          "position": [
+            1507421.8091612891,
+            605375.6536864348,
+            -702922.333681772
+          ]
+        }
+      ]
+    },
+    "cubeFaces": [
+      "gas-giant-lightning-v1/dark-cube/px.png",
+      "gas-giant-lightning-v1/dark-cube/nx.png",
+      "gas-giant-lightning-v1/dark-cube/py.png",
+      "gas-giant-lightning-v1/dark-cube/ny.png",
+      "gas-giant-lightning-v1/dark-cube/pz.png",
+      "gas-giant-lightning-v1/dark-cube/nz.png"
+    ],
+    "rimeSurface": "jade-moons-v1/rime-disk-v2.png"
+  },
+  "timestamp": 0,
+  "seed": 58319,
+  "exposure": 1,
+  "camera": {
+    "px": {
+      "back": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nx": {
+      "back": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "py": {
+      "back": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        -1
+      ]
+    },
+    "ny": {
+      "back": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ]
+    },
+    "pz": {
+      "back": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nz": {
+      "back": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "stars": "All background stars baked with the complete environment",
+  "sources": {
+    "assets/backgrounds/features/warm-sun-v1.png": {
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/nx.png": {
+      "sha256": "154756ef61ba8e11832392bd57b4bfa2f22ef628feba62b68ab03bf575785064"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/ny.png": {
+      "sha256": "d69112264db6c2c1b6f6bc930b7d7cf38c27a4fead1b5000259265c5405c66ef"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/nz.png": {
+      "sha256": "3f35e70d91405b9c0afa011d53c51e6190fc2757ce4890f23b58ddba6c085ab5"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/px.png": {
+      "sha256": "befc8529e3538989e5617672013871b53c68ac6665ce826bbe39fd964467b753"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/py.png": {
+      "sha256": "0cb6b966f56e16b67313623de49fb8accbb30dc84ae3f8b5dc01c021db362498"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/pz.png": {
+      "sha256": "9ef2936d27f39426bca43fe07003254315ce1dec9bb88026d990cb44fe34b686"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/nx.png": {
+      "sha256": "562cdeb1256a0535edb712201a4516abd2df68fc7f76d08b7735f1c8737b1e84"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/ny.png": {
+      "sha256": "d69112264db6c2c1b6f6bc930b7d7cf38c27a4fead1b5000259265c5405c66ef"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/nz.png": {
+      "sha256": "1b11f1f57cf441933298cf4828515608fc481e2603a87bb422dab557e98c8140"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/px.png": {
+      "sha256": "c52968d22ebddd1e153b26c61156a59ee9a2661f587552dee9f64363f31bcbb3"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/py.png": {
+      "sha256": "b99224592f26272c8b0adb8f17be7d43e3f9ef057a131e7add3585d6a970ce5b"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/pz.png": {
+      "sha256": "e2ab86a765a8ca60b876a3b7587eb59c774760f62e9a91aa1cb57bf2929cb048"
+    },
+    "assets/backgrounds/jade-moons-v1/rime-disk-v2.png": {
+      "sha256": "0dbca4a4981c6c9ad54da29160e26a258ec931ad64ed694a3c26ac39a3b24c42"
+    }
+  }
+}

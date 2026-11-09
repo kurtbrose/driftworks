@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 1024,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "baked",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "21177895424e74ade0f6ec58b84e14078047c8d0c1a3558ffbea22a5bea8c62e"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "9be9b083f56c95bc27f88a1b9113e2d46cee33503985826b14424a5e18423b5c"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "10881d972b55d30fe01f00364424ed2308601f03566450159dfae3f571f9c6e9"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "4bd98473ecf6e023b21031a1b6a22a3b5150b2a0bc724976a1fc43f1041d8aa6"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "aad62508c0feac058444f502f059e8078a1ad55a2cdd76dc53393233f93ef5df"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "6956539812bfb49950dc2b3a3d453adb7418691ae2853f78b770095e4bddcb08"
+    }
+  },
+  "sources": {
+    "assets/backgrounds/all-sky-milky-way.jpg": {
+      "sha256": "9055c7a801035211706565d838a6fa52ac9e670168b788e0008bd947e55e5c0e"
+    }
+  },
+  "completeEnvironment": true,
+  "recipeSha256": "b09cb74097c600056104e91a1de2e9d941247833dbfccb466bc059bfb36e45a3"
+}

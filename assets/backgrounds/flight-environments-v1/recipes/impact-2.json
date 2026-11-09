@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "renderer": "tools/skybox-source.js",
+  "rendererSha256": "f038397ef911ace3a0c809748619535d386950776d92ae3da6285df10457df5a",
+  "id": "impact-2",
+  "mission": "planet-orbital-cube",
+  "style": 7,
+  "stage": 2,
+  "sky": {
+    "kind": "landmarks",
+    "features": [
+      {
+        "asset": "planet-hero-orbital-v2/master.png",
+        "yaw": 90,
+        "pitch": -30,
+        "roll": 0,
+        "widthDeg": 110,
+        "gain": 1
+      },
+      {
+        "asset": "features/warm-sun-v1.png",
+        "yaw": 225,
+        "pitch": 35,
+        "roll": 0,
+        "widthDeg": 7,
+        "gain": 1
+      }
+    ],
+    "cubeFaces": [
+      "planet-hero-orbital-v2/cube-v1/px.png",
+      "planet-hero-orbital-v2/cube-v1/nx.png",
+      "planet-hero-orbital-v2/cube-v1/py.png",
+      "planet-hero-orbital-v2/cube-v1/ny.png",
+      "planet-hero-orbital-v2/cube-v1/pz.png",
+      "planet-hero-orbital-v2/cube-v1/nz.png"
+    ],
+    "bakedImpact": true,
+    "cubeStages": "planet-hero-orbital-v2/animation-cube-v1/"
+  },
+  "timestamp": 0,
+  "seed": 58319,
+  "exposure": 1,
+  "camera": {
+    "px": {
+      "back": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nx": {
+      "back": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "py": {
+      "back": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        -1
+      ]
+    },
+    "ny": {
+      "back": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ]
+    },
+    "pz": {
+      "back": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nz": {
+      "back": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "stars": "All background stars baked with the complete environment",
+  "sources": {
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/0/nx.png": {
+      "sha256": "01b2e7bc7671a479571bd6f6ca2ee6f24a39d131d8759a2556ff57f295bd8fb8"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/0/ny.png": {
+      "sha256": "852aea101875f49339ac667819fc8629bb10ff6f0af3611befe5fa64986281ad"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/0/nz.png": {
+      "sha256": "c6baef92c2b7932b0737d69f60b4bf61ae9e903dcef88a62fa295e9c0cd6daed"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/0/px.png": {
+      "sha256": "d3b407d9a4731f38e4c9c7ce06b5dd9c36491502a04ebda91cd182f362605109"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/0/py.png": {
+      "sha256": "01c98567d95ed98f4d37824d571b90628d5ad81dee2827770f4877da64605952"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/0/pz.png": {
+      "sha256": "51b6b3e065e7b9a3355c3410becb1a347fc0262b2987e9830bfb3a617177bd2d"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/1/nx.png": {
+      "sha256": "01b2e7bc7671a479571bd6f6ca2ee6f24a39d131d8759a2556ff57f295bd8fb8"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/1/ny.png": {
+      "sha256": "852aea101875f49339ac667819fc8629bb10ff6f0af3611befe5fa64986281ad"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/1/nz.png": {
+      "sha256": "c6baef92c2b7932b0737d69f60b4bf61ae9e903dcef88a62fa295e9c0cd6daed"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/1/px.png": {
+      "sha256": "d3b407d9a4731f38e4c9c7ce06b5dd9c36491502a04ebda91cd182f362605109"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/1/py.png": {
+      "sha256": "01c98567d95ed98f4d37824d571b90628d5ad81dee2827770f4877da64605952"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/1/pz.png": {
+      "sha256": "51b6b3e065e7b9a3355c3410becb1a347fc0262b2987e9830bfb3a617177bd2d"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/2/nx.png": {
+      "sha256": "01b2e7bc7671a479571bd6f6ca2ee6f24a39d131d8759a2556ff57f295bd8fb8"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/2/ny.png": {
+      "sha256": "852aea101875f49339ac667819fc8629bb10ff6f0af3611befe5fa64986281ad"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/2/nz.png": {
+      "sha256": "c6baef92c2b7932b0737d69f60b4bf61ae9e903dcef88a62fa295e9c0cd6daed"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/2/px.png": {
+      "sha256": "d3b407d9a4731f38e4c9c7ce06b5dd9c36491502a04ebda91cd182f362605109"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/2/py.png": {
+      "sha256": "3449e806c44723456c51bb804be641029d19757b41745abee4d54d25cacd15db"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/2/pz.png": {
+      "sha256": "51b6b3e065e7b9a3355c3410becb1a347fc0262b2987e9830bfb3a617177bd2d"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/3/nx.png": {
+      "sha256": "01b2e7bc7671a479571bd6f6ca2ee6f24a39d131d8759a2556ff57f295bd8fb8"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/3/ny.png": {
+      "sha256": "852aea101875f49339ac667819fc8629bb10ff6f0af3611befe5fa64986281ad"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/3/nz.png": {
+      "sha256": "c6baef92c2b7932b0737d69f60b4bf61ae9e903dcef88a62fa295e9c0cd6daed"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/3/px.png": {
+      "sha256": "d3b407d9a4731f38e4c9c7ce06b5dd9c36491502a04ebda91cd182f362605109"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/3/py.png": {
+      "sha256": "75b5354733789e66eb0ca1a0ae6f2b9ee4945bede54bad364d85bae9d434060b"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/3/pz.png": {
+      "sha256": "51b6b3e065e7b9a3355c3410becb1a347fc0262b2987e9830bfb3a617177bd2d"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/4/nx.png": {
+      "sha256": "01b2e7bc7671a479571bd6f6ca2ee6f24a39d131d8759a2556ff57f295bd8fb8"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/4/ny.png": {
+      "sha256": "852aea101875f49339ac667819fc8629bb10ff6f0af3611befe5fa64986281ad"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/4/nz.png": {
+      "sha256": "c6baef92c2b7932b0737d69f60b4bf61ae9e903dcef88a62fa295e9c0cd6daed"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/4/px.png": {
+      "sha256": "d3b407d9a4731f38e4c9c7ce06b5dd9c36491502a04ebda91cd182f362605109"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/4/py.png": {
+      "sha256": "248b814e60ea74946381b74e91596f02ead3c0a44ca660e982824deafffceb80"
+    },
+    "assets/backgrounds/planet-hero-orbital-v2/animation-cube-v1/4/pz.png": {
+      "sha256": "51b6b3e065e7b9a3355c3410becb1a347fc0262b2987e9830bfb3a617177bd2d"
+    }
+  }
+}

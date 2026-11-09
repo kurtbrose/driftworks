@@ -64,8 +64,9 @@ and velocities transfer, and targeting/collision caches invalidate. Formation
 gates use the same lifecycle as the visible mouth. Reset creates a fresh registry.
 
 `skyView` derives local sky identity and return apertures from the same endpoints.
-Reception uses the existing hero panorama; hostile space uses its rotated warm
-variant. A single lazy-loaded local texture is shared by these two presets. Source
+Reception and hostile space use complete static baked environments, with the
+existing rotated warm treatment retained in the hostile bake. All declared
+source and destination environments preload before launch. Source
 hulls/effects are isolated by the renderer's opt-in space filter, and cargo contact
 ignores craft in other spaces. The hostile capital is visible directly in its
 space. Both mouths have return crossings; the convoy continues in the source
@@ -187,3 +188,13 @@ remain intact; the shared placement constraint shifts it onto the clear flank.
 Staged remote capitals retain the source aperture mask after linked-space placement.
 Finite-body continuation must not expose their sections beyond the mouth silhouette;
 viewing the capital directly in its own space clears this staged mask.
+
+### Complete sky environments
+
+Sky optics sample the same complete baked environments used by ordinary flight.
+sky.environment selects the local bake and sky.linkedEnvironments declares
+potential destinations before launch; each link endpoint still owns its sky ID.
+Static faces include stars and haze. Background sampling uses the established
+Ellis lookup even when physical traversal and foreground ships use thin-shell
+optics. The offline compositor lives in tools/skybox-source.js; gameplay never
+loads its source images, reconstructs sky layers or captures an environment.

@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 1024,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "baked",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "50f91589a7cd9eb2eb313c86f7edf4b482fb78848d239512ba5d36c5bc3c2908"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "8e5b1fa70338b5b8ee48e5597afc49d5d54af09c3ea7ca9934a7b57ef73680a0"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "1656864ff7dc26926a92a0a7ac9e60ea920977bd48f099573262c3d877f560c1"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "cfe5e0747d0a5caa4d8d480c16c3a6fdf752c4cb5c558719728629f826bd57f8"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "bb509e37e3a3f6d5fbdae8a0aea2a6ab9382c589891deacc2147fda036b10244"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "2dbca9ca9e869f84d4db7545acc9c32017eb5aaaf6de46b25803afdf8a4c4239"
+    }
+  },
+  "sources": {
+    "assets/backgrounds/features/warm-sun-v1.png": {
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/nx.png": {
+      "sha256": "154756ef61ba8e11832392bd57b4bfa2f22ef628feba62b68ab03bf575785064"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/ny.png": {
+      "sha256": "d69112264db6c2c1b6f6bc930b7d7cf38c27a4fead1b5000259265c5405c66ef"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/nz.png": {
+      "sha256": "3f35e70d91405b9c0afa011d53c51e6190fc2757ce4890f23b58ddba6c085ab5"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/px.png": {
+      "sha256": "befc8529e3538989e5617672013871b53c68ac6665ce826bbe39fd964467b753"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/py.png": {
+      "sha256": "0cb6b966f56e16b67313623de49fb8accbb30dc84ae3f8b5dc01c021db362498"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/dark-cube/pz.png": {
+      "sha256": "9ef2936d27f39426bca43fe07003254315ce1dec9bb88026d990cb44fe34b686"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/nx.png": {
+      "sha256": "562cdeb1256a0535edb712201a4516abd2df68fc7f76d08b7735f1c8737b1e84"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/ny.png": {
+      "sha256": "d69112264db6c2c1b6f6bc930b7d7cf38c27a4fead1b5000259265c5405c66ef"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/nz.png": {
+      "sha256": "1b11f1f57cf441933298cf4828515608fc481e2603a87bb422dab557e98c8140"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/px.png": {
+      "sha256": "c52968d22ebddd1e153b26c61156a59ee9a2661f587552dee9f64363f31bcbb3"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/py.png": {
+      "sha256": "b99224592f26272c8b0adb8f17be7d43e3f9ef057a131e7add3585d6a970ce5b"
+    },
+    "assets/backgrounds/gas-giant-lightning-v1/lit-cube/pz.png": {
+      "sha256": "e2ab86a765a8ca60b876a3b7587eb59c774760f62e9a91aa1cb57bf2929cb048"
+    },
+    "assets/backgrounds/hero-composition-v1-8k.jpg": {
+      "sha256": "c945397af53223e9fc63b92636e823adf930cbae4c0e85cc90d3fd97c975f222"
+    },
+    "assets/backgrounds/planet-hero-v1/master.png": {
+      "sha256": "7e01a17efd7627ffebe13c62b6b78ca575937c0bddbe4237fedad5d21f5b6dde"
+    }
+  },
+  "completeEnvironment": true,
+  "recipeSha256": "14e946addbbb8ac4b339bbc186ff3fbe3e4502bbb5778c2d8b5c5a0fc84431b3"
+}

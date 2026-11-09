@@ -13,7 +13,6 @@
     var multiplayerMode=new URLSearchParams(location.search).get('multiplayer')==='1';
     /** @type {ReturnType<typeof import('./multiplayer-flight').mount>|null} */var multiplayer=null;
     if(multiplayerMode&&!DW.multiplayerFlight)await new Promise(/** @param {(value:void)=>void} resolve */function(resolve){window.addEventListener('multiplayer-flight-ready',function(){resolve();},{once:true});});
-    if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
     if(['convoy','fleet-evacuation'].includes(activeMission.id))host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
     var cinematic=activeMission.id==='cinematic';
     var impactWatch=!!activeMission.emptySpace&&!cinematic&&!activeMission.sky.hyperbolic;

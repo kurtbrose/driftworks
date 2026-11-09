@@ -36,23 +36,49 @@ View-dependent glare belongs after environment sampling. It must respect
 source visibility/occlusion. Optional live background animation must pass
 through the same sky optics; an unwarped overlay is not an animation solution.
 
-## Current implementation gaps
+## Production loading and offline sources
 
-This contract describes the required architecture. It is not a claim that all
-existing modes implement it. The older flight renderer in
-`experiments/skybox.js` composes procedural backgrounds, hero image cards and
-point stars in separate runtime draws. Some newer mission families already
-load baked cubes, but that has not migrated every sky mode.
+Production flight loads complete static assets from
+assets/backgrounds/flight-environments-v1/catalog.json. Every environment has
+six 1024-square PNG faces, a camera manifest and a retained recipe. Background
+stars, haze, galaxies, suns, planets and moons are already in those faces.
+experiments/skybox.js only loads and samples the finished cubes; it has no
+source-card, procedural-planet or point-star background draw. Normal flight and
+linked mouths use the same environment sampler. The established Ellis lookup
+selects the outgoing direction and source environment for returning/transmitted
+rays; thin-shell foreground traversal does not choose background optics.
 
-The fleet arrival/linked-mouth path currently samples a panorama using
-thin-shell surface-normal mapping before the established Ellis branch. Local
-hero cards and stars can subsequently draw over its result. The
-`bridgeSky=ellis` option is scoped to the thin-shell mission and does not make
-the fleet path use Ellis. These are unresolved integration defects; preserve
-this distinction when reporting checks or choosing code to reuse. Fix them at
-the shared environment boundary, not by adding per-feature aperture masks or
-another mission-specific sky renderer. Existing legacy paths are migration
-targets, not exceptions permitting new bypasses.
+The old compositor is now the offline-only tools/skybox-source.js. Source
+artwork and placements remain in the authoring library for new compositions.
+They must not be added to a gameplay script profile. The planet image editor, HDR source review and thin-shell comparison explicitly
+load that source tool as authoring/diagnostic pages, not gameplay renderers.
+
+Run node tools/bake-flight-environments.cjs against the local HTTP server to
+capture missing complete environments, or pass an environment ID prefix and
+--force to rebake it. The browser driver waits for source uploads, freezes the
+clock/exposure/random seed and captures all six cameras at one origin. It uses
+tools/bake-sky-cube.py --captures to package the same camera convention,
+axis diagnostics, PNG hashes and recipe hashes as the existing baker. Browser
+and Python packages are development dependencies only. Nothing bakes on load,
+at mission start, or while a wormhole opens.
+
+Mission sky.environment selects a completed environment ID;
+sky.linkedEnvironments declares potential destination presets to preload.
+sky.sourceEnvironment can select a different complete source for a canonical
+link. Endpoint sky identities still come from the shared link data.
+flightSkybox.create(...).ready resolves only after the declared complete cubes
+have uploaded; flight presentation includes it in the launch gate. Impact
+animation blends nine complete static environments, including their background
+stars. Normal Jade/Rime/fleet views blend complete baked lightning frames on a
+shared clock. Wormhole-bent rays (both returning and transmitted) sample the
+constant default environment instead. The offline compositor and cell/mask
+artwork remain authoring inputs; gameplay never assembles lightning layers.
+
+Camera glare/exposure remains a separate view-dependent effect using metadata
+stored with each environment, not source artwork. It is suppressed while an
+active mouth changes visibility. Precomputed foreground lighting probes are
+separate resources; they are not background layers. Navigation guidance dots
+remain foreground motion cues and do not supply background stars.
 
 ## Integration review
 
@@ -67,10 +93,11 @@ under `output/<task>/` and state which views remain uninspected.
 
 `tests/flight-skybox.cjs` checks shader wiring and controls; `tests/sky-cube.cjs`
 checks baked artifacts/projection; the wormhole GPU check exercises selected
-rendering fixtures. None currently proves that the complete fleet sky passes
-through Ellis or that later background draws cannot overwrite it. Add focused
-coverage for those defects with the runtime repair. Do not equate an asset bake,
-a shader-string assertion, or traversal success with visual acceptance.
+rendering fixtures. tests/baked-environments.cjs validates the complete static artifacts, while
+tests/flight-skybox.cjs checks load gating and the single background draw.
+tools/check-baked-sky-browser.cjs captures the actual fleet scene from both
+spaces and exercises native per-eye sampling. Retain and inspect its captures;
+asset hashes or shader assertions alone do not establish visual acceptance.
 
 ## Existing modes and authoring history
 
@@ -589,3 +616,11 @@ values. Do not independently hand-place moon bearings or resize the near
 scene's planet. The asset README documents the physical recipe and the limit
 of reusing the original painted planet lighting. Both are frozen observation
 points, independent of the ship's local flight translation.
+
+The lightning acceptance tool, tools/check-baked-weather-browser.cjs, captures
+normal-flight flashes with a stationary production fighter. It compares both
+returning and transmitted images across the same animation times and includes
+negative controls using the complete bright plates as explicit defaults. Normal
+lightning must change; refracted images must remain constant. Native headset
+interaction still requires an actual XR device; the browser checks per-eye
+WebGL2 sampling rather than claiming headset acceptance.

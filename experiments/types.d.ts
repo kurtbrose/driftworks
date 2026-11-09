@@ -13,7 +13,7 @@ export type FlightMission = {
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{connection?:WormholeLink;hyperbolic?:number;wormhole?:boolean;thinShell?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{environment?:string;linkedEnvironments?:string[];sourceEnvironment?:string;connection?:WormholeLink;hyperbolic?:number;wormhole?:boolean;thinShell?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
     asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
@@ -329,7 +329,7 @@ export type ConvoyBattleOrder={id:string;kind:'assist'|'intercept'|'escort';fron
 export type ConvoyBattleState={fronts:{id:number;name:string;offset:Vector;center:Vector;packet:number;radiusM:number;allies:number;enemies:number;alliedHull:number;released:boolean}[];nextAssessment:number;nextDispatch:number;order:ConvoyBattleOrder|null;pending:boolean;lastCall:number};
 export type ConvoyState = {evacuation?:FleetEvacuation;navigation?:import("../src/types").FleetFormation;coverage?:Record<string,number[]>;nextCoverage?:number;elapsed:number;speedMps:number;destinationY:number;complete:boolean;raidStarted:boolean;arrivalPortal?:ConvoyPortal;battle?:ConvoyBattleState;arrivalFleet:ConvoyReceptionShip[];raids:ConvoyRaid[];director:{attention:DirectorAttention;phase:'opening'|'patrol'|'contact'|'threatened'|'under-fire'|'recovery';raids:number;reservePlanned:boolean;overload:number;withdrawn:number;events:{wing:number;kind:string}[];nextRaidAt:number;pressure:number;lastHull:number;lastDamageAt:number;quietSince:number;patrol:number;stationAt:number;waypoint:{kind:'patrol'|'intercept'|'assist'|'escort';label?:string;front?:number|null;packet:number;position:Vector;targetId:string|null}|null};radio:{wait:number;opening:number;said:string[];phase:'arrival'|'cruise'|'combat'|'damage-report'|'complete';report:number;chat:number;chatTurn:number};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;forward?:Vector;hull:number;maxHull:number;arrived:boolean}[]};
 export type ShotSpace=boolean|'thin-shell'|number|{links:WormholeLink[];time:number};
-export type PortalSkyView={position:Vector;radius:number;sky?:number;localSky?:number;other?:PortalSkyView};
+export type PortalSkyView={position:Vector;radius:number;sky?:number|string;localSky?:number|string;other?:PortalSkyView};
 export type Combat = {
     wormholes?:WormholeLink[];
     convoy?:ConvoyState;
@@ -973,6 +973,7 @@ export type ExperimentModules = {
             y: number;
         } | null;
         create: (host: HTMLElement, config?:{style?:number;fov?:number;cueControls?:boolean;sources?:import('../src/types').SkyCameraSource[];optics?:boolean;preserveDrawingBuffer?:boolean;styleControls?:boolean;context?:WebGL2RenderingContext}) => {
+            ready:Promise<boolean>;
             getStyle:()=>number;
             getFrameState:()=>SkyFrameState;
             setFrameState:(state:SkyFrameState)=>void;

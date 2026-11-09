@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 1024,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "baked",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "eef3b031b054edcc78ee0b05208a2ca3814cfd1d926fd587c0dd22011c66682a"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "e8826aaef534f3b6b47410143f10634831d2b306aa00238d56ca24ff511af132"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "906adf64e4c9fe42804ed8566eaa724ba12fb6839edd8d086c298b0a4e7dfa58"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "db7204c4aeaf888b280219ffb7005680dcc0640e904fc972f9bba26020b7427c"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "15b67657543b38558434150f0ce81ef4158329a81c9ee4483fb132a8f37000c8"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "a0badf461cc0aa0d18631300150f4f699b08f6446df92e94bd0795117a7550c4"
+    }
+  },
+  "sources": {
+    "assets/backgrounds/all-sky-milky-way.jpg": {
+      "sha256": "9055c7a801035211706565d838a6fa52ac9e670168b788e0008bd947e55e5c0e"
+    },
+    "assets/backgrounds/features/blue-filament-v1.png": {
+      "sha256": "ace0324f6d336727c8f72222f500b250eac8f573aa4759a2bb02029945f490bc"
+    },
+    "assets/backgrounds/features/blue-nebula-v1.png": {
+      "sha256": "163c20c23c9b0d580c7814d228e03c7716fd3d7911a65434a45d0555069c3eda"
+    },
+    "assets/backgrounds/features/spiral-galaxy-v1.png": {
+      "sha256": "d95f1234e8a8c8f568d0b3835247ad5536891d33f80a1a2115e307f875c6086d"
+    },
+    "assets/backgrounds/features/warm-sun-v1.png": {
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    },
+    "assets/backgrounds/hero-composition-v1-8k.jpg": {
+      "sha256": "c945397af53223e9fc63b92636e823adf930cbae4c0e85cc90d3fd97c975f222"
+    },
+    "assets/backgrounds/hero-layout-v1.json": {
+      "sha256": "d2de961079c31d0c59b7a6ea25e9e3f3705f4a7a246f2f7c165281735f694a42"
+    },
+    "assets/backgrounds/sky-lighting-v1-galaxy.png": {
+      "sha256": "a60641ed178db2e16640db25c407fefb2c5a220aecbbac7c6d37041c5ce254eb"
+    },
+    "assets/backgrounds/sky-lighting-v1-galaxy.rgba32f.bin": {
+      "sha256": "8d021fe74a3e22f5a64ee57fd4c14e19534fb9cc271b5cbb9314f8030b3a5ce5"
+    },
+    "assets/backgrounds/sky-lighting-v1-nebula.png": {
+      "sha256": "f868be300353f9b6bb968bd0fb804385c0750e237b2e058ee7d2367f3af4680d"
+    },
+    "assets/backgrounds/sky-lighting-v1-nebula.rgba32f.bin": {
+      "sha256": "11ed57dce17c0714f853dc7e238a6abfdcaf807d1acd87af52802a7bc425a4b6"
+    },
+    "assets/backgrounds/sky-lighting-v1-river.png": {
+      "sha256": "dfe715a64da1468fa3053f6c4a6293e88a42549a06b1e80d7a9f138945f46a00"
+    },
+    "assets/backgrounds/sky-lighting-v1-river.rgba32f.bin": {
+      "sha256": "d76f3ec50053d87458f7679eff864f31170c1586848644962bc401685fb53da7"
+    },
+    "assets/backgrounds/sky-lighting-v1-sun.png": {
+      "sha256": "397f41f9a6b66c2ff21fda4148db3a12b34ae4f0c325467d43ace23463cb46a3"
+    },
+    "assets/backgrounds/sky-lighting-v1-sun.rgba32f.bin": {
+      "sha256": "6fad9a81613a6cf14d2a419f0865a20e69332c8b931ffdfb66e64504d6e47e15"
+    },
+    "assets/backgrounds/sky-lighting-v1-woven.png": {
+      "sha256": "af6f25e296b84eb38514896286f90e0f2b143847fac65a18e69d2b9226cd1e6e"
+    },
+    "assets/backgrounds/sky-lighting-v1-woven.rgba32f.bin": {
+      "sha256": "d3373f10d4477f19bdc75854a72b0b81a563e2457fe40fec5a1e97ebee6a585e"
+    },
+    "assets/backgrounds/sky-lighting-v1.json": {
+      "sha256": "b93d0f730b242343456fc464b543d93422cfb26657864699b8e498266477d3d1"
+    }
+  },
+  "completeEnvironment": true,
+  "recipeSha256": "e2a928def4665bc4cffe67795a2e58b7d5bf569379e46f8e3d2195ef9ee4e617"
+}

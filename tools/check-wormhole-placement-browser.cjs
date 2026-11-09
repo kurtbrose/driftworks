@@ -75,9 +75,10 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
    if(!restored||remoteLeak)throw Error('Returning to source failed to restore hull visibility');
    return {rows,opening,hidden,negativeControl,foreign,present,width:canvas.width,height:canvas.height};
   });
-  await page.evaluate(()=>{
+  await page.evaluate(async()=>{
+   Driftworks.flightMissions.define('sky-preload-test',{sky:{linkedEnvironments:['reception','hostile']}},'default');history.replaceState({},'','?mission=sky-preload-test');
    const host=document.createElement('div');Object.assign(host.style,{width:'320px',height:'240px'});document.body.appendChild(host);
-   window.overlapSky=Driftworks.flightSkybox.create(host,{preserveDrawingBuffer:true});window.overlapHost=host;
+   window.overlapSky=Driftworks.flightSkybox.create(host,{preserveDrawingBuffer:true});window.overlapHost=host;await window.overlapSky.ready;
   });
   await page.waitForLoadState('networkidle');
   const skyOverlap=await page.evaluate(()=>{

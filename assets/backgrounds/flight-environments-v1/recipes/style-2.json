@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "renderer": "tools/skybox-source.js",
+  "rendererSha256": "f038397ef911ace3a0c809748619535d386950776d92ae3da6285df10457df5a",
+  "id": "style-2",
+  "mission": "default",
+  "style": 2,
+  "sky": {
+    "kind": "selectable",
+    "features": []
+  },
+  "timestamp": 0,
+  "seed": 58319,
+  "exposure": 1,
+  "camera": {
+    "px": {
+      "back": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nx": {
+      "back": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "py": {
+      "back": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        -1
+      ]
+    },
+    "ny": {
+      "back": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ]
+    },
+    "pz": {
+      "back": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nz": {
+      "back": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "stars": "All background stars baked with the complete environment",
+  "sources": {
+    "assets/backgrounds/all-sky-milky-way.jpg": {
+      "sha256": "9055c7a801035211706565d838a6fa52ac9e670168b788e0008bd947e55e5c0e"
+    }
+  }
+}

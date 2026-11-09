@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
+const root="assets/backgrounds/flight-environments-v1",catalog=JSON.parse(fs.readFileSync(root+"/catalog.json","utf8")),names=["px","nx","py","ny","pz","nz"],hash=b=>crypto.createHash("sha256").update(b).digest("hex");
+assert.equal(catalog.styles.length,13);assert.equal(catalog.impact.length,9);let checked=0;
+for(const [id,entry]of Object.entries(catalog.environments)){
+ if(entry.animation){assert.equal(entry.animation.frames[0],id);assert(entry.animation.frames.every(f=>catalog.environments[f]));assert(entry.animation.keys.every((k,i,a)=>i===0||k.time>=a[i-1].time));assert.equal(entry.animation.keys[0].amount,0);assert.equal(entry.animation.keys.at(-1).amount,0);}
+ const manifest=JSON.parse(fs.readFileSync(path.join(root,entry.manifest))),recipe=fs.readFileSync(path.join(root,"recipes",id+".json"));assert.equal(manifest.projection,"six-perspective-cameras");assert.equal(manifest.completeEnvironment,true);assert.equal(manifest.stars,"baked");assert.equal(manifest.fovDegrees,90);assert.equal(manifest.flipY,false);assert.deepEqual(manifest.origin,[0,0,0]);assert.equal(manifest.recipeSha256,hash(recipe));assert.equal(entry.faces.length,6);
+ const edges=[];for(const face of names){const data=manifest.faces[face],bytes=fs.readFileSync(path.join(root,id,data.file));assert.equal(bytes.readUInt32BE(16),catalog.size);assert.equal(bytes.readUInt32BE(20),catalog.size);assert.equal(data.sha256,hash(bytes));const ray=(x,y)=>data.forward.map((v,i)=>v+x*data.right[i]+y*data.imageTop[i]);for(const axis of [0,1])for(const sign of [-1,1])edges.push([-1,0,1].map(t=>ray(axis?t:sign,axis?sign:t)));checked++;}
+ const key=e=>JSON.stringify(e.map(v=>v.map(n=>n||0)));edges.forEach((edge,i)=>assert.equal(edges.filter((e,j)=>i!==j&&(key(e)===key(edge)||key([...e].reverse())===key(edge))).length,1,"All twelve cube edges share the same directional rays"));
+}
+assert(!require("../tools/script-manifest.cjs").resolve("flight").some(s=>s.src==="experiments/gas-giant-flight.js"),"Procedural weather is authoring-only");
+const source=fs.readFileSync("experiments/skybox.js","utf8");for(const token of ["heroProgram","starBuffer","loadHeroFeatures","gasSurface(","gl.POINTS","all-sky-milky-way.jpg","hero-composition-v1-8k.jpg"])assert(!source.includes(token),"Authoring layer leaked into runtime: "+token);
+console.log("PASS "+checked+" complete baked sky faces: hashes, retained recipes, square cameras, twelve-edge orientation, stars baked and authoring/runtime separation");

@@ -81,7 +81,7 @@
         title:'Jade weather / free flight · Driftworks',heading:'DRIFTWORKS / JADE WEATHER',
         subtitle:'GAS GIANT / QUIET FREE FLIGHT',
         hint:'No combat. W/S throttle · X stop · arrows steer · Q/E roll · hold W at max / double-tap W boost · Esc pause. Fly and watch the storms.',
-        sky:{kind:'landmarks',gasGiant:true,jadeSystem:jadeSystem(false),cubeFaces:['px','nx','py','ny','pz','nz'].map(function(face){return 'gas-giant-lightning-v1/dark-cube/'+face+'.png';}),features:[
+        sky:{environment:'jade',kind:'landmarks',gasGiant:true,jadeSystem:jadeSystem(false),cubeFaces:['px','nx','py','ny','pz','nz'].map(function(face){return 'gas-giant-lightning-v1/dark-cube/'+face+'.png';}),features:[
             {asset:'gas-giant-lightning-v1/dark.png',yaw:90,pitch:0,roll:0,widthDeg:110,gain:1},
             {asset:'features/warm-sun-v1.png',yaw:20,pitch:20,roll:0,widthDeg:7,gain:1}
         ]}
@@ -90,7 +90,7 @@
         title:'Rime / moon-side free flight / Driftworks',heading:'DRIFTWORKS / RIME APPROACH',
         subtitle:'900 KM ABOVE RIME / JADE GIANT OVERHEAD',
         hint:'Look up for the jade giant. Rime fills the sky below. Fixed observation point; flight controls move the ship, not the orbital tableau.',
-        sky:{jadeSystem:jadeSystem(true),rimeSurface:'jade-moons-v1/rime-disk-v2.png'}
+        sky:{environment:'rime',jadeSystem:jadeSystem(true),rimeSurface:'jade-moons-v1/rime-disk-v2.png'}
     },'gas-giant');
     define('ellis',{
         title:'Ellis bridge / Driftworks',heading:'DRIFTWORKS / ELLIS BRIDGE',
@@ -100,19 +100,19 @@
         encounter:{kind:'furball',count:8,immediate:true}
     },'jade-rime');
     define('thin-shell',{title:'Thin-shell bridge / Driftworks',heading:'DRIFTWORKS / THIN-SHELL BRIDGE',subtitle:'ASTEROID RANGE / RIME THIN-SHELL DOGFIGHT',sky:{thinShell:true}},'ellis');
-    define('cinematic',{emptySpace:true,sky:{jadeSystem:jadeSystem(false),rimeSurface:''},title:'Bridge battle / cinematic demo / Driftworks',heading:'DRIFTWORKS / CINEMATIC DEMO',subtitle:'TWO WORLDS / ENDLESS CAPITAL ENGAGEMENT',hint:'Start demo to watch. Esc pauses; C cuts to the next camera. Fighters launch from both carriers as losses occur.',encounter:{count:0,immediate:false}},'thin-shell');
+    define('cinematic',{emptySpace:true,sky:{sourceEnvironment:'cinematic',connection:{id:'cinematic-jade',mouths:[{space:0,position:[0,-2000,1550],radius:300,sky:'cinematic'},{space:1,position:[12000,-2000,1550],radius:300,sky:'jade'}]},jadeSystem:jadeSystem(false),rimeSurface:''},title:'Bridge battle / cinematic demo / Driftworks',heading:'DRIFTWORKS / CINEMATIC DEMO',subtitle:'TWO WORLDS / ENDLESS CAPITAL ENGAGEMENT',hint:'Start demo to watch. Esc pauses; C cuts to the next camera. Fighters launch from both carriers as losses occur.',encounter:{count:0,immediate:false}},'thin-shell');
     define('planet-hero',{
         title:'Planet hero flight · Driftworks',heading:'DRIFTWORKS / PLANET HERO TEST',subtitle:'STATIC PLANET BACKDROP · LOCAL DOGFIGHT',
-        sky:{kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
+        sky:{environment:'planet-110',kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
     },'furball');
-    define('planet-hero-80',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:80,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
-    define('planet-hero-140',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:140,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
+    define('planet-hero-80',{sky:{environment:'planet-80',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:80,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
+    define('planet-hero-140',{sky:{environment:'planet-140',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:140,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('planet-orbital-watch',{
         emptySpace:true,
         title:'Orbital planet study · Driftworks',heading:'DRIFTWORKS / ORBITAL PLANET STUDY',
         subtitle:'STATIC GEOMETRY STUDY · EMPTY SPACE',
         hint:'W/S throttle · X stop · arrows steer · Esc pause. Static orbital-reference planet; impact animation remains in Impact Watch.',
-        sky:{features:[{asset:'planet-hero-orbital-v2/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
+        sky:{environment:'orbital',features:[{asset:'planet-hero-orbital-v2/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
     },'planet-hero');
     define('planet-orbital-static',{
         title:'Six-camera planet skybox · Driftworks',
@@ -123,16 +123,16 @@
         title:'Orbital impact · Driftworks',heading:'DRIFTWORKS / ORBITAL IMPACT',
         subtitle:'ANIMATED SIX-FACE SKYBOX · MISSION-CUED IMPACT',
         hint:'Next cue advances the cinematic sky; each stage holds. W/S throttle · X stop · arrows steer · Esc pause.',
-        sky:{bakedImpact:true,cubeStages:'planet-hero-orbital-v2/animation-cube-v1/'}
+        sky:{environment:'impact-0',bakedImpact:true,cubeStages:'planet-hero-orbital-v2/animation-cube-v1/'}
     },'planet-orbital-static');
     // Existing bookmarks now use the approved planet and six-camera sequence.
     define('planet-impact-baked',{emptySpace:false,title:'Orbital impact dogfight · Driftworks'},'planet-orbital-cube');
     define('planet-impact-watch',{emptySpace:true,title:'Orbital impact watch · Driftworks'},'planet-orbital-cube');
     define('evacuation',{emptySpace:false,title:'Evacuation / cockpit dry run',heading:'DRIFTWORKS / EVACUATION',subtitle:'CYCLE A / HOLD THE REFUELING CORRIDOR',hint:'Protect fuel operations. Three fighters, one occupied bay. First-cycle radio playtest; Esc pauses.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Actual','Finch','Raider One','Raider Two','Raider Three','Raider Four']}},'planet-orbital-cube');
-    define('convoy',{portraits:{cast:'convoy'},title:'Convoy escort / Driftworks',heading:'DRIFTWORKS / CONVOY ESCORT',subtitle:'30 FREIGHTERS / THREE-FIGHTER WING / ESCORT RENDEZVOUS',hint:'Follow Control\'s cyan patrol and amber intercept markers. Weapons free. W/S throttle / hold W at max / double-tap W boost / Click or Space fire / Tab cycle hostiles / L lock target / Esc pause. Cargo cruises at 25 m/s; your fighter can overtake it. Escort survivors along the 7.5 km route.',encounter:{kind:'furball',count:2,immediate:true,callsigns:['Lancer Two','Lancer Three']}});
+    define('convoy',{sky:{linkedEnvironments:['reception','hostile']},portraits:{cast:'convoy'},title:'Convoy escort / Driftworks',heading:'DRIFTWORKS / CONVOY ESCORT',subtitle:'30 FREIGHTERS / THREE-FIGHTER WING / ESCORT RENDEZVOUS',hint:'Follow Control\'s cyan patrol and amber intercept markers. Weapons free. W/S throttle / hold W at max / double-tap W boost / Click or Space fire / Tab cycle hostiles / L lock target / Esc pause. Cargo cruises at 25 m/s; your fighter can overtake it. Escort survivors along the 7.5 km route.',encounter:{kind:'furball',count:2,immediate:true,callsigns:['Lancer Two','Lancer Three']}});
     // Rotate the complete Jade tableau: convoy +Y stays tangent, night-side limb sits below the clear forward route.
     define('fleet-evacuation',{title:'Fleet evacuation / Driftworks',heading:'DRIFTWORKS / FLEET EVACUATION',subtitle:'JADE ORBIT / ROUTINE CONVOY PATROL',hint:'Six hours into a quiet escort over Jade. Stay with the convoy. Follow Control and the amber TASK marks when the situation changes. W/S throttle / double-tap W boost / Space fire / Tab target / L lock / Esc pause.',
-        sky:{...definitions['gas-giant'].sky,jadeSystem:{...jadeSystem(false),frame:[[1,0,0],[0,0.4226182617,-0.9063077870],[0,0.9063077870,0.4226182617]]}}},'convoy');
+        sky:{...definitions['gas-giant'].sky,environment:'fleet',linkedEnvironments:['reception','hostile'],jadeSystem:{...jadeSystem(false),frame:[[1,0,0],[0,0.4226182617,-0.9063077870],[0,0.9063077870,0.4226182617]]}}},'convoy');
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});
     /** Boolean support retains the old compose(kind,data,true) API during migration. @param {string|boolean} [id] */
     function resolve(id){return definitions[id===true?'ohio':typeof id==='string'?id:'default']||definitions.default;}

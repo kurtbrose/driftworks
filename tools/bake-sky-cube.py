@@ -36,24 +36,34 @@ def main():
     parser.add_argument('recipe', type=Path)
     parser.add_argument('--size', type=int, choices=[256,512,1024,2048], default=1024)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--captures', type=Path, help='Package six offline renderer captures using the same camera/manifest contract')
     args = parser.parse_args()
     layout = json.loads(args.recipe.read_text(encoding='utf-8'))
-    composer.validate(layout)
-    images = {k:composer.load_asset(args.recipe.parent/v['file']) for k,v in layout['library'].items()}
+    if not args.captures:
+        composer.validate(layout)
+    images = {} if args.captures else {k:composer.load_asset(args.recipe.parent/v['file']) for k,v in layout['library'].items()}
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = {'version':1, 'projection':'six-perspective-cameras', 'size':args.size,
         'origin':[0,0,0], 'fovDegrees':90, 'aspect':1, 'near':0.01, 'far':10,
         'cardDistance':1, 'worldUp':'+Z', 'flipY':False,
         'color':'display RGB, screen blend, no exposure adaptation',
-        'timestamp':0, 'stars':'separate runtime pass', 'faces':{}}
+        'timestamp':layout.get('timestamp',0), 'stars':'baked' if args.captures else 'separate runtime pass', 'faces':{}}
     manifest['sources']={key:{'file':value['file'],'sha256':hashlib.sha256((args.recipe.parent/value['file']).read_bytes()).hexdigest()}
-        for key,value in layout['library'].items()}
+        for key,value in layout.get('library',{}).items()}
     for name, (forward, right, up) in CAMERAS.items():
-        output = np.zeros((args.size,args.size,3), dtype=np.uint8)
-        axis = (np.arange(args.size)+.5)*2/args.size-1
-        for start in range(0,args.size,32):
-            x,y = np.meshgrid(axis, -axis[start:start+32])
-            output[start:start+len(y)] = np.rint(composer.composite(rays(name,x,y),layout,images)*255).astype(np.uint8)
+        if args.captures:
+            source = args.captures/f'{name}.png'
+            with Image.open(source) as capture:
+                if capture.size != (args.size,args.size):
+                    raise ValueError(f'Wrong capture dimensions: {source}')
+                output = np.asarray(capture.convert('RGB'))
+        else:
+            output = np.zeros((args.size,args.size,3), dtype=np.uint8)
+        if not args.captures:
+            axis = (np.arange(args.size)+.5)*2/args.size-1
+            for start in range(0,args.size,32):
+                x,y = np.meshgrid(axis, -axis[start:start+32])
+                output[start:start+len(y)] = np.rint(composer.composite(rays(name,x,y),layout,images)*255).astype(np.uint8)
         filename=name+'.png'
         Image.fromarray(output).save(args.output/filename)
         manifest['faces'][name]={'file':filename,'forward':forward,'right':right,'imageTop':up,
@@ -62,6 +72,9 @@ def main():
         axis64=(np.arange(64)+.5)*2/64-1
         x,y=np.meshgrid(axis64,-axis64)
         Image.fromarray(np.rint((rays(name,x,y)+1)*127.5).astype(np.uint8)).save(args.output/('axis-'+filename))
+    if args.captures:
+        manifest['sources'] = layout.get('sources',{})
+        manifest['completeEnvironment'] = True
     manifest['recipeSha256']=hashlib.sha256(args.recipe.read_bytes()).hexdigest()
     (args.output/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8',newline='\n')
     print(f'Six {args.size} x {args.size} perspective faces: {args.output}')

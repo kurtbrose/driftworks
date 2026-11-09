@@ -112,6 +112,8 @@ const suites = {
     "ellis-invariants.cjs",
     "ellis-visibility.cjs",
     "flight-skybox.cjs",
+    "skybox-source.cjs",
+    "baked-environments.cjs",
     "ship-viewer.cjs",
     {"file":"mining-study-navigation.cjs","setup":"shared"},
     {"file":"mining-ramp-clearance.cjs","setup":"shared"},

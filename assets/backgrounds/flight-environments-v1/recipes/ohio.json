@@ -1,0 +1,145 @@
+{
+  "version": 1,
+  "renderer": "tools/skybox-source.js",
+  "rendererSha256": "f038397ef911ace3a0c809748619535d386950776d92ae3da6285df10457df5a",
+  "id": "ohio",
+  "mission": "ohio",
+  "style": 7,
+  "sky": {
+    "kind": "landmarks",
+    "features": [
+      {
+        "asset": "ohio-planet-v1.png",
+        "yaw": 90,
+        "pitch": 4,
+        "roll": 0,
+        "widthDeg": 44,
+        "gain": 1
+      },
+      {
+        "asset": "features/warm-sun-v1.png",
+        "yaw": 225,
+        "pitch": 30,
+        "roll": 0,
+        "widthDeg": 7,
+        "gain": 1
+      }
+    ]
+  },
+  "timestamp": 0,
+  "seed": 58319,
+  "exposure": 1,
+  "camera": {
+    "px": {
+      "back": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nx": {
+      "back": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "py": {
+      "back": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        -1
+      ]
+    },
+    "ny": {
+      "back": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ]
+    },
+    "pz": {
+      "back": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    "nz": {
+      "back": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "stars": "All background stars baked with the complete environment",
+  "sources": {
+    "assets/backgrounds/features/warm-sun-v1.png": {
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    },
+    "assets/backgrounds/ohio-planet-v1.png": {
+      "sha256": "5920a2ca4abaab4641c21e866e5477d7d8d12abdcd814dfe6ca44d401f4da3f9"
+    }
+  }
+}

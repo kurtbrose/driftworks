@@ -107,7 +107,7 @@
      * @returns {import('../experiments/types').PortalSkyView|null} */
     function skyView(links,space,time,units){
         var local=links.flatMap(function(link){return link.mouths.filter(function(m){return m.space===space;});})[0];
-        function preset(/** @type {string} */ sky){return sky==='reception'?1:sky==='hostile'?2:0;}
+        function preset(/** @type {string} */ sky){return sky==='reception'?1:sky==='hostile'?2:sky==='local'||sky==='asteroid'?0:sky;}
         var views=links.flatMap(function(link){var side=link.mouths.findIndex(function(m){return m.space===space;});if(side<0)return [];
             var mouth=link.mouths[side],amount=phase(time,link.lifecycle).amount;
             return [{position:mouth.position.map(function(v){return v/units;}),radius:mouth.radius*amount,sky:preset(link.mouths[1-side].sky),localSky:local?preset(local.sky):0}];
