@@ -218,8 +218,19 @@
     assert(Math.hypot.apply(null,view.camera.eye.map(function(v,k){return v-view.state.eye[k];}))>0);
     assert(Math.abs(view.camera.right.reduce(function(n,v,k){return n+v*view.camera.up[k];},0))<1e-8);
     assert(JSON.stringify(session.snapshot().state)===before,'Camera cannot move the simulated ship');
+    [true,false,true].forEach(function(held){
+      for(var frame=0;frame<12;frame++){
+        var sliding=session.snapshot();camera(sliding,held,1/60);
+        ['right','up','back'].forEach(function(axis){
+          assert(sliding.camera[axis].every(function(v,k){return v===sliding.state[axis][k];}),'Slide preserves cockpit orientation throughout entry and release');
+          assert(sliding.camera[axis]!==sliding.state[axis],'Camera basis must not alias simulation arrays');
+        });
+      }
+    });
+    for(var settle=0;settle<60;settle++){view=session.snapshot();camera(view,true,1/60);}
+
     var offset=view.camera.eye.map(function(v,k){return (v-view.state.eye[k])*DW.sim.METERS_PER_UNIT;});
-    assert(Math.abs(Math.hypot.apply(null,offset)-Math.hypot(75,47.5))<1e-6,'Local camera has a fixed metre-scale pullback');
+    assert(Math.abs(Math.hypot.apply(null,offset)-Math.hypot(75,18))<1e-6,'Local camera has a fixed metre-scale pullback');
     var far=session.snapshot();far.combat.targetId=null;camera(far,true,1/60);
     assert(far.camera.eye.every(function(v,k){return Math.abs(v-view.camera.eye[k])<1e-8;}),'No target distance can drag the chase camera away');
     for(var j=0;j<90;j++){view=session.snapshot();camera(view,false,1/60);}

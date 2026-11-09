@@ -412,7 +412,7 @@ profiles. There are no external runtime dependencies or tactical-save changes.
 
 ### Flight renderer profiling
 
-Flight shortcuts ignore Ctrl, Alt, and Windows/Command combinations so browser and OS shortcuts remain available. W combines throttle and afterburner; hold Shift to pull out above your ship for a local elevated chase view (75 m aft, 47.5 m up), keeping only contact boxes and arrows; release to return to the cockpit. Steering remains active. Screenshot overlays that take focus or release pointer lock still pause flight; use a full-screen capture shortcut that keeps the game focused to capture it in motion.
+Flight shortcuts ignore Ctrl, Alt, and Windows/Command combinations so browser and OS shortcuts remain available. W combines throttle and afterburner; hold Shift to slide into a local chase view (75 m aft, 18 m up) while preserving the cockpit viewing angle, keeping only contact boxes and arrows; release to return to the cockpit. Steering remains active. Screenshot overlays that take focus or release pointer lock still pause flight; use a full-screen capture shortcut that keeps the game focused to capture it in motion.
 
 The flight pause screen offers **Copy screenshot** and **Copy screenshot (no HUD)**. Both capture the frozen scene without the pause menu at the display's pixel resolution. A PNG download link is also available, including when the browser blocks image clipboard access.
 
