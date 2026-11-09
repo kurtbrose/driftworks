@@ -56,8 +56,15 @@ assert(engine.getObjectByName('engine bell inner liner').material.color.getHex()
 const command=kit.buildFreighter('container').getObjectByName('freight command module');
 assert(command.getObjectByName('commandId identification'));
 const bay=command.getObjectByName('freight observation bay');assert(bay);
-const windows=bay.children.filter(o=>o.userData.observationWindow);assert.equal(windows.length,7,'two forward panes, sides and overhead glazing');
+const windows=bay.children.filter(o=>o.userData.observationWindow);assert.equal(windows.length,8,'V windscreen, sides and four planar overhead facets');
 command.updateWorldMatrix(true,true);assert(new T.Box3().setFromObject(bay,true).min.x< -18.9,'observation bay projects ahead of the pressure housing in ship metres');
+const forward=windows.filter(o=>o.name.startsWith('forward canopy '));assert.equal(forward.length,2);
+assert(forward[0].geometry.attributes.normal.getZ(0)*forward[1].geometry.attributes.normal.getZ(0)<0,'windscreen facets meet in a V');
+for(const pane of forward){
+ const p=pane.geometry.attributes.position,x=Array.from({length:p.count},(_,i)=>p.getX(i));
+ assert(Math.max(...x)-Math.min(...x)>.3,'front panes sweep back from the prow ridge');
+}
+assert.equal(bay.userData.prow,'faceted wedge');
 assert.equal(command.children.filter(o=>o.name==='cylinder / glass').length,0,'replace the small portholes');
 for(const pane of windows){
  const p=pane.geometry.attributes.position,n=pane.geometry.attributes.normal;

@@ -537,3 +537,26 @@ OFF was 1.40/1.80 ms, 39 draws and 123,498 triangles. Both had 13.30/13.40 ms
 median/p95 rAF cadence. GPU execution was not measured; these are current-scene
 readiness figures, not a claimed whole-game speedup. Capital preparation was
 1,496.0 ms outside sampling. The additional glazing introduces no material draws.
+
+
+### Pointed angular prow iteration
+
+The observation bay now tapers more strongly toward a chevron windscreen.
+Two forward glass facets sweep back from a central vertical prow ridge; four
+planar roof facets carry that ridge into the pressure housing. A mirrored shear
+of the tapered loft gives the pointed plan silhouette. The roof and lower sill
+are divided at the centreline so each window remains flat rather than twisting
+a quad. There are now eight glazed panes. The rear housing, service packs,
+spine connection and engine-family styling are retained.
+
+The command module is about 10.0 m long and has 1,446 triangles, 78 more than
+the first observation-bay version; its five material batches are unchanged.
+No texture, material or shader feature was added. The final container / feeder /
+tanker counts are 61,218 / 27,702 / 28,142 triangles, still 7 / 7 / 6 material
+batches; the binary is 11,237,952 bytes. The exact hull bake includes the new prow.
+
+Focused checks verify the opposed windscreen normals, forward sweep, eight
+panes, planar glazing, outward winding, authored scale and shared batches. The
+industrial geometry/export and five-mode convoy collision suites passed.
+Visual inspection covered close front-quarter and top views plus the complete
+container carrier. Captures are under ignored `output/freighter-prow/`.

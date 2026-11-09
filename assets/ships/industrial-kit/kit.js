@@ -451,12 +451,18 @@ export function buildFrameFreighter(name,options={}){
 }
 
 // Command hardware uses the drive cassette's chamfers, collars and service packs.
-// Faceted observation bay: seven opaque glazed panes avoid transparency sorting.
+// Faceted observation bay: eight opaque glazed panes avoid transparency sorting.
 function observationBay(cabin){
-  const bay=group(cabin,'freight observation bay');bay.userData.windowCount=7;
+  const bay=group(cabin,'freight observation bay');bay.userData.windowCount=8;bay.userData.prow='faceted wedge';
   const section=[[-.6,-.85],[-.6,.85],[-.25,1.15],[.85,1.15],[1.2,.8],[1.2,-.8],[.85,-1.15],[-.25,-1.15]];
-  const front=section.map(([y,z])=>[-5,y,z]);
-  const rear=section.map(([y,z])=>[-3.45,.3+(y-.3)*1.22,z*1.22]);
+  // A tapered loft plus mirrored shear makes a planar V windscreen.
+  // Splitting roof/sill at the centreline keeps every facet flat.
+  function station(y,z,aft=false){
+    const scale=aft?1.22:.72,py=.3+(y-.3)*scale,pz=z*scale;
+    return [(aft?-3.45:-6)+.55*Math.abs(pz),py,pz];
+  }
+  const front=section.map(([y,z])=>station(y,z));
+  const rear=section.map(([y,z])=>station(y,z,true));
   function rib(a,b,width=.14){
     const av=new T.Vector3(...a),bv=new T.Vector3(...b),delta=bv.clone().sub(av);
     const geo=geometry('cupola mullion '+width,()=>{const geo=new T.BoxGeometry(width,1,width),uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,1124/2048,1-1636/2048);return geo;});
@@ -483,15 +489,25 @@ function observationBay(cabin){
     const glass=face(name,inset,'glass',desired);glass.userData.observationWindow=true;
   }
   for(let i=0;i<8;i++){
-    const j=(i+1)%8;
-    rib(front[i],front[j],.16);rib(rear[i],rear[j],.18);rib(front[i],rear[i],.12);
-    const points=[front[i],front[j],rear[j],rear[i]],out=[0,(section[i][0]+section[j][0])/2-.3,(section[i][1]+section[j][1])/2];
-    if([2,3,4,5,6].includes(i))windowPane('canopy side/roof '+i,points,out);
-    else face('observation sill '+i,points,'paint',out);
+    const j=(i+1)%8,out=[0,(section[i][0]+section[j][0])/2-.3,(section[i][1]+section[j][1])/2];
+    rib(front[i],rear[i],.12);
+    if(i===0||i===4){
+      const fm=station(section[i][0],0),rm=station(section[i][0],0,true);
+      rib(front[i],fm,.16);rib(fm,front[j],.16);rib(rear[i],rm,.18);rib(rm,rear[j],.18);rib(fm,rm,.12);
+      for(const [k,points] of [[0,[front[i],fm,rm,rear[i]]],[1,[fm,front[j],rear[j],rm]]]){
+        if(i===4)windowPane('canopy roof facet '+k,points,out);
+        else face('observation prow sill '+k,points,'paint',out);
+      }
+    }else{
+      rib(front[i],front[j],.16);rib(rear[i],rear[j],.18);
+      const points=[front[i],front[j],rear[j],rear[i]];
+      if([2,3,5,6].includes(i))windowPane('canopy side/roof '+i,points,out);
+      else face('observation sill '+i,points,'paint',out);
+    }
   }
   const left=[[-.6,0],[-.6,-.85],[-.25,-1.15],[.85,-1.15],[1.2,-.8],[1.2,0]];
-  for(const sign of [-1,1])windowPane('forward canopy '+sign,left.map(([y,z])=>[-5,y,z*sign]),[-1,0,0]);
-  rib([-5,-.6,0],[-5,1.2,0],.12);
+  for(const sign of [-1,1])windowPane('forward canopy '+sign,left.map(([y,z])=>station(y,z*sign)),[-1,0,0]);
+  rib(station(-.6,0),station(1.2,0),.12);
   return bay;
 }
 
