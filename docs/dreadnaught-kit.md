@@ -346,7 +346,10 @@ This uses the ordinary flight simulator controls, physics, HUD, NPCs, projectile
 stepping and damage resolver. The player flies between allied and red-team
 1,305 m battleships exchanging main-battery fire. Customized bench configurations
 are not passed through. The ships patrol on bounded opposing arcs at about
-12 m/s, with a gentle heading swing. Red starts 1,500 m across the beam and
+12 m/s. Outside the scripted bridge encounter, each surviving ship turns toward
+the nearest broadside to its opponent at up to 0.035 rad/s (2 degrees/s),
+scaled by its surviving engine fraction. Hull masking and dorsal/ventral firing
+arcs still apply; a broadside exposes the facing deck rather than all 12 guns. Red starts 1,500 m across the beam and
 180 m higher, allowing the allied dorsal and hostile ventral batteries clear
 firing arcs. Red illumination and red bolts distinguish the opposing ship.
 

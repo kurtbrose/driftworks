@@ -34,14 +34,25 @@
         }
         /** @param {number} elapsed @param {FlightView} view */function step(elapsed,view){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;var dt=Math.min(.1,elapsed);seconds+=dt;
-            // Bounded, opposing patrol arcs: ~12 m/s, a slow heading swing, no eventual collision/drift.
+            // Bounded patrol arcs preserve separation; powered hulls turn to expose a broadside.
             states.forEach(function(s,i){var engines=rigs[i].components?rigs[i].components().filter(function(p){return p.kind==='engine';}):[],power=engines.length?engines.filter(function(p){return p.hp>0;}).length/engines.length:1;motion[i]+=dt*power;var phase=motion[i]*.018,sign=i===0?-1:1,old=s.position.slice();if(s.integrity>0){
                 if(options&&options.bridge){
                     var orbit=(i===0?-Math.PI/2:Math.PI/2)+(i===0?1:-1)*motion[i]*.006;
                     s.position[0]=(i*12000+Math.cos(orbit)*675)/U;s.position[1]=(-2000+Math.sin(orbit)*675)/U;
                     s.heading=orbit+Math.PI/2;
-                }else{s.position[0]=starts[i].position[0]+sign*Math.sin(phase)*650/U;s.position[1]=starts[i].position[1]+sign*(1-Math.cos(phase))*120/U;s.heading=starts[i].heading+sign*Math.sin(phase*.7)*.12;}
+                }else{s.position[0]=starts[i].position[0]+sign*Math.sin(phase)*650/U;s.position[1]=starts[i].position[1]+sign*(1-Math.cos(phase))*120/U;}
             }s.velocity=s.position.map(function(v,k){return (v-old[k])*U/dt;});});
+            if(!(options&&options.bridge))states.forEach(function(s,i){
+                var opponent=states[1-i];if(s.integrity<=0||opponent.integrity<=0)return;
+                var engines=rigs[i].components?rigs[i].components().filter(function(p){return p.kind==='engine';}):[];
+                var power=engines.length?engines.filter(function(p){return p.hp>0;}).length/engines.length:1;
+                var bearing=Math.atan2(opponent.position[1]-s.position[1],opponent.position[0]-s.position[0]);
+                // Either beam gives the same gun clearance. Choose the nearest
+                // orientation, so ships never spin around to change sides.
+                var error=Math.atan2(Math.sin(bearing+Math.PI/2-s.heading),Math.cos(bearing+Math.PI/2-s.heading));
+                if(error>Math.PI/2)error-=Math.PI;else if(error<-Math.PI/2)error+=Math.PI;
+                s.heading+=Math.max(-.035*power*dt,Math.min(.035*power*dt,error));
+            });
             if(options&&options.bridge){
                 var opposition=Math.cos(-Math.PI+(motion[0]+motion[1])*.006),clear=opposition<-.25;
                 states.forEach(function(s){s.mainBatteryClear=clear;});

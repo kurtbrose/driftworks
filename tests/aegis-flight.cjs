@@ -288,6 +288,23 @@ const zoneMeshes=zonedRig.geometry(),zoneVertices=zoneMeshes.map(b=>b.vertices);
 for(let i=0;i<600;i++){zoned.combat.time+=1/60;zonedRig.step(1/60,zoned);}
 assert.ok(zonedRig.telemetry().capitals.every(c=>c.shots>0&&c.hits>0),'both battlefield capitals exchange real main-battery hits');
 assert.ok(zonedRig.geometry().every((b,i)=>b.vertices===zoneVertices[i]),'battlefield movement retains GPU buffers');
+let previousHeadings=zonedRig.telemetry().capitals.map(c=>c.heading);
+for(let i=0;i<1800;i++){
+ zonedRig.step(1/60,zoned);
+ const capitals=zonedRig.telemetry().capitals;
+ capitals.forEach((c,k)=>assert.ok(Math.abs(c.heading-previousHeadings[k])<=.035/60+1e-10,'broadside turns respect capital slew rate'));
+ previousHeadings=capitals.map(c=>c.heading);
+}
+const broadsideReport=zonedRig.telemetry();
+broadsideReport.capitals.forEach((c,i)=>{
+ const other=broadsideReport.capitals[1-i],bearing=Math.atan2(other.position[1]-c.position[1],other.position[0]-c.position[0]);
+ assert.ok(Math.abs(Math.cos(bearing-c.heading))<.03,'both hulls acquire a broadside against the moving opponent');
+ const guns=broadsideReport.mounts.slice(i*24,(i+1)*24).filter(m=>m.kind==='heavy');
+ assert.ok(guns.filter(m=>m.shots>0).length>=6,'both facing six-gun decks participate');
+ assert.ok(c.hits>0&&c.integrity<20000,'both capitals deliver and receive real damage');
+});
+console.log('PASS bounded broadside steering and reciprocal six-gun deck fire',JSON.stringify(broadsideReport.capitals));
+
 zonedRig.reset(zoned.combat);assert.deepEqual(zonedRig.telemetry().capitals.map(c=>c.position),placed.map(c=>c.position));
 console.log('PASS zone-defense capitals: sortie-relative placement, real battery fire, stable buffers, reset and preserved fighter ownership');
 const pausedBattle=fixture();pausedBattle.combat.enabled=false;pausedBattle.combat.enemies=[];
