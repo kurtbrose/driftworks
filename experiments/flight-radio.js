@@ -81,6 +81,7 @@
         }
         /** @param {Line} line */
         function speak(line) {
+            if(line.interrupt)stop();
             closing = false;
             reassurance = line.event === 'emotionalReply';
             if (portrait) portrait.show(line);

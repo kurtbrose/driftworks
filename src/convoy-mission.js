@@ -154,7 +154,7 @@
                         members.forEach(function(e){if(e.convoyRaider)e.convoyRaider.cargoId=exposed.ship.id;});event(group,'commit');
                     }
                 }
-            }else if(group.phase!=='withdraw'&&(depleted||group.passes>=2||d.overload>=6)){
+            }else if(group.phase!=='withdraw'&&(depleted||group.passes>=2||!s.evacuation&&d.overload>=6)){
                 group.phase='withdraw';group.until=combat.time;event(group,'withdraw');
             }
             if(group.phase==='withdraw'&&combat.time-group.until>3&&members.every(function(e){return cargo.every(function(ship){return range(e.pose.eye,ship.position)>5500;});})){
@@ -235,7 +235,8 @@
         const cargo=s.ships.find(function(ship){return ship.id===r.cargoId&&ship.hull>0&&(!s.evacuation||!ship.arrived);})||s.ships.find(function(ship){return ship.hull>0&&(!s.evacuation||!ship.arrived);});if(!cargo)return false;r.cargoId=cargo.id;
         if(raid.phase==='withdraw'){
             craft.mode='withdraw';craft.targetId=null;r.stage='extend';craft.retarget=.75;
-            flyRaider(craft,cargo.position.map(function(v,k){return v+raid.offset[k]*3/U;}),craft.profile.maxVelocity[2],true,dt);return true;
+            var exit=s.evacuation?s.evacuation.entry.map(function(v,k){return v+(k===1?7500/U:0);}):cargo.position.map(function(v,k){return v+raid.offset[k]*3/U;});
+            flyRaider(craft,exit,craft.profile.maxVelocity[2],true,dt);return true;
         }
         if(raid.phase==='hold'){
             craft.mode='holding';craft.targetId=null;craft.retarget=.75;
@@ -256,6 +257,11 @@
         }
         var danger=threat(combat,craft),opponent=/** @type {import('../experiments/types').Craft|undefined} */(undefined);
         if(r.role==='strike'&&danger&&range(danger.pose.eye,craft.pose.eye)>450&&combat.time-craft.damagedAt>=2&&!danger.guns.bolts.length)danger=undefined;
+        if(s.evacuation&&r.role==='strike'){
+            if(r.stage==='defend'&&combat.time>=(r.breakUntil||0)){r.stage='attack';r.commitUntil=combat.time+7;}
+            if(combat.time<(r.commitUntil||0))danger=undefined;
+            else if(danger&&r.stage!=='defend')r.breakUntil=combat.time+3;
+        }
         if(r.role==='cover'){
             members.forEach(function(e){var candidate=threat(combat,e);if(candidate&&(!opponent||range(candidate.pose.eye,craft.pose.eye)<range(opponent.pose.eye,craft.pose.eye)))opponent=candidate;});
         }else opponent=danger;
@@ -417,7 +423,7 @@
         if(s.evacuation){
             var story=DW.convoyAmbush.radio(combat);
             if(story&&(!busy||story.priority)){
-                var line=story.wing?fighterCue(story.key,story.text,combat.enemies.find(function(c){return c.team==='ally'&&c.hp>0;})||combat.player):cue(story.key,story.text,story.civilian?0:undefined);r.wait=6;return line;
+                const storyLine=Object.assign(story.wing?fighterCue(story.key,story.text,combat.enemies.find(function(c){return c.team==='ally'&&c.hp>0;})||combat.player):cue(story.key,story.text,story.civilian?0:undefined),{interrupt:!!story.priority});r.wait=6;return storyLine;
             }
             if(busy)return null;
             if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. You got them out.':'Lancer, Control. Convoy lost. Withdraw.');

@@ -43,13 +43,13 @@
                 e.withdrawalAt=t;
             }
             const b=e.capitals[0];var forward=e.exit.normal,right=[forward[1],-forward[0],0],age=t-e.rescueAt;
-            var goal=e.exit.position.map(function(v,k){return v*U-forward[k]*1050+right[k]*(age>12?1450:0);});
+            var goal=e.exit.position.map(function(v,k){return v*U-forward[k]*850+right[k]*(age>20?700:0);});
             var delta=goal.map(function(v,k){return v-b.position[k]*U;}),distance=Math.hypot(...delta),speed=Math.min(95,distance/2);
             b.velocity=unit(delta).map(function(v){return b.integrity>0?v*speed:0;});b.position.forEach(function(v,k){b.position[k]=v+b.velocity[k]*dt/U;});
             var arrived=0;s.ships.forEach(function(ship){
                 if(ship.hull<=0||ship.arrived)return;
                 var relative=ship.position.map(function(v,k){return (v-e.exit.position[k])*U;}),along=relative.reduce(function(n,v,k){return n+v*forward[k];},0),radial=Math.hypot(...relative.map(function(v,k){return v-forward[k]*along;}));
-                if(t>=e.bastionClearAt&&along>=0&&radial<e.exit.radiusM-80){ship.arrived=true;ship.velocity=[0,0,0];arrived++;}
+                if(t>=e.bastionClearAt&&along>=140&&radial<e.exit.radiusM-80){ship.arrived=true;ship.velocity=[0,0,0];arrived++;}
             });if(arrived)DW.flightSim.collisionChanged(combat);
         }
         stepSalvos(combat,dt);

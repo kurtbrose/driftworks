@@ -256,7 +256,7 @@ export type ArtCraft = {
 export type CollisionShape = { kind: 'sphere'; radiusM: number } | { kind: 'model'; modelId: string };
 export type Craft = ArtCraft & {
     convoyBattle?:{front:number;wing:number;slot:number};
-    convoyRaider?:{wing:number;slot:number;role:'strike'|'cover';cargoId:string;stage:'form'|'attack'|'defend'|'extend';holdUntil:number;runAt:number;fired:number};
+    convoyRaider?:{breakUntil?:number;commitUntil?:number;wing:number;slot:number;role:'strike'|'cover';cargoId:string;stage:'form'|'attack'|'defend'|'extend';holdUntil:number;runAt:number;fired:number};
     plotArmor?: boolean;
     battleZone?: {id:number;center:Vector;radiusM:number;returning?:boolean};
     hangarLaunch?:{remaining:number};
@@ -709,6 +709,7 @@ export type CommsState = {
     } | null;
 };
 export type Line = {
+    interrupt?:boolean;
     runwayPortraitIndex?: number;
     civilianPortraitIndex?: number;
     portraitIndex?: number;

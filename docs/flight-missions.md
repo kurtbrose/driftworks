@@ -28,6 +28,9 @@ The fixed-step encounter in `src/convoy-ambush.js` owns the following beats:
   These use real swept cargo hull hits and normal damage; no cargo loss is scripted.
   Up to four three-fighter strike wings arrive, at least 20 seconds apart, with
   no new wing while more than three fresh raiders are active.
+  Capital-caused pressure does not cancel healthy ambush wings. Strike pilots
+  take short defensive breaks and then recommit to cargo; depleted wings still
+  retreat to a fixed, distant exit that can satisfy the departure condition.
 - 38 seconds: Control confirms the rally and delayed relief. Existing stable
   interception assignments and amber TASK radar/ship/edge cues identify live wings.
 - 96 seconds: a rescue mouth opens ahead of the rerouted convoy. Bastion emerges
@@ -42,8 +45,10 @@ scene units; routes, rally and cruise intent use SI units. Harrow's outgoing
 rounds are stepped headlessly as well as in the browser; its remote hull does
 not collide with local fighters. Bastion's native Aegis combat remains owned by
 the browser facade and has a separate actual-rig regression. The seeded unattended
-route test (durable test pilot only) currently ends around 175 seconds: 27 escaped,
+route test (durable test pilot only) currently ends around 207 seconds: 27 escaped,
 three lost to physical hits. This verifies progression, not player difficulty.
+The hostile opening is 1.3 km in diameter; the rescue opening is 1.6 km. These
+are initial staging values, not a requirement imposed by the capital's length.
 
 Control's assigned enemies carry amber TASK brackets on radar, ship markers and
 offscreen arrows. Entire live wings are marked, including survivors after leader
@@ -53,6 +58,7 @@ dead, withdrawing and departed ships and never changes the player's target lock.
 
 Focused checks: `node tests/fleet-evacuation.cjs`,
 `node tests/evacuation-capitals.cjs`, `node tests/flight-hud-markers.cjs`, and the
+`node tests/convoy-ambush-tactics.cjs` regression, plus the
 convoy battle/director/arrival checks. Original prototype measurements are retained
 in `docs/benchmarks/fleet-evacuation.md`; they predate this staged encounter.
 
