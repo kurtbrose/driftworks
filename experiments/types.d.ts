@@ -327,7 +327,9 @@ export type ConvoyRaid={id:number;phase:'hold'|'approach'|'engage'|'regroup'|'wi
 export type ConvoyBattleOrder={id:string;kind:'assist'|'intercept'|'escort';front:number|null;packet:number;targetId:string;position:Vector;label:string;priority:number;since:number};
 export type ConvoyBattleState={fronts:{id:number;name:string;offset:Vector;center:Vector;packet:number;radiusM:number;allies:number;enemies:number;alliedHull:number;released:boolean}[];nextAssessment:number;nextDispatch:number;order:ConvoyBattleOrder|null;pending:boolean;lastCall:number};
 export type ConvoyState = {evacuation?:FleetEvacuation;navigation?:import("../src/types").FleetFormation;coverage?:Record<string,number[]>;nextCoverage?:number;elapsed:number;speedMps:number;destinationY:number;complete:boolean;raidStarted:boolean;arrivalPortal?:ConvoyPortal;battle?:ConvoyBattleState;arrivalFleet:ConvoyReceptionShip[];raids:ConvoyRaid[];director:{attention:DirectorAttention;phase:'opening'|'patrol'|'contact'|'threatened'|'under-fire'|'recovery';raids:number;reservePlanned:boolean;overload:number;withdrawn:number;events:{wing:number;kind:string}[];nextRaidAt:number;pressure:number;lastHull:number;lastDamageAt:number;quietSince:number;patrol:number;stationAt:number;waypoint:{kind:'patrol'|'intercept'|'assist'|'escort';label?:string;front?:number|null;packet:number;position:Vector;targetId:string|null}|null};radio:{wait:number;opening:number;said:string[];phase:'arrival'|'cruise'|'combat'|'damage-report'|'complete';report:number;chat:number;chatTurn:number};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;forward?:Vector;hull:number;maxHull:number;arrived:boolean}[]};
+export type PortalSkyView={position:Vector;radius:number;sky?:number;localSky?:number;other?:PortalSkyView};
 export type Combat = {
+    wormholes?:WormholeLink[];
     convoy?:ConvoyState;
     scramble?:{beat:number;radio:number};
     evacuation?:EvacuationState;
@@ -738,7 +740,7 @@ export type EllisDraw={lensTransit?:HullTransit;projected?:boolean;lensRadius?:n
 export type YoYoFrame={view:Pose;points:{point:number[];region:number}[];expected:number[][];distance:number;observerL:number;halfSize:number};
 export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
-    wormholes:{occluded:(eye:number[],point:number[],mouths:{position:number[];radius:number}[])=>boolean;separate:(position:number[],axis:number[],radius:number,others:{position:number[];radius:number}[],clearance:number)=>number[];phase:(time:number,life?:WormholeLife)=>{amount:number;visible:boolean;traversable:boolean;state:string};request:(life:WormholeLife,open:boolean,time:number)=>void;clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
+    wormholes:{linkPortal:(combat:Combat,portal:ConvoyPortal,id:string,destination:number,sky:string,units:number)=>WormholeLink;travel:(links:WormholeLink[],before:number[],pose:Pose,time:number,units:number)=>boolean;skyView:(links:WormholeLink[],space:number,time:number,units:number)=>PortalSkyView|null;occluded:(eye:number[],point:number[],mouths:{position:number[];radius:number}[])=>boolean;separate:(position:number[],axis:number[],radius:number,others:{position:number[];radius:number}[],clearance:number)=>number[];phase:(time:number,life?:WormholeLife)=>{amount:number;visible:boolean;traversable:boolean;state:string};request:(life:WormholeLife,open:boolean,time:number)=>void;clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
     multiplayerFlight:{mount:(session:ReturnType<ExperimentModules['flightSession']['create']>,loadout:()=>{profile:number;weapon:number;model:string})=>{isGuest:()=>boolean;update:(demand:Demand,paused:boolean)=>void}};
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
@@ -968,7 +970,7 @@ export type ExperimentModules = {
             getStyle:()=>number;
             getFrameState:()=>SkyFrameState;
             setFrameState:(state:SkyFrameState)=>void;
-            renderEye:(pose:Pose,eye:import('./flight-vr-types').SkyEye,empty:boolean,elapsed?:number,motionOpacity?:number,arrival?:{position:Vector;radius:number}|null)=>void;
+            renderEye:(pose:Pose,eye:import('./flight-vr-types').SkyEye,empty:boolean,elapsed?:number,motionOpacity?:number,arrival?:PortalSkyView|null)=>void;
             setFov:(degrees:number)=>void;
             cueImpact:(stage:string|number,seconds?:number)=>boolean;
             resetImpact:()=>void;
@@ -984,7 +986,7 @@ export type ExperimentModules = {
             getLighting: () => import('../src/types').SkyEnvironmentLighting | null;
             setLightingEnabled: (enabled:boolean) => void;
             getRenderStats: () => RenderStats['sky'];
-            render: (pose: Pose, renderScale: number, empty: boolean, elapsed?:number, motionOpacity?:number, arrival?:{position:Vector;radius:number}|null) => void;
+            render: (pose: Pose, renderScale: number, empty: boolean, elapsed?:number, motionOpacity?:number, arrival?:PortalSkyView|null) => void;
         };
     };
     flightRadar: {

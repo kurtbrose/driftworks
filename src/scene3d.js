@@ -455,7 +455,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
     var drawLensRadius=0,drawProjected=false;
     var drawLensTransit=/** @type {import('../experiments/types').HullTransit|undefined} */(undefined);
     var drawLensCenter=/** @type {number[]|null} */(null);
-    var drawRegion=0,surfaceRegion=0,bridgeRevision=/** @type {string|null} */(null);
+    var studySpaceFilter=false,drawRegion=0,surfaceRegion=0,bridgeRevision=/** @type {string|null} */(null);
     /** One submission path for hulls and effects, including uniform reset. @param {import('../experiments/types').Batch} batch */
     function place(batch){
       var p=(/** @type {Required<import('./types').DriftworksNamespace>} */(DW)).wormholes.resolve(batch);
@@ -639,7 +639,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       /** @type {import('./three-types').Object3D & {material:import('./three-types').Material}} */(entry.object).material=submitted;
       submitted.blending=blending;submitted.depthWrite=depthWrite;
       entry.material.blending=blending;entry.material.depthWrite=depthWrite;entry.object.geometry=mesh.buffer;
-      scene.add(entry.object);drawIndex++;
+      entry.object.visible=true;scene.add(entry.object);drawIndex++;
       renderStats.drawCalls++;if(lines)renderStats.lines+=mesh.count/2;else renderStats.triangles+=mesh.count/3*(mesh.buffer.instanceCount||1);
       frameMeshes.add(mesh.buffer);frameMaterials.add(materialFinish+':'+!!rock+':'+color.join(','));
     }
@@ -1039,6 +1039,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         setFinish(0);setUniform('Spin',w.elapsedSeconds);setUniform('Flat',0);depthWrite=true;blending=THREE.NoBlending;
       }
       renderStats.bridgeObjectPaths=0;renderStats.bridgeObjectPatches=0;renderStats.bridgeObjectError=0;renderStats.bridgeObjectBad=0;renderStats.bridgeHistoryValid=0;renderStats.bridgeCaptures=0;renderStats.bridgeCpuMs=0;
+      if(studySpaceFilter&&!bridgeRenderer)drawPool.slice(0,drawIndex).forEach(function(entry){entry.object.visible=entry.object.visible&&(entry.region||0)===surfaceRegion;});
       if(vr&&vr.active()){vr.renderSky();renderer.render(scene,camera);
       }else if(bridgeRenderer&&!shadowPass){
         var target=/** @type {number[]} */(uniforms.uTarget.value);
@@ -1135,6 +1136,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         if(enabled&&!bridgeRenderer&&DW.ellisRenderer){bridgeRenderer=DW.ellisRenderer.create(THREE,renderer);if(shipStretchingOverride!==null)bridgeRenderer.setShipStretching(shipStretchingOverride);}
         if(!enabled&&bridgeRenderer){bridgeRenderer.dispose();bridgeRenderer=null;}
       },
+      setStudySpaceFilter:/** @param {boolean} enabled */function(enabled){studySpaceFilter=enabled;},
       /** @param {{mode:string,flat:boolean,scale:number,mothership:boolean,actors:boolean}} value */
       setStudyDiagnostics: function(value){if(study)diagnostics={mode:value.mode==='empty'||value.mode==='boxes'?value.mode:'normal',flat:!!value.flat,scale:Math.max(.25,Math.min(1,value.scale)),mothership:!!value.mothership,actors:!!value.actors};},
       getRenderStats: function(){return Object.assign({},renderStats);},

@@ -64,8 +64,9 @@
         /** @type {import('./types').FleetEvacuation|undefined} */var plan;
         /** @type {Parameters<import('./types').AegisFlightRig['reset']>[0]} */var renderCombat;
         var groups=ships.map(function(ship){return ship.geometry();}),batches=groups.flat();
-        function updatePlacements(){
-            placements.forEach(function(p,i){p.visible=!!states[i].present;DW.wormholes.clear(p);});
+        /** @param {number} [space] */function updatePlacements(space){
+            space=space||0;
+            placements.forEach(function(p,i){p.visible=!!states[i].present;p.region=space;DW.wormholes.clear(p);});
             if(plan){
                 var time=renderCombat?renderCombat.time:0,entry=renderCombat&&renderCombat.convoy&&renderCombat.convoy.arrivalPortal;
                 var entryPhase=entry?DW.wormholes.phase(time,entry):{amount:0,visible:false};
@@ -74,10 +75,12 @@
                 var exitPhase=DW.wormholes.phase(time,plan.exit);
                 placements[0].visible=!!states[0].present&&exitPhase.visible;
                 DW.wormholes.mouth(placements[0],plan.exit.position,plan.exit.normal,plan.exit.radiusM/U*exitPhase.amount,exitPhase.amount<1?'aperture':'back');
+                if(space===1){DW.wormholes.clear(placements[1]);placements[1].visible=!!states[1].present;placements[0].visible=false;}
+                else if(space!==0){placements[0].visible=false;placements[1].visible=false;}
             }
         }
-        function geometry(){
-            updatePlacements();
+        /** @param {import('./types').Pose} [pose] */function geometry(pose){
+            updatePlacements(pose&&pose.region);
             ships.forEach(function(ship){ship.geometry();});
             var active=states.map(function(state,i){return state.present?groups[i]:[];}).flat();
             if(active.length!==batches.length||active.some(function(batch,i){return batch!==batches[i];}))batches=active;
@@ -91,9 +94,9 @@
                 if(plan){plan.capitals=states;if(combat&&combat.convoy)combat.convoy.arrivalFleet=states;}
             },step:function(dt,view){if(view.combat.convoy&&states[0].present)ships[0].step(dt,view);},
             geometry:geometry,
-            effects:function(pose,shields){updatePlacements();return states[0].present?ships[0].effects(pose,shields):[];},
+            effects:function(pose,shields){updatePlacements(pose.region);return states[0].present?ships[0].effects(pose,shields):[];},
             readout:function(){return states.filter(function(s){return s.present;}).map(function(ship){return ship.callsign+' / '+Math.ceil(ship.integrity/200)+'%';}).join(' / ');},
-            hit:function(a,b,bolt){return states[0].present?ships[0].hit(a,b,bolt):null;},
+            hit:function(a,b,bolt){return states[0].present&&!(bolt&&bolt.region||0)?ships[0].hit(a,b,bolt):null;},
             damage:function(point,amount,combat){const ship=ships[0];return !!states[0].present&&!!ship.damage&&ship.damage(point,amount,combat);},
             components:function(){return states[0].present&&ships[0].components?ships[0].components():[];},
             telemetry:function(){var stats=ships.map(function(ship){return ship.telemetry();});return {seconds:stats[0].seconds,contacts:stats.reduce(function(n,s){return n+s.contacts;},0),launches:0,shots:stats.reduce(function(n,s){return n+s.shots;},0),hits:stats.reduce(function(n,s){return n+s.hits;},0),mounts:stats.flatMap(function(s){return s.mounts;}),capitals:states.map(function(ship,i){return {team:ship.team,position:ship.position.slice(),heading:ship.heading,integrity:ship.integrity,shots:stats[i].shots,hits:stats[i].hits};})};}};
@@ -106,6 +109,7 @@
             var batch=DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:axes.right,back:axes.back,up:axes.up,velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);DW.wormholes.own([batch],placement);return batch;
         });
         var portals=[state.arrivalPortal,state.evacuation?state.evacuation.exit:undefined];
+        if(view.region&&combat.wormholes)portals=combat.wormholes.flatMap(function(link){var mouth=link.mouths.find(function(m){return m.space===view.region;});return mouth?[{position:mouth.position.map(function(v){return v/U;}),radiusM:mouth.radius,opensAt:link.lifecycle&&link.lifecycle.opensAt||0,closesAt:link.lifecycle&&link.lifecycle.closesAt||Infinity,spawned:true}]:[];});
         portals.forEach(function(portal){
         if(portal&&combat.time>=portal.opensAt&&combat.time<portal.closesAt){
             var age=combat.time-portal.opensAt,radius=(portal.radiusM||210)*DW.wormholes.phase(combat.time,portal).amount/U;
@@ -129,7 +133,7 @@
                     });
                 }
             }
-            effects.push({vertices:new Float32Array(vertices),color:state.evacuation&&portal===state.evacuation.exit?[.1,.8,1]:[.3,.12,1],shieldGlow:true});
+            effects.push({vertices:new Float32Array(vertices),color:state.evacuation&&portal.radiusM===state.evacuation.exit.radiusM?[.1,.8,1]:[.3,.12,1],region:view.region||0,shieldGlow:true});
         }
         });
         return effects;

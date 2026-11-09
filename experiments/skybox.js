@@ -147,6 +147,7 @@ varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
 uniform vec4 arrivalMouth,arrivalMouth2;uniform vec3 arrivalEye;
+uniform vec2 arrivalSkies;uniform float linkedSpace;
 uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeThinShell;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;uniform vec2 bridgeSpaceSkies;
 float bridgeFootprint=0.;
 uniform sampler2D panorama;
@@ -309,10 +310,16 @@ vec3 jadeSatellites(vec3 sky,vec3 ray){
 }
 ${bridgeOptics?bridgeOptics.shader:'uniform float ellisRegion; struct EllisRay {float hit;}; EllisRay ellisInit(vec3 e,vec3 r){return EllisRay(0.);} vec3 ellisExit(EllisRay e){return vec3(0.);} vec3 ellisPoint(EllisRay e,float t,out float side){side=0.;return vec3(0.);}'}
 ${bridgeOptics&&bridgeOptics.latticeShader?bridgeOptics.latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'}
+vec3 linkedSky(vec3 ray,float preset){
+    if(preset>1.5)ray=vec3(-ray.y,ray.x,ray.z);
+    vec2 uv=vec2(atan(ray.y,ray.x)/6.28318530718+.5,acos(clamp(ray.z,-1.,1.))/3.14159265359);
+    vec3 color=preset>.5?texture2D(rimeSurface,uv).rgb:texture2D(panorama,uv).rgb;
+    return color*(preset>1.5?vec3(1.,.55,.38):vec3(1.))*exposure;
+}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
     vec3 arrivalRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
-    float nearestMouth=1.e30;vec3 nearestNormal=vec3(0.);
+    float nearestMouth=1.e30,nearestSky=0.;vec3 nearestNormal=vec3(0.);
     for(int mouthIndex=0;mouthIndex<2;mouthIndex++){vec4 mouth=mouthIndex==0?arrivalMouth:arrivalMouth2;
     if(mouth.w>0.){
         vec3 ray=arrivalRay;
@@ -320,14 +327,15 @@ void main(){
         float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
         if(along<0. && impact2<1. && dot(offset,offset)>1.){
             float entry=-along-sqrt(max(0.,1.-impact2)),distance=entry*mouth.w;
-            if(distance<nearestMouth){nearestMouth=distance;nearestNormal=normalize(offset+ray*entry);}
+            if(distance<nearestMouth){nearestMouth=distance;nearestNormal=normalize(offset+ray*entry);nearestSky=mouthIndex==0?arrivalSkies.x:arrivalSkies.y;}
         }
     }}
     if(nearestMouth<1.e29){
         vec3 outgoing=normalize(2.*dot(arrivalRay,nearestNormal)*nearestNormal-arrivalRay);
         vec2 uv=vec2(atan(outgoing.y,outgoing.x)/6.28318530718+.5,acos(clamp(outgoing.z,-1.,1.))/3.14159265359);
-        gl_FragColor=vec4(texture2D(panorama,uv).rgb*exposure,1.);return;
+        gl_FragColor=vec4(linkedSky(outgoing,nearestSky),1.);return;
     }
+    if(linkedSpace>.5){gl_FragColor=vec4(linkedSky(arrivalRay,linkedSpace),1.);return;}
     if(bridgeEnabled>.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         float side=ellisRegion;
@@ -900,6 +908,17 @@ void main(){
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
         }
+        var linkedTexture=/** @type {WebGLTexture|null} */(null);
+        function loadLinkedSky(){
+            if(linkedTexture)return;
+            linkedTexture=gl.createTexture();var map=linkedTexture;
+            gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,map);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,1,1,0,gl.RGB,gl.UNSIGNED_BYTE,new Uint8Array([4,8,14]));
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
+            var linkedImage=new Image();linkedImage.onload=function(){gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,map);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,linkedImage);gl.activeTexture(gl.TEXTURE0);canvas.dataset.linkedSky='ready';};
+            linkedImage.src=assetUrl('../assets/backgrounds/hero-composition-v1-8k.jpg');
+        }
         var image = new Image();
         image.onload = function () {
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
@@ -947,7 +966,7 @@ void main(){
                 if(value){var hdrFilter=gl.getExtension('OES_texture_float_linear')?gl.LINEAR:gl.NEAREST;hdrTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,256,0,gl.RGBA,gl.FLOAT,value.radiance||null);gl.activeTexture(gl.TEXTURE0);}
             },cueImpact:cueImpact,resetImpact:resetImpact,getImpactState:impactCues.snapshot,setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
-            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] @param {number} [motionOpacity] @param {{position:number[];radius:number;other?:{position:number[];radius:number}}|null} [arrival] */ function (pose, renderScale, empty,elapsed,motionOpacity,arrival) {
+            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] @param {number} [motionOpacity] @param {import('./types').PortalSkyView|null} [arrival] */ function (pose, renderScale, empty,elapsed,motionOpacity,arrival) {
                 if(window.Driftworks.gpuDiagnostics)window.Driftworks.gpuDiagnostics.mark('sky.render');
                 if(effects&&sourceStyle!==style){
                     effects.setSources(cameraSources||(hdrTexture?[]:landmarkSky&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.fromFeatures(missionSky.features,authoredAssetSources):authoredSources[String(style)]||[]));sourceStyle=style;
@@ -994,6 +1013,9 @@ void main(){
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
+                if(arrival&&(arrival.sky||arrival.localSky||arrival.other&&arrival.other.sky))loadLinkedSky();
+                gl.uniform1f(gl.getUniformLocation(sky,'linkedSpace'),arrival&&arrival.localSky||0);
+                gl.uniform2f(gl.getUniformLocation(sky,'arrivalSkies'),arrival&&arrival.sky||0,arrival&&arrival.other&&arrival.other.sky||0);
                 var units=arrival?(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT:1;
                 gl.uniform4fv(gl.getUniformLocation(sky,'arrivalMouth'),arrival?arrival.position.map(function(v){return v*units;}).concat(arrival.radius):[0,0,0,0]);
                 var other=arrival&&arrival.other;gl.uniform4fv(gl.getUniformLocation(sky,'arrivalMouth2'),other?other.position.map(function(v){return v*units;}).concat(other.radius):[0,0,0,0]);
@@ -1015,9 +1037,10 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky,'cubeProjection'),missionSky.cubeStages?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bakedBlend'),0);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), effectiveExposure);
-                gl.uniform1i(gl.getUniformLocation(sky,'rimeSurface'),rimeTexture?7:0);
+                gl.uniform1i(gl.getUniformLocation(sky,'rimeSurface'),rimeTexture||linkedTexture?7:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'rimeDetailed'),rimeLoaded?1:0);
                 if(rimeTexture){gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,rimeTexture);}
+                if(linkedTexture){gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,linkedTexture);}
                 gl.uniform1f(gl.getUniformLocation(sky,'hdrEnabled'),hdrTexture?1:0);gl.uniform1i(gl.getUniformLocation(sky,'hdrEnvironment'),4);
                 if(hdrTexture){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.activeTexture(gl.TEXTURE0);}
                 gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,noiseTexture);gl.activeTexture(gl.TEXTURE0);
@@ -1090,7 +1113,7 @@ void main(){
                 gl.bindTexture(gl.TEXTURE_2D,!hdrTexture && !landmarkSky && style>=10 ? panoramaTextures[style] : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
-                if(!hdrTexture && !landmarkSky && style>=7 && style<=9 && heroFeatures.length) {
+                if(!(arrival&&arrival.localSky)&&!hdrTexture && !landmarkSky && style>=7 && style<=9 && heroFeatures.length) {
                     uniforms(heroProgram,pose,width/height,dpr);
                     gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),effectiveExposure);
                     gl.uniform1i(gl.getUniformLocation(heroProgram,'feature'),0);

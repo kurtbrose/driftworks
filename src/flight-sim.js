@@ -114,9 +114,15 @@
         var craft = t.player, pose = craft.pose, guns = craft.guns;
         var convoyCraft=t.convoy?participants(t).map(function(c){return c.pose.eye.slice();}):null;
         var convoyShips=t.convoy?t.convoy.ships.map(function(s){return s.position.slice();}):null;
+        var travelers=/** @type {import('../experiments/types').Pose[]} */(t.wormholes?[pose,...t.enemies.map(function(c){return c.pose;}),...t.wrecks.map(function(c){return c.pose;})]:[]);
+        var beforeTravel=travelers.map(function(p){return p.eye.slice();});
         DW.flightSim.stepInput(craft, controls, dt);
         var hullBefore = t.hull, shieldBefore = t.shield, hitBefore = t.lastHit;
-        DW.flightSim.step(t, pose, dt, radius, terrainHit, afterMovement);
+        DW.flightSim.step(t, pose, dt, radius, terrainHit, function(){
+            var changed=false;travelers.forEach(function(p,i){if(DW.wormholes.travel(t.wormholes||[],beforeTravel[i],p,t.time,U))changed=true;});
+            if(changed){t.targetId=null;t.targetLocked=false;DW.flightSim.collisionChanged(t);}
+            if(afterMovement)afterMovement();
+        });
         var convoyImpact=convoyCraft&&convoyShips?DW.convoyMission.collide(t,convoyCraft,convoyShips,dt):false;
         var playerDamaged = t.hull < hullBefore || t.shield < shieldBefore;
         if (afterCombat) afterCombat();
@@ -551,8 +557,8 @@
                 var coveragePoint=coverage?coverage.map(function(v){return v/U;}):null;
                 var escortThreat=coveragePoint&&living.some(function(c){return c.team==='enemy'&&coveragePoint&&length(sub(c.pose.eye,coveragePoint))*U<1800;});
                 if(DW.convoyBattle.stepEvacuationWing(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
-                if(t.convoy&&e.team==='ally'&&!e.convoyBattle&&!escortThreat){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt,t);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
-                if(t.convoy&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
+                if(t.convoy&&!(e.pose.region||0)&&e.team==='ally'&&!e.convoyBattle&&!escortThreat){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt,t);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
+                if(t.convoy&&!(e.pose.region||0)&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 var wingPlan=wingPlans.get(e.id);
                 if(wingPlan){
                     e.mode='wing-travel';e.goal=wingPlan.goal;e.targetId=null;e.gunValid=false;

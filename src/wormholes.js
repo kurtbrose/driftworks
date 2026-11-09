@@ -72,6 +72,48 @@
         var remaining=transport(d.map(function(v){return v*(1-t);}),normal);
         return {region:to.space,eye:to.position.map(function(v,k){return v-normal[k]*to.radius+remaining[k];}),normal:normal,sky:to.sky};
     }
+    /** Register a real two-space connection for an animated mission mouth.
+     * Positions are converted to metres once. Charts may share coordinates.
+     * @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').ConvoyPortal} portal
+     * @param {string} id @param {number} destination @param {string} sky @param {number} units */
+    function linkPortal(combat,portal,id,destination,sky,units){
+        var position=portal.position.map(function(v){return v*units;}),radius=portal.radiusM||210;
+        var link=define({id:id,lifecycle:{opensAt:portal.opensAt,closesAt:portal.closesAt},mouths:[
+            {space:0,position:position,radius:radius,sky:'local'},
+            {space:destination,position:position.slice(),radius:radius,sky:sky}]});
+        var links=combat.wormholes||(combat.wormholes=[]),index=links.findIndex(function(existing){return existing.id===id;});
+        if(index<0)links.push(link);else links[index]=link;
+        return link;
+    }
+    /** Shared swept traversal for ordinary mission links, including full camera frame.
+     * @param {Link[]} links @param {number[]} before @param {import('../experiments/types').Pose} pose
+     * @param {number} time @param {number} units */
+    function travel(links,before,pose,time,units){
+        var best=/** @type {ReturnType<typeof cross>} */(null),bestDistance=Infinity;
+        links.forEach(function(link){if(!phase(time,link.lifecycle).traversable)return;
+            const hit=cross(link,before.map(function(v){return v*units;}),pose.eye.map(function(v){return v*units;}),pose.region||0);
+            if(!hit)return;const mouth=link.mouths.find(function(m){return m.space===(pose.region||0);});if(!mouth)return;
+            var point=mouth.position.map(function(v,k){return v+hit.normal[k]*mouth.radius;}),distance=Math.hypot.apply(null,point.map(function(v,k){return v-before[k]*units;}));
+            if(distance<bestDistance){bestDistance=distance;best=hit;}
+        });
+        var result=/** @type {ReturnType<typeof cross>} */(best);if(!result)return false;
+        pose.region=result.region;pose.eye=result.eye.map(function(v){return v/units;});
+        pose.right=transport(pose.right,result.normal);pose.up=transport(pose.up,result.normal);pose.back=transport(pose.back,result.normal);
+        if('velocity' in pose)pose.velocity=transport(/** @type {number[]} */(pose.velocity),result.normal);
+        return true;
+    }
+    /** Presentation uses the exact registered endpoints and lifecycle used by travel.
+     * @param {Link[]} links @param {number} space @param {number} time @param {number} units
+     * @returns {import('../experiments/types').PortalSkyView|null} */
+    function skyView(links,space,time,units){
+        var local=links.flatMap(function(link){return link.mouths.filter(function(m){return m.space===space;});})[0];
+        function preset(/** @type {string} */ sky){return sky==='reception'?1:sky==='hostile'?2:0;}
+        var views=links.flatMap(function(link){var side=link.mouths.findIndex(function(m){return m.space===space;});if(side<0)return [];
+            var mouth=link.mouths[side],amount=phase(time,link.lifecycle).amount;
+            return [{position:mouth.position.map(function(v){return v/units;}),radius:mouth.radius*amount,sky:preset(link.mouths[1-side].sky),localSky:local?preset(local.sky):0}];
+        });
+        if(!views.length)return null;return Object.assign(views[0],views[1]?{other:views[1]}:{});
+    }
     /** One transient owner is shared by all material and attached-effect batches.
      * @param {import('../experiments/types').Batch[]} batches @param {Placement} placement */
     function own(batches,placement){batches.forEach(function(batch){batch.placement=placement;});return batches;}
@@ -95,5 +137,5 @@
         placement.clipPlane=mode==='aperture'?undefined:normal.map(function(v){return v*sign;}).concat(-sign*dot(normal,position));
         return placement;
     }
-    DW.wormholes={occluded:occluded,separate:separate,phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
+    DW.wormholes={linkPortal:linkPortal,travel:travel,skyView:skyView,occluded:occluded,separate:separate,phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
 }());

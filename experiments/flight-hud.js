@@ -531,7 +531,7 @@
                 var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,view.state.curvature||(mission.sky.thinShell?'thin-shell':!!mission.sky.wormhole));
                 return path?Math.round(path.distance*units*displayScale)+distanceUnit:'—';
             }
-            if(combat.convoy){
+            if(combat.convoy&&!(state.region||0)){
                 var convoy=combat.convoy,remaining=Math.max(0,convoy.destinationY*units-convoy.elapsed*convoy.speedMps);
                 combatHud.save();combatHud.font='14px system-ui';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';combatHud.strokeStyle='#72c8d5';
                 var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy'&&!e.convoyBattle;}).length;
@@ -576,6 +576,11 @@
                     if(selectedCargo||ship===nearestCargo&&distance<650){combatHud.fillText(ship.callsign,x,y-17);combatHud.fillText(Math.round(distance)+' m',x,y+22);}
                 });
                 combatHud.restore();
+            }
+            if(combat.wormholes&&(state.region||0)){
+                var spaceView=DW.wormholes.skyView(combat.wormholes,state.region||0,combat.time,units);
+                combatHud.save();combatHud.font='14px monospace';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';
+                combatHud.fillText((spaceView&&spaceView.localSky===2?'HOSTILE SPACE':'RECEPTION SPACE')+' / RETURN MOUTH LEADS TO CONVOY',w/2,Math.max(174,h*.16));combatHud.restore();
             }
             // Exterior view retains only spatial contacts, in the actual moving camera.
             if(tactical){gpu.begin(w,h,immersive?14:0);if(view.camera)state=Object.assign({},state,view.camera);}

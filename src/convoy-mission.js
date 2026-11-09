@@ -80,6 +80,7 @@
         // Keep the mouth clear of freighters, reception hulls and existing fighters.
         if(s.ships.some(function(ship){return ship.hull>0&&range(position,ship.position)<600;})||s.arrivalFleet.some(function(ship){return range(position,ship.position)<1700;})||DW.flightSim.participants(combat).some(function(c){return c.hp>0&&range(position,c.pose.eye)<500;}))return false;
         s.arrivalPortal={position:position,opensAt:combat.time,closesAt:combat.time+13,spawned:false};
+        DW.wormholes.linkPortal(combat,s.arrivalPortal,'convoy-hostile',1,'hostile',U);
         s.director.events.push({wing:-1,kind:'portal'});return true;
     }
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
@@ -373,7 +374,7 @@
         const state=combat.convoy;if(!state||!combat.enabled||!(dt>0))return false;
         var playerImpact=false,maxMotion=state.ships.reduce(function(n,ship,i){return Math.max(n,Math.hypot.apply(null,ship.position.map(function(v,k){return v-previousShips[i][k];}))*U);},0);
         DW.flightCollision.batch(combat,function(){DW.flightSim.participants(combat).forEach(function(craft,index){
-            if(craft.hp<=0)return;
+            if(craft.hp<=0||(craft.pose.region||0)!==0)return;
             var pose=craft.pose,radius=DW.flightCollision.radius(craft)*U;
             // An approach may spawn during this tick; new craft have no earlier sample.
             var from=previousCraft[index]||pose.eye,indices=DW.flightCollision.sweep(combat,from,pose.eye,radius+maxMotion).filter(function(entry){return !!entry.craft.convoyModel;}).map(function(entry){return entry.craft.index;});

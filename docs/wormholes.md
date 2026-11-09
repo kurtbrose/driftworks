@@ -45,17 +45,34 @@ metre scale, materials, collision and simulation ownership remain unchanged.
 mission assignments to `portalClip` or `clipPlane` are prohibited by the
 boundary regression. Legacy batch fields remain readable for compatibility.
 
-The fleet's staged arrival views currently use the mask adapter, not complete
-space links. They must not be described as player-traversable destinations.
-Giving them full traversal requires declaring real destination spaces and
-migrating their staged actor/weapon state to those spaces; the adapter does not
-pretend that a clipped remote view constitutes that integration.
+Fleet mouths register actual connections in the JSON-safe combat `wormholes`
+registry through `linkPortal`. The hostile and rescue mouths connect source
+space 0 to independent spaces 1 and 2. `flightSim.stepControlled` applies shared
+swept traversal after movement and before controlled gunfire; full camera frames
+and velocities transfer, and targeting/collision caches invalidate. Formation
+gates use the same lifecycle as the visible mouth. Reset creates a fresh registry.
+
+`skyView` derives local sky identity and return apertures from the same endpoints.
+Reception uses the existing hero panorama; hostile space uses its rotated warm
+variant. A single lazy-loaded local texture is shared by these two presets. Source
+hulls/effects are isolated by the renderer's opt-in space filter, and cargo contact
+ignores craft in other spaces. The hostile capital is visible directly in its
+space. Both mouths have return crossings; the convoy continues in the source
+space while the player is away.
+
+Capital emergence and freighter evacuation still use the staged mask adapter.
+This change does not provide general recursive geometry views through arbitrary
+links, transfer cargo lifecycle into a destination simulation, or trace projectiles
+through the new fleet links. The dedicated Ellis/thin-shell optical compositor
+retains its existing projectile and finite-hull crossing implementation.
 
 ## Automated verification
 
 - `node tests/wormholes.cjs`: 1,000 generated translated/scaled crossings,
   destination identity, overshoot, vector reciprocity, immutable geometry,
   owner inheritance and the source boundary against per-mission mask code.
+- `node tests/wormhole-traversal.cjs`: real session crossings into both fleet
+  spaces and back, forming-mouth gate, sky identity, frame/speed and reset.
 - `node tests/evacuation-capitals.cjs`: actual capital hull/effect ownership,
   staged visibility, firing, stable buffers and replacement-state reset.
 - `node tests/flight-skybox.cjs`: endpoint sky presets follow link data.

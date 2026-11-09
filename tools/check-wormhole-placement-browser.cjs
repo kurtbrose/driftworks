@@ -63,7 +63,17 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
    effect.placement=owner;
    owner.visible=false;const hidden=mask(pixels([hull],[effect])).filter(Boolean).length;if(hidden)throw Error('Hidden owner leaked pixels');
    owner.visible=true;owner.clipPlane=undefined;owner.portalClip=undefined;pixels([hull],[effect]);
-   return {rows,opening,hidden,negativeControl,width:canvas.width,height:canvas.height};
+   // Independent mission spaces can share coordinates without leaking hulls/effects.
+   viewer.setSurfaceCamera({region:1,eye:[0,-10,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});viewer.setStudySpaceFilter(true);
+   const local={vertices:data,color:[1,0,0],region:0},remote={vertices:data,color:[0,1,0],region:1};
+   const isolated=pixels([local,remote],[{vertices:data,color:[1,0,0],region:0}]);let foreign=0,present=0;
+   for(let i=0;i<isolated.length;i+=4){if(isolated[i]>8)foreign++;if(isolated[i+1]>8)present++;}
+   if(foreign||!present)throw Error('Independent chart leaked local hull/effect pixels: '+JSON.stringify({foreign,present}));
+   viewer.setSurfaceCamera({region:0,eye:[0,-10,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+   const returned=pixels([local,remote],[]);let restored=0,remoteLeak=0;
+   for(let i=0;i<returned.length;i+=4){if(returned[i]>8)restored++;if(returned[i+1]>8)remoteLeak++;}
+   if(!restored||remoteLeak)throw Error('Returning to source failed to restore hull visibility');
+   return {rows,opening,hidden,negativeControl,foreign,present,width:canvas.width,height:canvas.height};
   });
   await page.evaluate(()=>{
    const host=document.createElement('div');Object.assign(host.style,{width:'320px',height:'240px'});document.body.appendChild(host);
@@ -81,8 +91,18 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
    if(!lit)throw Error('Overlapping sky fixture is empty');
    return {mismatch,lit};
   });
+  await page.evaluate(()=>overlapSky.render({eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]},1,false,0,0,{position:[0,20,0],radius:100,sky:1}));
+  await page.waitForFunction(()=>overlapHost.querySelector('canvas').dataset.linkedSky==='ready');
+  const spacePixels=await page.evaluate(()=>{
+   const sky=overlapSky,canvas=overlapHost.querySelector('canvas'),gl=canvas.getContext('webgl'),pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+   function pixels(localSky){sky.render(pose,1,false,0,0,{position:[0,0,0],radius:0,localSky});const p=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,p);return p;}
+   const local=pixels(0),reception=pixels(1),hostile=pixels(2);let changed=0,distinct=0;
+   for(let i=0;i<local.length;i++){if(local[i]!==reception[i])changed++;if(reception[i]!==hostile[i])distinct++;}
+   if(changed<1000||distinct<1000)throw Error('Linked destination skies did not visibly change');
+   return {changed,distinct};
+  });
   assert.equal(results.rows.length,27);assert.deepEqual(errors,[]);
-  await page.screenshot({path:path.join(output,'gpu-fixture.png')});fs.writeFileSync(path.join(output,'gpu.json'),JSON.stringify({results,skyOverlap,errors},null,2)+'\n');
+  await page.screenshot({path:path.join(output,'gpu-fixture.png')});fs.writeFileSync(path.join(output,'gpu.json'),JSON.stringify({results,skyOverlap,spacePixels,errors},null,2)+'\n');
   console.log('PASS shared wormhole GPU placement: 27 hull/effect pixel-mask comparisons and hidden-owner suppression; nearest-mouth sky order verified');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

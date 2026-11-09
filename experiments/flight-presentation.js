@@ -269,7 +269,7 @@
         function render(view, appearance, comparison, elapsed, gpuTimer) {
             if(view.state.curvature)view=DW.flightHyperbolic.presentation(view);
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
-            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(DW.flightMissions.resolve(combat.mode).sky.thinShell||liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
+            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[state.region||0],objectWarp=regions.length>1&&(DW.flightMissions.resolve(combat.mode).sky.thinShell||liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.flightSim.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);
             var groups=/** @type {{team:string;region:number;craft:ArtCraft[]}[]} */([]);
@@ -372,6 +372,7 @@
             if(scene.setStudyBridgeRevision&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeTemporal')==='1'){
                 scene.setStudyBridgeRevision(JSON.stringify([world.elapsedSeconds,world.asteroids,world.ships,appearance.allyArt,appearance.enemyArt,appearance.paint,comparison,livingArt.map(function(c){return [c.hp,c.pose,c.scorches];}),combat.flashes,actorBatches.map(function(b){return [b.vertices.length,b.origin,b.rotation,b.basis,b.scale,b.finish,b.color,b.opacity,b.texture&&b.texture.src];})]));
             }
+            scene.setStudySpaceFilter(!!combat.wormholes);
             scene.setStudyDiagnostics(comparison);
             if(skybox.setOccluders)skybox.setOccluders(world.asteroids.map(function(a){return {center:[a.position.x,a.position.y,0],radius:a.radius};}));
             var motionToggle=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes'));
@@ -380,6 +381,7 @@
             var motionOpacity=regions.length>1&&!combat.dead&&!document.body.classList.contains('watch-chase')&&(!motionToggle||motionToggle.checked)&&(!motionStyle||motionStyle.value==='grid')?(motionBrightness?Number(motionBrightness.value)/100:.85):0;
             var plan=combat.convoy&&combat.convoy.evacuation;var mouth=plan&&combat.time>=plan.exit.opensAt?plan.exit:combat.convoy&&combat.convoy.arrivalPortal,arrival=mouth&&combat.time>=mouth.opensAt&&combat.time<mouth.closesAt?{position:mouth.position,radius:(mouth.radiusM||210)*DW.wormholes.phase(combat.time,mouth).amount}:null;
             var hostile=combat.convoy&&combat.convoy.arrivalPortal;if(arrival&&plan&&mouth===plan.exit&&hostile)Object.assign(arrival,{other:{position:hostile.position,radius:(hostile.radiusM||210)*DW.wormholes.phase(combat.time,hostile).amount}});
+            if(combat.wormholes&&combat.wormholes.length)arrival=DW.wormholes.skyView(combat.wormholes,state.region||0,combat.time,units);
             var vr=DW.flightVr&&DW.flightVr.forHost(host),immersive=!!(vr&&vr.active());
             skybox.setFov(immersive?140:45);
             // This pass supplies the world lighting basis and exposure. Head rotation
