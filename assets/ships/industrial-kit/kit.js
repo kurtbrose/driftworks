@@ -84,7 +84,14 @@ function restraintLug(g,x,z,y=-3.1){beam(g,[x,y+1,z],[x+.2,y+.4,z],.2);cylinder(
 function rcs(g){
   panel(g,[1.5,1.15,1.15],[0,0,0],'ivory',.16);
   for(const [axis,p] of [['x',[-.95,0,0]],['y',[0,.8,0]],['z',[0,0,.8]]])cylinder(g,.23,.35,.55,p,'steel',axis,12);
-  panel(g,[.5,.1,1.18],[.3,.59,0],'hazard',.02);
+  // Painted warning field, cropped inside tile 8: no raised slab or side faces.
+  const marking=geometry('RCS flush caution paint',()=>{
+    const geo=new T.PlaneGeometry(.5,.8),uv=geo.attributes.uv;
+    for(let i=0;i<uv.count;i++)uv.setXY(i,(32+uv.getX(i)*448)/2048,1-(1024+32+(1-uv.getY(i))*448)/2048);
+    return geo;
+  });
+  const caution=mesh(g,marking,'paint',[.3,.579,0],'RCS caution marking');
+  caution.rotation.x=-Math.PI/2;caution.castShadow=false;caution.userData.surfaceMark=true;
 }
 function viewportSpec(direction,width,height){
   const u=new T.Vector3(...direction).normalize(),p=new T.Vector3(u.x*3.8,u.y*2.05,u.z*2.25),normal=new T.Vector3(u.x/3.8,u.y/2.05,u.z/2.25).normalize();

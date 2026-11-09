@@ -129,6 +129,15 @@ kit.part('service').traverse(o=>{
   assert(Math.abs(uv.getX(i)-u)<1e-6&&Math.abs(uv.getY(i)-v)<1e-6,'bevel paint does not stretch atlas borders into pixelated bands');bevelVertices++;
  }
 });assert(bevelVertices>0,'exercise actual service-panel chamfers');
+// Caution stripes are flush paint, with no chamfered slab or edge wrap.
+const rcs=kit.part('rcs');rcs.updateWorldMatrix(true,true);
+const caution=rcs.getObjectByName('RCS caution marking');assert(caution&&caution.userData.surfaceMark);
+assert.equal(caution.geometry.index.count,6,'two-triangle caution marking');
+assert.equal(rcs.getObjectByName('hazard panel'),undefined,'remove the raised caution slab');
+const warningBounds=bounds(caution),housingBounds=bounds(rcs.getObjectByName('ivory panel'));
+assert(warningBounds.max.y-warningBounds.min.y<1e-6,'paint has no physical thickness');
+assert(warningBounds.min.y-housingBounds.max.y>0&&warningBounds.min.y-housingBounds.max.y<.005,'marking sits flush to housing roof');
+assert(warningBounds.max.x<.59&&warningBounds.min.x>-.59&&warningBounds.max.z<.415&&warningBounds.min.z>-.415,'warning field stays on the flat roof, clear of bevels');
 // Production bake keeps source-authored mouths in the flight coordinate convention.
 const meta=require('../assets/ships/industrial-kit/convoy-flight.json');
 assert.equal(meta.sourceSha256,require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync('assets/ships/industrial-kit/kit.js')).digest('hex'),'flight bake matches its editable source');

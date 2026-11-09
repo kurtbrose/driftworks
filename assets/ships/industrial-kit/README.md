@@ -635,3 +635,14 @@ material batch counts match the preceding alignment revision for all three
 production variants. Only UVs/atlas pixels and source fingerprints changed.
 Visual review repeated the pump-and-shield close-up, including the long bevels
 beside the face decals. Captures are under ignored `output/freighter-edge-paint/`.
+
+## Flush RCS caution paint (2026-11-08)
+
+RCS warning stripes now use a two-triangle surface marking on the flat housing
+roof, cropped within the shared atlas hazard tile. The old chamfered warning
+slab and its striped side faces are removed. The marking stays clear of roof
+bevels and adds no texture or material batch. Each RCS saves 42 triangles
+(5,040 across 120 units); this is a geometry reduction, not a measured FPS claim.
+Production geometry and exact collision bakes were regenerated. Focused freighter,
+industrial-kit and convoy-collision checks passed, and the RCS mounting was
+visually inspected in the review page. Capture: `output/freighter-caution/`.
