@@ -11,7 +11,7 @@
         models={};cache=new WeakMap();
         Object.keys(meta.variants).forEach(function(name){
             var end=-7+meta.variants[name].manifest.reduce(function(n,p){return n+(p==='bulkFluid'?28:14);},0);
-            mouths[name]=[[-3,-2.8],[-3,2.8],[3,-2.8],[3,2.8]].map(function(p){return [p[0],-end-11.4,p[1],1.85];});
+            mouths[name]=meta.variants[name].engineMouths||[[-3,-2.8],[-3,2.8],[3,-2.8],[3,2.8]].map(function(p){return [p[0],-end-11.4,p[1],1.85];});
             models[name]=meta.variants[name].batches.map(function(b){
                 var vertices=new Float32Array(new Float32Array(bytes,b.offset,b.count));
                 for(var i=0;i<vertices.length;i+=8)for(var k=0;k<3;k++)vertices[i+k]/=U;

@@ -316,7 +316,7 @@ export type RadioEvent = {
 };
 export type EvacuationState = {scene:number;line:number;wait:number;elapsed:number;quiet:number;departure:number;complete:boolean;reserve:Craft[];origin:[number,number,number]};
 export type ConvoyHit = {shipIndex:number;shipId:string;fraction:number;point:Vector;normal:Vector};
-export type ConvoyAsset = {variants:Record<string,{collision?:Model['hullIndex'];manifest:string[];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
+export type ConvoyAsset = {variants:Record<string,{collision?:Model['hullIndex'];manifest:string[];engineMouths?:number[][];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
 export type ConvoyPacket = {name:string;center:Vector;ship:string;pilot:string;id:string;portrait:number;voice:number};
 export type ConvoyReceptionShip={id:string;callsign:string;position:Vector;heading:number};
 export type EvacuationCapital=AegisCapitalState & {id:string;callsign:string;present?:boolean;remote?:boolean};

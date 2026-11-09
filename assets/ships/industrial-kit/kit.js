@@ -399,7 +399,7 @@ export function buildConsist(types=routePresets.mixed,options={}){
 
 // Production recipes retain the existing model IDs and physical module pitch.
 // Wider carriers use one command/drive spine and passive parallel cargo lanes.
-export function buildFreighter(name,options={}){
+export function buildFrameFreighter(name,options={}){
   const configs={container:{load:routePresets.container,lanes:[-7,7],treatment:'sill'},mixed:{load:routePresets.mixed,lanes:[0],treatment:'rail'},fluid:{load:routePresets.fluid,lanes:[-7,7],treatment:'rail'}};
   const c=configs[name];if(!c)throw new Error('Unknown freighter: '+name);
   c.treatment=options.treatment||c.treatment;
@@ -420,6 +420,89 @@ export function buildFreighter(name,options={}){
   }
   root.userData.layout=c.lanes.length>1?'paired cargo lanes':'single spine';
   root.userData.treatment=c.treatment;return root;
+}
+
+// Command hardware uses the drive cassette's chamfers, collars and service packs.
+function freightCommand(g){
+  const cabin=group(g,'freight command module',[-14,0,0]);
+  cabin.userData.designFamily='industrial drive cassette';
+  panel(cabin,[3.8,3.15,3.15],[-1.8,0,0],'ivory',.45).name='command chamfered housing';
+  panel(cabin,[2.6,3.15,3.15],[1.5,0,0],'ivory',.45);
+  cylinder(cabin,1.32,1.32,1.8,[3.0,0,0],'steel','x',24);
+  cylinder(cabin,1.52,1.52,.22,[.15,0,0],'ochre','x',24);
+  cylinder(cabin,1.52,1.52,.22,[2.8,0,0],'edge','x',24);
+  // Small instrument/view ports in an opaque forward plate, not a windshield.
+  panel(cabin,[.12,1.1,2.1],[-3.73,.35,0],'dark',.08);
+  for(const z of [-.58,.58]){
+    cylinder(cabin,.29,.29,.08,[-3.82,.35,z],'glass','x',16);
+    ring(cabin,-3.86,.34,'edge',.055).position.set(-3.86,.35,z);
+  }
+  for(const z of [-1.68,1.68]){
+    panel(cabin,[2.4,1.7,.45],[-1.6,0,z],'service',.14);
+    panel(cabin,[1.85,1.22,.12],[-1.6,0,z+Math.sign(z)*.26],'door',.04);
+    pipe(cabin,[[-3.2,.6,z*.7],[-2.6,1.15,z],[.4,1.15,z],[1.1,.6,z*.7]],.09,'ochre');
+  }
+  panel(cabin,[2.8,.4,1.6],[-2,-1.7,0],'dark',.1);
+  panel(cabin,[2.0,.24,1.7],[1.2,1.65,0],'vent',.08);
+  return cabin;
+}
+
+// Purpose-built freight packaging. The legacy DW-14 cage remains a review option.
+export function buildFreighter(name,options={}){
+  if(options.packaging==='frame')return buildFrameFreighter(name,options);
+  if(!['container','mixed','fluid'].includes(name))throw new Error('Unknown freighter: '+name);
+  const g=new T.Group();g.name=name+' / compact packaging';g.userData.units='metres';
+  const end=name==='fluid'?42:name==='container'?24.8:14.2;
+  g.userData.packaging='compact';g.userData.payloadEnd=end;
+  g.userData.manifest=name==='fluid'?['bulkFluid','bulkFluid']:name==='container'?['cargo','cargo','cargo']:['cargo','cargo'];
+  g.userData.purpose=name==='fluid'?'Permanent bulk-fluid transport':'Exchangeable container cassettes';
+  g.userData.engineMouths=[[-3,-2.8],[-3,2.8],[3,-2.8],[3,2.8]].map(p=>[p[0],-end-11.4,p[1],1.85]);
+  // The continuous load spine carries thrust to the payload attachments.
+  panel(g,[end+14,1.0,1.0],[(end-7)/2,0,0],'dark',.15).name='continuous thrust spine';
+  if(name==='fluid'){
+    const source=part('bulkTank').getObjectByName('domed bulk-fluid vessel');
+    for(const x of [5,30])for(const z of [-6.2,6.2]){
+      const vessel=group(g,'permanent fluid vessel',[x,0,z]);vessel.userData.capacityShell={length:24,diameter:11};
+      vessel.add(source.clone());
+      for(const dx of [-7.5,7.5]){
+        ring(vessel,dx,5.62,'edge',.18).name='load collar';
+        for(const y of [-2.8,2.8])beam(g,[x+dx,Math.sign(y)*.5,0],[x+dx,y,z-Math.sign(z)*4.88],.32,'steel');
+      }
+      // Inboard outlet, isolation valve and protected connection to the common bus.
+      cylinder(g,.12,.12,.3,[x,0,Math.sign(z)*.55],'ochre','z');
+      cylinder(g,.12,.12,2,[x+1,0,Math.sign(z)*.4],'ochre');
+      cylinder(g,.36,.36,.7,[x+1,0,Math.sign(z)*.7],'edge');
+      ring(g,x+1,.43,'ochre',.07).position.set(x+1,.55,Math.sign(z)*.7);
+    }
+    pipe(g,[[-6,.7,0],[17.5,.7,0],[end+2,.7,0]],.22,'edge').name='common transfer manifold';
+    for(const z of [-1.5,1.5])addPart(g,'service',[end+1,0,z]);
+    panel(g,[3.4,.22,5.0],[end+1,1.7,0],'service',.12).name='valve impact shield';
+    for(const z of [-2.5,2.5]){cylinder(g,.5,.5,.7,[end+1,0,z],'ochre','z');cylinder(g,.36,.36,.8,[end+1,0,z],'steel','z');}
+    g.userData.payloadCount=4;g.userData.layout='four close-packed capsule tanks';
+  }else{
+    const rows=name==='container'?3:2,columns=name==='container'?[-7.65,-2.55,2.55,7.65]:[-2.55,2.55];
+    for(let i=0;i<rows;i++){
+      const x=-1.7+i*10.6,cassette=group(g,'exchangeable cargo cassette',[x,0,0]);
+      cassette.userData.loading='Remove complete cassette radially; release corner locks';
+      // Thin shear web in the occupied utility channel links the corner locks.
+      panel(cassette,[10.2,.24,columns.length*5.1],[0,0,0],'dark',.06);
+      for(const y of [-3,3])for(const z of columns){
+        addPart(cassette,'cargo',[0,y,z],{color:y>0?(z>0?'cargo':'blue'):(z>0?'rust':'ochrePaint')});
+        for(const dx of [-4.8,4.8])for(const dz of [-2.13,2.13]){
+          panel(cassette,[.7,.48,.55],[dx,Math.sign(y)*.42,z+dz],'ochrePaint',.06).name='cassette corner lock';
+        }
+      }
+    }
+    for(const x of [-7,end]){
+      panel(g,[.7,1.0,columns.length*5.1],[x,0,0],'dark',.12).name='load spreading bulkhead';
+      for(const z of [-1,1])beam(g,[x,0,0],[x+(x<0?-3:3),0,z*3],.35,'steel');
+    }
+    g.userData.payloadCount=rows*columns.length*2;g.userData.containerPitch=10.6;g.userData.layout=name==='container'?'24-container compact block':'8-container local feeder';
+  }
+  freightCommand(g);neck(g,-10.2,-7);
+  engineBank(g,end+8,[[-2.8,-3],[-2.8,3],[2.8,-3],[2.8,3]]);neck(g,end,end+3);
+  for(const x of [-6,end-1])for(const z of [-1,1])addPart(g,'rcs',[x,0,z*(name==='fluid'?1:5.1)]);
+  return g;
 }
 
 export function assembly(kind){

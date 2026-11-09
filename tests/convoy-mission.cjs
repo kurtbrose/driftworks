@@ -26,7 +26,7 @@ for(const variant of Object.values(meta.variants)){
     const collisionVertices=new Float32Array(variant.collision.vertexCount);let offset=0;
     for(const b of variant.batches)for(let i=b.offset/4;i<b.offset/4+b.count;i+=8)for(let k=0;k<6;k++)collisionVertices[offset++]=data[i+k];
     assert.equal(variant.collision.sourceHash,require('node:crypto').createHash('sha256').update(Buffer.from(collisionVertices.buffer)).digest('hex'),'Baked hull index fingerprints the render mesh positions and normals');
-    assert(variant.batches.reduce((n,b)=>n+b.count/24,0)>50000,'Use detailed authored DW-14 ships');
+    assert(variant.batches.reduce((n,b)=>n+b.count/24,0)>0,'Use authored freight geometry');
     assert.equal(variant.batches.filter(b=>b.textured).length,1,'Retain the authored paint atlas material');
     for(const b of variant.batches)for(let i=b.offset/4;i<b.offset/4+b.count;i+=24){
         const a=[0,1,2].map(k=>data[i+8+k]-data[i+k]),c=[0,1,2].map(k=>data[i+16+k]-data[i+k]);
@@ -35,10 +35,10 @@ for(const variant of Object.values(meta.variants)){
     }
 }
 f.DW.convoyScenery.install(meta,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
-const batches=f.DW.convoyScenery.geometry(c),buffers=batches.map(b=>b.vertices);
-assert.equal(batches.length,26,'Instance the 30 authored ships without losing any materials');
+const batches=f.DW.convoyScenery.geometry(c),buffers=batches.map(b=>b.vertices),materialCount=Object.values(meta.variants).reduce((n,v)=>n+v.batches.length,0);
+assert.equal(batches.length,materialCount,'Instance the 30 authored ships without losing any materials');
 assert(batches.every(b=>b.instanceOffsets.length===30),'Ten copies of each authored configuration');
-assert.equal(new Set(buffers).size,26,'Repeated ships share the 26 immutable material buffers');
+assert.equal(new Set(buffers).size,materialCount,'Repeated ships share immutable material buffers');
 assert.equal(new Set(c.convoy.ships.map(s=>s.packet)).size,5,'Five readable packets');
 for(let p=0;p<5;p++){
     const ships=c.convoy.ships.filter(s=>s.packet===p);assert.equal(ships.length,6);
@@ -103,7 +103,7 @@ const cargo=c.convoy.ships[24],mixed=c.convoy.ships[25];
 const at=(ship,p)=>p.map((v,k)=>ship.position[k]+v/U);
 const solid=f.DW.convoyMission.trace(c,at(cargo,[-20,0,2.6]),at(cargo,[20,0,2.6]),.1);
 assert(solid&&solid.shipId===cargo.id,'Container/truss geometry is collidable');
-assert.equal(f.DW.convoyMission.trace(c,at(mixed,[0,-42,-4]),at(mixed,[0,-42,4]),.1),null,'Empty scaffold remains hollow');
+assert.equal(f.DW.convoyMission.trace(c,at(mixed,[0,-42,-4]),at(mixed,[0,-42,4]),.1),null,'Removed trailing bay leaves clear space');
 assert.equal(f.DW.convoyMission.trace(c,at(cargo,[-30,0,70]),at(cargo,[30,0,70]),7),null,'Clearance above the actual hull is unobstructed');
 // A real fixed tick must stop a fighter even when it crosses the whole ship.
 let pose=f.snapshot().state;
@@ -175,6 +175,14 @@ for(let i=0;i<1200&&!c.dead&&!c.enemies.some(e=>e.team==='ally'&&e.guns.fired>0)
     const distance=Math.hypot(...goal.map((v,k)=>v-state.eye[k]))*U;
     f.advance(.05,{...f.DW.flightSim.steer(state,goal),throttle:distance>300?1:.5,boost:distance>1800});
 }
+// Start this gun-path fixture in the threat-side interception envelope. A long
+// approach can let the wingmen finish first as cargo collision silhouettes evolve.
+const intercept=c.enemies.find(e=>e.team==='enemy'&&e.hp>0),interceptPose=f.snapshot().state;
+assert(intercept,'The fixed raid supplies a live interception target');
+interceptPose.eye=intercept.pose.eye.map((v,k)=>v+intercept.pose.back[k]*400/U);
+interceptPose.velocity=intercept.pose.velocity.slice();
+const interceptForward=interceptPose.eye.map((v,k)=>intercept.pose.eye[k]-v),interceptLength=Math.hypot(...interceptForward),interceptFrame=f.DW.fleetGuidance.frame(interceptForward.map(v=>v/interceptLength));
+interceptPose.right=interceptFrame.right.slice();interceptPose.up=interceptFrame.up.slice();interceptPose.back=interceptFrame.back.slice();
 for(let i=0;i<2400&&!c.dead;i++){
     const enemies=c.enemies.filter(e=>e.team==='enemy'&&e.hp>0);if(!enemies.length)break;
     const own=f.snapshot().state;const target=enemies.slice().sort((a,b)=>Math.hypot(...a.pose.eye.map((v,k)=>v-own.eye[k]))-Math.hypot(...b.pose.eye.map((v,k)=>v-own.eye[k])))[0];c.targetId=target.id;

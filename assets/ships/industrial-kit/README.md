@@ -337,3 +337,70 @@ geometry/collision bake with the current atlas and current renderer. Capital
 preparation was outside sampling and varied strongly between page loads.
 The runtime convoy starting view was also inspected in motion; engine effects
 remain aligned to the shared central drive bank.
+
+## Purpose-built freight packaging (2026-11-08)
+
+The default `buildFreighter` now packages cargo around its job. The earlier
+DW-14 layouts remain available through `{packaging:'frame'}` and the review's
+Previous frame option; the standard module builder itself remains available.
+The comparison uses a common camera fit for each old/new pair.
+
+The large carrier retains 24 unchanged containers in three exchangeable
+cassettes. Longitudinal pitch is 10.6 m, lateral pitch 5.1 m. A 1.1 m central
+channel contains the thrust spine, cassette shear webs and corner locks. Whole
+cassettes are intended to release radially; this is a design premise, not an
+implemented cargo-handling simulation. Overall length/height/width changes from
+64.4 / 13.5 / 27.4 m to about 54.1 / 10.9 / 20.4 m. The smaller local feeder
+carries eight containers and has no empty trailing scaffold bay.
+
+The tanker retains four unchanged 24 m long, 11 m diameter capsule vessels.
+They sit at 25 m longitudinal and 12.4 m lateral pitch. Conformal collars and
+short inboard struts transmit loads to the continuous centre spine; a common
+transfer bus, isolation valves, pump cassettes and shielded transfer ports
+explain fluid handling. Rectangular cages and remote corner locks are gone.
+Pressure-vessel atlas tiles use inspection covers rather than ventilation slots.
+No capacity, structural certification or mass/fuel recalibration is claimed.
+
+The command module and four drive cassettes share ivory chamfered housings,
+dark metal joints, ochre collars/conduits and matching service-pack dimensions.
+The front uses small recessed viewports. The legacy bulb cabin is retained in
+the previous-frame comparison and the original industrial study.
+
+`convoy-flight.json` now optionally provides `engineMouths` in flight metres,
+matching its baked geometry. The scenery loader uses these anchors and retains
+its manifest-length fallback for older bakes. Collision trees are rebuilt from
+the exact final render geometry. Model IDs and saved convoy state stay compatible.
+
+Container / feeder / tanker now use 7 / 7 / 6 shared material batches and
+66,368 / 32,852 / 33,292 triangles, versus 9 / 9 / 8 and
+99,658 / 65,294 / 64,506 in the previous pass. The geometry binary changes from
+22,027,968 to 12,721,152 bytes. These reductions come from removing vacant
+structure and simplifying the command housing; cargo and tank scale is retained.
+
+Visual inspection covered new container bow/stern, tanker bow/belly, the small
+feeder, and old/new switching. The viewport now gives controls their own column.
+Captures are under ignored `output/freighter-packaging/`. The shapes are design
+proposals for further art direction, not validated spacecraft engineering.
+
+### Verification and measured convoy cost
+
+Focused packaging/source-bake tests, the five-mode convoy collision suite, the
+complete convoy mission regression and strict application type checking passed.
+The chase fixture stages its player in a defined 400 m interception envelope
+after wingman fire begins, preserving a real chase/aim/gun path while avoiding a
+race in which the wing finishes before the player arrives. No gameplay weapon,
+AI, health or collision rules were changed for this art pass.
+
+Matched foreground starting-cockpit samples used 1838 x 1461 backing pixels,
+DPR 1.5, 100% production artwork, normal effects, frozen AI/projectiles and 30
+freighters. Each before/after run used OFF/ON/ON/OFF, 20 warm-up frames and 90
+samples per block. No builds or tests ran during timing; GPU time was unmeasured.
+Before: ON CPU median/p95 3.60/4.50 ms, 95 draws, 2,418,558 triangles;
+OFF 1.80/2.20 ms, 39 draws, 123,498 triangles. After: ON 3.00/3.40 ms,
+89 draws, 1,449,098 triangles; OFF 1.40/1.80 ms, 39 draws, 123,498 triangles.
+Both runs recorded 13.30/13.40 ms median/p95 rAF cadence. Background timing
+variation also changed the OFF baseline, so these samples support the reduction
+in submitted geometry and acceptable submission cost in this scene, not a
+precise whole-game speedup or GPU-headroom claim. Capital preparation was
+outside timing (1,475.6 / 1,531.8 ms). The actual convoy was inspected in motion,
+with engine glow aligned to the shortened ships' authored exhaust anchors.

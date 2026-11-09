@@ -24,7 +24,7 @@ for(const name of ['container','mixed','fluid']){
  }
  let radius=0;for(let i=0;i<collisionVertices.length;i+=6)radius=Math.max(radius,Math.hypot(collisionVertices[i],collisionVertices[i+1],collisionVertices[i+2]));
  const collision={version:1,vertexCount:collisionVertices.length,sourceHash:crypto.createHash('sha256').update(Buffer.from(new Float32Array(collisionVertices).buffer)).digest('hex'),radius,tree:build(collisionVertices,Array.from({length:collisionVertices.length/18},(_,i)=>i*18))};
- variants[name]={manifest:Array.from(context.kit.routePresets[name]),batches,collision};
+ variants[name]={manifest:Array.from(root.userData.manifest),engineMouths:root.userData.engineMouths,batches,collision};
  console.log(name,batches.length,batches.reduce((n,b)=>n+b.count/24,0),'triangles');
 }
 const manifest={version:1,source:'kit.js',sourceSha256:crypto.createHash('sha256').update(source).digest('hex'),units:'metres',forward:'+Y',up:'+Z',binary:'convoy-flight.bin',variants};

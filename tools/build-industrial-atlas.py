@@ -94,7 +94,7 @@ for index, (name, color) in enumerate(PALETTE):
             for bx in [x+6, x+w-6]:
                 for by in [y+6, y+h-6]:
                     d.ellipse((bx-2, by-2, bx+2, by+2), fill=seam)
-            for n in range(7):
+            for n in ([] if index in [11, 15] else range(7)):
                 yy=y+18+n*5
                 d.line((x+16, yy, x+w-16, yy), fill=seam, width=2)
                 d.line((x+16, yy+2, x+w-16, yy+2), fill=highlight, width=1)
