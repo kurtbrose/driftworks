@@ -1,5 +1,16 @@
 # Driftworks
 
+Driftworks is primarily a **3D space flight and combat simulator**, served as a
+static browser site. The main experience is the [3D flight lab](experiments/flight.html),
+with fighters, capital ships, weapons, shields, AI and space environments.
+The root page indexes flight missions, asset viewers and experiments.
+
+Start with the [flight architecture](docs/flight-architecture.md),
+[flight artwork](docs/flight-artwork.md) and
+[flight presentation](docs/flight-presentation.md) references for development.
+Flight visual experiments belong in a real 3D scene with perspective, depth,
+world-space trajectories and ship-scale context.
+
 Try [Hyperbolic space / 3D flight](experiments/flight.html?mission=hyperbolic):
 the existing flight lab, weapons, shields, AI, HUD and radar in negatively curved
 space. The aiming pip follows geodesic projectile travel. See
@@ -15,12 +26,19 @@ to inspect the Blender-baked orbital tank farm against the existing planet sky.
 It includes articulated refueling arms, sky stages and true-scale fighters.
 See [asset source and rebuild notes](assets/depots/refueling-v1/README.md).
 
-Driftworks is a collection of browser-based flight experiments, artwork viewers, and a hard-SF economic/RTS prototype. The landing page is the experiments index; the original tactical mining and fleet simulation is available as the Driftworks 2D experiment at `rts.html`, with an optional 3D renderer at `rts.html?renderer=3d`. Everything is served as static files.
+The original hard-SF mining/construction RTS is retained as a legacy experiment
+at `rts.html`, with Pixi artwork and an optional tactical 3D renderer at
+`rts.html?renderer=3d`. Its planar simulation and controls are separate from
+the primary flight simulator. Everything is served as static files.
 
 For code changes, start with [AGENTS.md](AGENTS.md), then consult the
-[architecture map](docs/architecture.md) and [world-state contract](docs/world-state.md).
+[architecture map](docs/architecture.md). The [world-state contract](docs/world-state.md)
+describes the legacy tactical simulation.
 
-## What Works Now
+## Legacy tactical RTS features
+
+This section and the following mining/propellant section describe `rts.html`.
+For the primary 3D simulator, see [flight play and controls](#arcade-flight-experiment).
 
 - PixiJS tactical scene using vendored runtime code. An optional whole-scene WebGL geometry prototype at `?renderer=3d` tests a shared perspective orbit camera, depth-tested asteroid volumes, and a meshed tunnel/chamber cutaway. Its ship and platform models are temporary blockouts; the detailed plumes and artwork described below belong to the default Pixi renderer.
 - Mothership, one blue cargo ship (Linehorse), two escort craft, and two stored mining platforms. There are no mining ships.
@@ -53,7 +71,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Focused [test groups](docs/testing.md): `npm run test:simulation`, `test:flight`, `test:rendering`, `test:assets`, `test:artwork`, `test:audio` and `test:tooling`. `npm test` runs them all; `npm run check` remains the complete validation gate.
 - Asteroid playground at `./tests/asteroid-playground.html`; every refresh creates twenty new seeded specimens using the production painter.
 
-## Propellant, launchers, and mining platforms
+## Legacy tactical propellant, launchers, and mining platforms
 
 - Mobile craft carry propellant mass. Acceleration uses current wet mass; engine velocity changes consume fuel using the rocket equation. Loaded ships have less remaining Î”v. Empty ships coast.
 - The fleet panel shows remaining Î”v in m/s and lets you select craft stored inside the mothership. Selection details include fuel tonnes. New missions begin with Linehorse and both fighters docked internally; docked craft are hidden in the scene.
@@ -107,13 +125,16 @@ serve.bat
 Then open:
 
 - Experiments index: http://localhost:8000/
-- Original tactical RTS: http://localhost:8000/rts.html
+- Primary 3D flight simulator: http://localhost:8000/experiments/flight.html
+- Legacy tactical RTS: http://localhost:8000/rts.html
 - Tests: http://localhost:8000/tests/
 - Asteroid playground: http://localhost:8000/tests/asteroid-playground.html
 - 3D asteroid orbit viewer: http://localhost:8000/tests/asteroid-orbit.html (automatic camera orbit, drag/zoom, cutaway, surface walking, re-seeding, composition presets and geology sliders)
 - 3D mothership study: http://localhost:8000/tests/mothership-orbit.html (orbit, zoom/pan, preset angles, machinery pause and animation scrubbing; uses the production model)
 
-The game keeps the existing Pixi artwork by default. Open `rts.html?renderer=3d` to try
+## Legacy tactical controls and renderer
+
+The legacy `rts.html` page keeps Pixi artwork by default. Open `rts.html?renderer=3d` to try
 the rough 3D geometry prototype. **Cutaway** focuses the asteroid
 and exposes its existing excavation geometry; **Orbit â†»** steps around it.
 Hold **Alt** while dragging to orbit continuously, use middle-drag or
@@ -136,7 +157,8 @@ texture across the sides and poles; broad relief and crater bowls also shape the
 continue to use the previous renderer. No additional runtime dependency or build
 step is required.
 
-The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is still the recommended path because browser behavior around local files varies, and it matches GitHub Pages or any static host.
+The tactical app uses ordinary scripts; flight also has explicitly declared module
+imports. Serve over HTTP to match deployment and support local asset loading.
 
 Debug controls:
 
@@ -177,6 +199,10 @@ Recovery controls:
 
 ## Reproduce a gameplay bug
 
+For flight, use the real session in [headless development](docs/headless.md),
+then verify presentation in the 3D renderer. The export/replay workflow below
+applies to the legacy tactical world.
+
 Pause and click **Export scenario** to copy or download the current world as JSON.
 Add commands, a tick count, and expected results, then run
 `node tests/scenarios.cjs path/to/scenario.json`. Place permanent regressions in
@@ -190,7 +216,9 @@ Deploy the repository contents directly as a static site, including to GitHub Pa
 
 ## Vendored Runtime
 
-PixiJS is vendored at `vendor/pixi/pixi.min.js`.
+The 3D renderer uses vendored Three.js r180 under `vendor/three/`; see
+[provenance](vendor/three/provenance.json) and its MIT license.
+Legacy tactical pages use PixiJS at `vendor/pixi/pixi.min.js`.
 
 - Version: PixiJS 7.4.2
 - Source: `https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js`
@@ -201,14 +229,15 @@ The game does not load code, fonts, art, telemetry, or other runtime resources f
 ## Browser Assumptions
 
 - Ordinary browser scripts loaded in explicit order.
-- Canvas/WebGL support through PixiJS.
+- WebGL support for the 3D flight renderer; Canvas/PixiJS for legacy pages.
 - `localStorage`.
 - Pointer events.
 - `requestAnimationFrame`.
 
-## Next Vertical-Slice Milestone
+## Legacy tactical direction and population
 
-The next milestone is pressure and consequence: add a simple extraction timer, a director-triggered pirate warning/attack, and persistent damage/cargo/money changes after the mining operation ends.
+The original tactical prototype explored mining, construction and population
+logistics. The features below describe that prototype, not the flight roadmap.
 
 ### People and platform shifts
 

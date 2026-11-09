@@ -1,5 +1,10 @@
 # Flight architecture
 
+This is the primary gameplay architecture for Driftworks, a 3D space flight
+and combat simulator. The main browser entry point is `experiments/flight.html`.
+The older `src/sim.js` mining/construction world at `rts.html` is a separate
+legacy prototype; its planar state and tactical controls do not define flight.
+
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
 ## Flight runtime ownership

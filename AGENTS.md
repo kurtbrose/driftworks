@@ -1,8 +1,35 @@
 # Working on Driftworks
 
+Driftworks is primarily a **3D space flight and combat simulator**. Flight,
+ships, weapons, capital ships and space environments are the default context
+for new work. Start with `experiments/flight.html`,
+`docs/flight-architecture.md`, `docs/flight-artwork.md` and
+`docs/flight-presentation.md`.
+
+The original mining/construction RTS remains at `rts.html`, with legacy Pixi
+artwork and an optional 3D tactical renderer. Its planar world, semantic zoom,
+selection controls and industrial gameplay are specific to that prototype;
+they do not define the flight simulator.
+
 Driftworks is a deployable static site: ordinary JavaScript scripts, vendored
-PixiJS, no build step or required package manager. Keep that deployment model;
+Three.js/WebGL for 3D rendering and PixiJS for legacy pages, no build step or
+required package manager. Keep that deployment model;
 use relative URLs and do not introduce runtime network dependencies.
+
+## Flight visuals and experiments
+
+- Evaluate flight artwork, projectiles and effects in a real 3D scene with
+  perspective, world-space trajectories, depth and ship-scale context. Reuse
+  the production scene, ship assets and effect paths where practical.
+- A standalone 2D canvas, screen-space animation or schematic is not a flight
+  visual review. Use one only when the user asks for it or the task explicitly
+  concerns a 2D interface; label its limited scope.
+- Comparisons against current gameplay must use the current assets/rendering
+  and relevant weapon dimensions, colors and settings. Do not substitute an
+  invented approximation and call it the current reference.
+- For stationary firing comparisons, keep ships, camera position, orientation
+  and focal length fixed. Add camera motion only when requested or explicitly
+  testing it. Fixed ships can still exchange bursts along real 3D trajectories.
 
 ## Scratch work and generated output
 
@@ -82,10 +109,23 @@ approved from a few spot checks.
 - For a captured gameplay bug, follow [scenario replay](docs/scenarios.md).
   Add JSON regressions to `tests/scenarios/`; the Node suite discovers them.
 - For behavior changes, add focused regression coverage to that suite. The
-  headless runner stubs the DOM and disables boot; it does not exercise Pixi,
+  headless runner stubs the DOM and disables boot; it does not exercise rendering,
   real input, or Web Audio. Verify visual/input/audio changes in the browser.
 
-## Find the change location
+## Find the change location: primary 3D flight simulator
+
+| Change | Inspect first |
+| --- | --- |
+| Flight session and browser orchestration | `experiments/flight.js`; `docs/flight-architecture.md` |
+| 3D scene, camera and rendering | `src/scene3d.js`, `src/model-viewer.js`; `docs/rendering-reference.md` |
+| Flight presentation, HUD and input | `experiments/flight-presentation.js`, `experiments/flight-hud.js`, `experiments/flight-controls.js`; `docs/flight-presentation.md` |
+| Flight projectiles and weapon appearance | `experiments/guns.js`, `experiments/retail-weapons.js`, effect materials in `src/scene3d.js`; `docs/flight-artwork.md` |
+| Flight collision, combat and stepping | `src/flight-collision.js`, `src/flight-combat.js`, `src/flight-sim.js`; opponent policies in `src/flight-opponent.js`, mission gates in `src/flight-mission-runtime.js` |
+| Flight ship catalog/art/hulls | `src/ship-catalog.js`, `src/ship-render.js`, `src/ship-assets.js`, `src/ship-hulls.js`; legacy facade in `experiments/ship-packs.js` |
+| Capital flight runtime | `src/aegis-sim.js`, `src/aegis-visual.js`, `src/aegis-battle.js`; composition in `experiments/aegis-flight.js` |
+| Script loading and test harness | `tools/script-manifest.cjs`; `docs/script-loading.md`, `docs/testing.md` |
+
+## Find the change location: legacy tactical RTS
 
 | Change | Inspect first |
 | --- | --- |
@@ -93,9 +133,6 @@ approved from a few spot checks.
 | Fuel, delta-v, launcher/catcher envelope | `src/propulsion.js`; conversions and payload mass in `src/sim.js` |
 | Save compatibility or new persistent fields | `src/sim.js`: constructors, `normalizeWorld`, `stepWorld`, serialization; `docs/world-state.md` |
 | Selection, right-click behavior, camera, zoom | `src/tactical/input3d.js` for 3D gestures, `src/tactical/picking.js` for artwork hits, `src/game.js` for Pixi input; shared command priorities in `sim.issuePickedContextOrder` |
-| Flight collision, combat and stepping | `src/flight-collision.js`: spatial queries and exact hits; `src/flight-combat.js`: tracing, shields and damage; `src/flight-sim.js`: craft lifecycle and stepping; opponent policies in `src/flight-opponent.js`, mission gates in `src/flight-mission-runtime.js` |
-| Flight ship catalog/art/hulls | `src/ship-catalog.js`, `src/ship-render.js`, `src/ship-assets.js`, `src/ship-hulls.js`; legacy facade in `experiments/ship-packs.js` |
-| Capital flight runtime | `src/aegis-sim.js`, `src/aegis-visual.js`, `src/aegis-battle.js`; composition in `experiments/aegis-flight.js` |
 | Hostiles, weapons, threat director | `src/combat.js`; update ordering in `src/sim.js`; event-driven effects in `src/game.js` |
 | Craft/platform artwork | `src/ship-art.js`: Pixi painters, semantic scale, thrusters and platform presentation |
 | Terrain, excavation, surface contacts | `src/asteroid-terrain.js`: CPU fields, meshes, fitting and derived caches |
@@ -108,16 +145,20 @@ approved from a few spot checks.
 
 - Write text files with LF line endings, including files generated by scripts.
   Preserve original asset bytes where `.gitattributes` marks files `-text`.
-- Load scripts in dependency order: propulsion, combat, simulation, audio, HUD, game;
+- Use the appropriate profile in `tools/script-manifest.cjs` for dependency order;
+  see [script loading](docs/script-loading.md). For the legacy tactical entry point:
+  propulsion, combat, simulation, audio, HUD, game;
   Pixi precedes game boot; `ship-art.js` follows simulation/geology and precedes game.
   `asteroid-terrain.js` follows simulation, geology and mining geometry, before `scene3d.js`.
   APIs live on `window.Driftworks`.
 - Keep persistent rules and serializable state in simulation code, SI propulsion
   math in propulsion, and browser resources in game/HUD/audio. Existing combat and
   camera exceptions are documented in [architecture](docs/architecture.md).
-- Treat public world transitions as returning a replacement world. Keep world
+- For the tactical `src/sim.js` world, public transitions return a replacement
+  world. Flight sessions have their own ownership and stepping contracts in
+  [flight architecture](docs/flight-architecture.md). Keep persistent world
   data JSON-safe; use IDs, never object pointers, for entity relationships.
-- Follow [world-state](docs/world-state.md) for formation, payload, and lifecycle
+- Follow the tactical [world-state](docs/world-state.md) contract for formation, payload, and lifecycle
   ownership. Adding a top-level field requires updating `stepWorld`'s explicit
   reconstruction as well as initialization and migration.
 - Preserve existing saves. Normalization is compatibility repair, not complete

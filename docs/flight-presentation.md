@@ -2,11 +2,24 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
+## Flight visual reviews
+
+Use a real 3D scene for ship, weapon and effect comparisons: perspective,
+world-space poses and trajectories, depth, and ships at meaningful metre scales.
+Prefer the production scene and rendering paths. A detached 2D canvas animation
+is a schematic and cannot establish how an effect reads in the space simulator.
+
+A current-gameplay reference uses current assets, weapon dimensions, team
+colors and effect materials. Label experimental changes separately. For fixed
+firing ranges, hold ships, camera position/orientation and focal length fixed
+while ships exchange bursts. Camera motion is a separate test, enabled only
+when requested or when it is the subject of the review.
+
 ### Shared model viewer navigation
 
 Load `src/model-viewer.js` before `src/scene3d.js` on inspection pages.
 `scene3d.create(..., {study:true, viewer:true})` opts into the shared toolbar;
-ordinary gameplay retains its tactical controls. Embedded combat views pass
+the legacy tactical app retains its tactical controls. Embedded combat views pass
 `{study:true, viewer:false}` so target cameras and flight presentation never mount
 inspection UI or collect picking geometry. `Driftworks.modelViewer.create(host, adapter)`
 returns `gesture(event, space)`, `isFlying()`, `isPicking()`, `reset()` and `dispose()`.

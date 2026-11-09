@@ -2,6 +2,13 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
+Driftworks' primary presentation is the 3D space simulator. This reference
+covers shared 3D rendering and also retains older tactical renderer notes.
+Descriptions of the optional `rts.html?renderer=3d` prototype apply to the
+legacy RTS, not to the status or dimensionality of the flight renderer.
+See [flight visual reviews](flight-presentation.md#flight-visual-reviews) for
+the required scene context when comparing ships, projectiles and effects.
+
 ## Instance pose ownership
 
 Raw and native ship materials use `uInstanced` only when the geometry supplies

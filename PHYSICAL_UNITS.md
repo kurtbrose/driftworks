@@ -1,5 +1,12 @@
 # Physical units: first calibration
 
+This calibration describes the legacy tactical RTS in `src/sim.js`, including
+its accelerated tactical clock and schematic artwork. The primary 3D space
+simulator uses its own flight poses, metre conversions and real-time stepping;
+see [flight architecture](docs/flight-architecture.md) and
+[flight artwork](docs/flight-artwork.md). Do not apply tactical time scaling or
+semantic zoom to flight trajectories or hull appearance.
+
 These are design values, intended to be tuned. `src/sim.js` owns the hull
 catalogue and conversions; each ship saves its own `physical` hull values.
 `physicalStats(world, ship)` computes current mass and available acceleration.

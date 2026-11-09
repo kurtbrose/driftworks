@@ -1,5 +1,13 @@
 # Architecture
 
+Driftworks is primarily a 3D space flight and combat simulator. Start with
+[flight architecture](flight-architecture.md) for gameplay/session ownership,
+[flight artwork](flight-artwork.md) for ships and weapons, and
+[flight presentation](flight-presentation.md) for browser integration.
+`experiments/flight.html` is the main flight entry point; `index.html` is the
+site index. The mining/construction RTS at `rts.html` is a retained legacy
+prototype with a separate planar simulation and Pixi/tactical presentation.
+
 Driftworks deploys as static files with ordinary scripts and vendored renderers.
 Persistent gameplay belongs in simulation; sessions own orchestration; renderers,
 input, HUD and audio own browser resources. Keep those boundaries when adding features.
@@ -9,11 +17,11 @@ input, HUD and audio own browser resources. Keep those boundaries when adding fe
 | Reference | Contents |
 | --- | --- |
 | [Rendering](rendering-reference.md) | Three scene, terrain, mining geometry, diagnostics and procedural assets |
-| [Tactical artwork](tactical-artwork.md) | Pixi asteroid and mothership artwork |
+| [Tactical artwork](tactical-artwork.md) | Legacy RTS Pixi asteroid and mothership artwork |
 | [Flight architecture](flight-architecture.md) | Session ownership, fixed ticks, combat, orchestration and Aegis sorties |
 | [Flight artwork](flight-artwork.md) | Imported models, finishes, firing geometry and tether scale |
 | [Flight presentation](flight-presentation.md) | Viewers, HUD, portraits, study actors and asset versions |
-| [World state](world-state.md) | Persistence, lifecycle ownership and compatibility |
+| [World state](world-state.md) | Legacy tactical world persistence, lifecycle ownership and compatibility |
 | [Script loading](script-loading.md) | Dependency profiles and generated static lists |
 | [Testing](testing.md) | Focused groups, shared registration and isolated execution |
 
@@ -33,7 +41,12 @@ to repair historical fields. Normalized worlds include camera zoom and elapsed
 seconds; legacy wreck artwork defaults a missing rotation to zero. The game
 exports `paintRecovery` alongside its other rendering helpers for regression checks.
 
-## Intended boundaries
+## Shared loading and legacy tactical boundaries
+
+The module table, HUD interface and `stepWorld` sequence below describe the
+legacy tactical app and its shared support modules. Flight has its own
+[runtime ownership and stepping](flight-architecture.md); it does not use the
+tactical world's replacement-state transition contract as a universal rule.
 
 The core site loads ordinary scripts into `window.Driftworks`; the flight page
 also declares its module scripts and import map explicitly. Shared loading order

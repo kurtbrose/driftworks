@@ -1,5 +1,10 @@
 # World state contract
 
+Scope: the legacy tactical mining/construction RTS (`rts.html`, `src/sim.js`).
+The `{x, y}` world and replacement-world commands described here are not the
+3D flight session contract. For the primary space simulator, start with
+[flight architecture](flight-architecture.md) and [headless sessions](headless.md).
+
 This is the reference for simulation relationships and valid state transitions.
 Constructors, order issuers, `normalizeWorld` and subsystem orchestration in
 `src/sim.js`, with combat transitions in `src/combat.js`, implement it. Use those
