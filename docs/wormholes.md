@@ -183,3 +183,7 @@ Bastion's cover station also reserves a 700 m hull envelope plus 100 m clearance
 from both open mouths. This prevents a supposedly local gun from being stationed
 in the excised throat volume. The emergence direction and threat-facing station
 remain intact; the shared placement constraint shifts it onto the clear flank.
+
+Staged remote capitals retain the source aperture mask after linked-space placement.
+Finite-body continuation must not expose their sections beyond the mouth silhouette;
+viewing the capital directly in its own space clears this staged mask.

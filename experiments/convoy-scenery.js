@@ -77,6 +77,9 @@
                 DW.wormholes.mouth(placements[0],plan.exit.position,plan.exit.normal,plan.exit.radiusM/U*exitPhase.amount,exitPhase.amount<1?'aperture':'back');
                 if(space===1){DW.wormholes.clear(placements[1]);placements[1].visible=!!states[1].present;placements[0].visible=false;}
                 else if(space!==0){placements[0].visible=false;placements[1].visible=false;}
+                // A staged remote hull stays behind a window even when its
+                // optical continuation classifies individual sections as local.
+                if(space===0)DW.wormholes.mouth(placements[1],plan.entry,[0,1,0],650/U*entryPhase.amount,'aperture');
             }
         }
         /** @param {import('./types').Pose} [pose] */function geometry(pose){

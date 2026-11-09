@@ -18,6 +18,8 @@ if(view.combat.convoy.director.attention){
 view.combat.time=view.combat.convoy.elapsed=32;DW.convoyMission.step(view.combat,0);
 const remote=rig.geometry();assert(remote.length>0&&remote.every(batch=>DW.wormholes.resolve(batch).portalClip),'Remote capital is visible only through the hostile aperture');assert.equal(rig.telemetry().shots,0);
 const remoteBuffers=remote.map(batch=>batch.vertices),remoteOwner=remote[0].placement;
+assert(remoteOwner.portalClip,'Registered staged remote capital retains its source aperture mask');
+rig.geometry({region:1});assert.equal(remoteOwner.portalClip,undefined,'Harrow is unmasked when viewed directly in its own space');rig.geometry();
 const portal=view.combat.convoy.arrivalPortal;
 view.combat.time=portal.opensAt;
 rig.geometry();assert.equal(remoteOwner.visible,false,'Remote capital is hidden before its aperture opens');
