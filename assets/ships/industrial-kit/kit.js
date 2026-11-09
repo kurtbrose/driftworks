@@ -23,14 +23,14 @@ function mesh(g,geo,mat,p=[0,0,0],name=mat){const m=new T.Mesh(geo,materials[mat
 
 // Closed chamfered cuboid: six faces, twelve bevels, eight corner triangles.
 // Hard face normals retain machined edges; UVs address the shared paint atlas.
-function chamferGeometry(size,b,tile){
+function chamferGeometry(size,b,tile,region){
   const h=size.map(v=>v/2),a=h.map(v=>v-b),vertices=[],normals=[],uvs=[],indices=[];
   function face(points,edge=false){
     const normal=new T.Vector3().subVectors(new T.Vector3(...points[1]),new T.Vector3(...points[0])).cross(new T.Vector3().subVectors(new T.Vector3(...points[2]),new T.Vector3(...points[0]))).normalize();
     const center=new T.Vector3();points.forEach(p=>center.add(new T.Vector3(...p)));if(normal.dot(center)<0){points=points.slice().reverse();normal.negate();}
     const components=[Math.abs(normal.x),Math.abs(normal.y),Math.abs(normal.z)],axis=components.indexOf(Math.max(...components));
     const axes=axis===0?[2,1]:axis===1?[0,2]:[0,1],start=vertices.length/3;
-    for(const p of points){vertices.push(...p);normals.push(normal.x,normal.y,normal.z);let u=.5+p[axes[0]]/size[axes[0]],v=.5+p[axes[1]]/size[axes[1]];if((axis===0&&normal.x>0)||(axis===1&&normal.y>0)||(axis===2&&normal.z<0))u=1-u;if(edge){u=.025+u*.018;v=.025+v*.018;}const index=tile===null?0:tiles[tile];uvs.push(((index%4)+.008+u*.984)/4,(3-Math.floor(index/4)+.008+v*.984)/4);}
+    for(const p of points){vertices.push(...p);normals.push(normal.x,normal.y,normal.z);let u=.5+p[axes[0]]/size[axes[0]],v=.5+p[axes[1]]/size[axes[1]];if((axis===0&&normal.x>0)||(axis===1&&normal.y>0)||(axis===2&&normal.z<0))u=1-u;if(edge){u=.025+u*.018;v=.025+v*.018;}const index=tile===null?0:tiles[tile];if(region){const r=edge?region.edge:region.face;const ru=edge?(u-.025)/.018:u,rv=edge?(v-.025)/.018:v;uvs.push((1024+r[0]+ru*(r[2]-r[0]))/2048,1-(1536+r[1]+(1-rv)*(r[3]-r[1]))/2048);}else uvs.push(((index%4)+.008+u*.984)/4,(3-Math.floor(index/4)+.008+v*.984)/4);}
     for(let i=1;i<points.length-1;i++)indices.push(start,start+i,start+i+1);
   }
   for(let axis=0;axis<3;axis++)for(const sign of [-1,1]){const other=[0,1,2].filter(i=>i!==axis);face([[-1,-1],[1,-1],[1,1],[-1,1]].map(pair=>{const p=[0,0,0];p[axis]=sign*h[axis];other.forEach((j,k)=>p[j]=pair[k]*a[j]);return p;}));}
@@ -47,10 +47,24 @@ function box(g,s,p,mat='steel',bevel=0){
   return mesh(g,geo,tile?'paint':mat,p,mat+' panel');
 }
 function panel(g,s,p,tile='ivory',b=.08){return box(g,s,p,tile,b);}
+// Tile 14 is a padded hardware sheet. Shells and chamfers sample quiet paint;
+// only physical hatches/vents receive the corresponding graphic, once per face.
+const hardwareRegions={
+  shell:{face:[16,16,272,240],edge:[24,24,56,56]},
+  frame:{face:[288,16,496,112],edge:[300,24,328,48]},
+  access:{face:[16,272,272,496],edge:[24,24,56,56]},
+  vent:{face:[288,272,496,496],edge:[300,24,328,48]},
+  registry:{face:[288,128,496,240],edge:[300,24,328,48]}
+};
+function hardwarePanel(g,size,p,finish='shell',bevel=.08){
+  const b=Math.min(bevel,...size.map(v=>v*.24)),region=hardwareRegions[finish];
+  const geo=geometry(['hardware',...size,b,finish].join(','),()=>chamferGeometry(size,b,'registry',region));
+  const m=mesh(g,geo,'paint',p,'hardware / '+finish);m.userData.hardwareFinish=finish;return m;
+}
 function cylinder(g,r1,r2,length,p,mat='steel',axis='x',segments=16){const m=mesh(g,geometry(['c',r1,r2,length,segments].join(','),()=>new T.CylinderGeometry(r1,r2,length,segments)),mat,p,'cylinder / '+mat);if(axis==='x')m.rotation.z=-Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;return m;}
 function beam(g,a,b,width=.16,mat='steel',depth=width){const av=new T.Vector3(...a),bv=new T.Vector3(...b),delta=bv.clone().sub(av);const m=mesh(g,geometry('beam'+width+','+depth,()=>new T.BoxGeometry(width,1,depth)),mat);m.name='structural beam';m.position.copy(av.add(bv).multiplyScalar(.5));m.scale.y=delta.length();m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return m;}
-function pipe(g,points,r=.08,mat='edge'){return mesh(g,geometry('pipe'+r+JSON.stringify(points),()=>new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)),false,'catmullrom',.15),Math.max(12,points.length*5),r,6,false)),mat,[0,0,0],'service pipe');}
-function ring(g,x,r,mat='ochre',tube=.1){const m=mesh(g,geometry('ring'+r+','+tube,()=>new T.TorusGeometry(r,tube,6,40)),mat,[x,0,0],'retaining hoop');m.rotation.y=Math.PI/2;return m;}
+function pipe(g,points,r=.08,mat='edge',steps=Math.max(12,points.length*5),sides=6){return mesh(g,geometry('pipe'+r+JSON.stringify(points)+':'+steps+':'+sides,()=>new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)),false,'catmullrom',.15),steps,r,sides,false)),mat,[0,0,0],'service pipe');}
+function ring(g,x,r,mat='ochre',tube=.1,segments=40,sides=6){const m=mesh(g,geometry('ring'+r+','+tube+','+segments+','+sides,()=>new T.TorusGeometry(r,tube,sides,segments)),mat,[x,0,0],'retaining hoop');m.rotation.y=Math.PI/2;return m;}
 function group(g,name,p=[0,0,0]){const c=new T.Group();c.name=name;c.position.set(...p);g.add(c);return c;}
 function handholdRun(g,a,b){const p=new T.Vector3(...a),d=new T.Vector3(...b).sub(p),n=Math.max(1,Math.ceil(d.length()/2)),t=d.clone().normalize().multiplyScalar(.27);for(let i=0;i<n;i++){const c=p.clone().addScaledVector(d,(i+.5)/n),a=c.clone().sub(t),b=c.clone().add(t);beam(g,a.toArray(),[a.x,a.y+.15,a.z],.035,'edge');beam(g,[a.x,a.y+.15,a.z],[b.x,b.y+.15,b.z],.04,'ochre');beam(g,[b.x,b.y+.15,b.z],b.toArray(),.035,'edge');}}
 function hatch(g,p=[0,0,0]){panel(g,[1.9,.12,1.7],p,'service');const [x,y,z]=p;cylinder(g,.65,.65,.12,[x,y+.12,z],'edge','y');box(g,[.75,.1,.08],[x,y+.22,z],'ochre');}
@@ -142,7 +156,7 @@ function cargo(g,options={}){
   }
   for(const z of [-2.3,2.3]){
     for(const x of [-3.6,-1.8,0,1.8,3.6])panel(g,[.13,3.8,.13],[x,0,z],'service',.025);
-    panel(g,[1.5,.56,.08],[2.6,.9,z+Math.sign(z)*.05],'registry',.025);
+    hardwarePanel(g,[1.5,.56,.08],[2.6,.9,z+Math.sign(z)*.05],'registry',.025);
     panel(g,[7.7,.14,.18],[0,-2.12,z],'edge',.025);
   }
   for(const z of [-1.8,1.8])panel(g,[8.9,.18,.2],[0,2.25,z],'service',.03);
@@ -176,21 +190,21 @@ function tank(g,options={}){
   g.userData.sockets={forward:[-6,0,0],aft:[6,0,0]};
 }
 function engine(g){
-  panel(g,[3.8,3.15,3.15],[-1.8,0,0],'ivory',.45);
-  cylinder(g,1.32,1.32,3,[-1.3,0,0],'steel','x',24);
-  for(const x of [-3.8,-1.8])cylinder(g,1.52,1.52,.22,[x,0,0],x===-1.8?'ochre':'edge','x',24);
-  ring(g,.5,.78,'edge',.10);
+  hardwarePanel(g,[3.8,3.15,3.15],[-1.8,0,0],'shell',.45);
+  cylinder(g,1.32,1.32,3,[-1.3,0,0],'steel','x',16);
+  for(const x of [-3.8,-1.8])cylinder(g,1.52,1.52,.22,[x,0,0],x===-1.8?'ochre':'edge','x',16);
+  ring(g,.5,.78,'edge',.10,16,4);
   const bell=geometry('hollow engine bell',()=>{
     const points=[[.7,.4],[.75,.7],[.95,1.4],[1.35,2.15],[1.95,3.2],[2.05,3.35],[1.86,3.4],[1.73,3.16],[1.17,2.2],[.8,1.4],[.60,.7],[.6,.4]].map(([r,x])=>new T.Vector2(r,x));const geo=new T.LatheGeometry(points,32);geo.normalizeNormals();return geo;
   });
   const nozzle=mesh(g,bell,'edge',[0,0,0],'recessed engine bell');nozzle.rotation.z=-Math.PI/2;
-  cylinder(g,.59,.59,.05,[.47,0,0],'hot','x',24);ring(g,3.28,1.96,'steel',.09);
+  cylinder(g,.59,.59,.05,[.47,0,0],'hot','x',16);ring(g,3.28,1.96,'steel',.09,24,4);
   for(let i=0;i<8;i++){const angle=i*Math.PI/4,y=Math.cos(angle),z=Math.sin(angle);beam(g,[.6,y*.98,z*.98],[2.8,y*1.82,z*1.82],.06,'steel');}
   for(const z of [-1.68,1.68]){
-    panel(g,[2.4,1.7,.45],[-1.6,0,z],'service',.14);panel(g,[1.85,1.22,.12],[-1.6,0,z+Math.sign(z)*.26],'vent',.04);
-    pipe(g,[[-3.8,.6,z*.7],[-3.2,1.15,z],[-.4,1.15,z],[.3,.6,z*.7]],.09,'ochre');
+    hardwarePanel(g,[2.4,1.7,.45],[-1.6,0,z],'frame',.14);hardwarePanel(g,[1.85,1.22,.12],[-1.6,0,z+Math.sign(z)*.26],'vent',.04);
+    pipe(g,[[-3.8,.6,z*.7],[-3.2,1.15,z],[-.4,1.15,z],[.3,.6,z*.7]],.09,'ochre',10,4);
   }
-  panel(g,[2.8,.4,1.6],[-2,-1.7,0],'dark',.1);
+  hardwarePanel(g,[2.8,.4,1.6],[-2,-1.7,0],'frame',.1);
   for(const y of [-1.3,1.3])beam(g,[-4,y,0],[-2.7,y,0],.2);
   g.userData.sockets={mount:[-4,0,0],exhaust:[3.4,0,0]};
 }
@@ -426,24 +440,24 @@ export function buildFrameFreighter(name,options={}){
 function freightCommand(g){
   const cabin=group(g,'freight command module',[-14,0,0]);
   cabin.userData.designFamily='industrial drive cassette';
-  panel(cabin,[3.8,3.15,3.15],[-1.8,0,0],'ivory',.45).name='command chamfered housing';
-  panel(cabin,[2.6,3.15,3.15],[1.5,0,0],'ivory',.45);
+  hardwarePanel(cabin,[3.8,3.15,3.15],[-1.8,0,0],'shell',.45).name='command chamfered housing';
+  hardwarePanel(cabin,[2.6,3.15,3.15],[1.5,0,0],'shell',.45);
   cylinder(cabin,1.32,1.32,1.8,[3.0,0,0],'steel','x',24);
   cylinder(cabin,1.52,1.52,.22,[.15,0,0],'ochre','x',24);
   cylinder(cabin,1.52,1.52,.22,[2.8,0,0],'edge','x',24);
   // Small instrument/view ports in an opaque forward plate, not a windshield.
-  panel(cabin,[.12,1.1,2.1],[-3.73,.35,0],'dark',.08);
+  hardwarePanel(cabin,[.12,1.1,2.1],[-3.73,.35,0],'frame',.08);
   for(const z of [-.58,.58]){
     cylinder(cabin,.29,.29,.08,[-3.82,.35,z],'glass','x',16);
     ring(cabin,-3.86,.34,'edge',.055).position.set(-3.86,.35,z);
   }
   for(const z of [-1.68,1.68]){
-    panel(cabin,[2.4,1.7,.45],[-1.6,0,z],'service',.14);
-    panel(cabin,[1.85,1.22,.12],[-1.6,0,z+Math.sign(z)*.26],'door',.04);
+    hardwarePanel(cabin,[2.4,1.7,.45],[-1.6,0,z],'frame',.14);
+    hardwarePanel(cabin,[1.85,1.22,.12],[-1.6,0,z+Math.sign(z)*.26],'access',.04);
     pipe(cabin,[[-3.2,.6,z*.7],[-2.6,1.15,z],[.4,1.15,z],[1.1,.6,z*.7]],.09,'ochre');
   }
-  panel(cabin,[2.8,.4,1.6],[-2,-1.7,0],'dark',.1);
-  panel(cabin,[2.0,.24,1.7],[1.2,1.65,0],'vent',.08);
+  hardwarePanel(cabin,[2.8,.4,1.6],[-2,-1.7,0],'frame',.1);
+  hardwarePanel(cabin,[2.0,.24,1.7],[1.2,1.65,0],'vent',.08);
   return cabin;
 }
 

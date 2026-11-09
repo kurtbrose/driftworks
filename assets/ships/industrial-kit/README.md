@@ -404,3 +404,56 @@ in submitted geometry and acceptable submission cost in this scene, not a
 precise whole-game speedup or GPU-headroom claim. Capital preparation was
 outside timing (1,475.6 / 1,531.8 ms). The actual convoy was inspected in motion,
 with engine glow aligned to the shortened ships' authored exhaust anchors.
+
+## Hardware close-up and curve-density review (2026-11-08)
+
+The freighter review now isolates the command module, one engine, or the full
+engine bank. Inspection found full generic atlas panels repeatedly mapped onto
+shell faces, trim, hatches and vent frames. Hardware now addresses dedicated,
+padded regions of tile 14: quiet ivory shell paint, plain graphite trim, one
+access-cover graphic, a louver inset, and a separate cargo registry label. The
+chamfers use quiet paint/trim instead of fragments of text and panel borders.
+The 2048-square atlas and shared paint material remain unchanged in number and
+resolution. Tile 14's old whole-tile registry use is remapped to its new label
+rectangle. There are no new runtime texture fetches or shader features.
+
+The original engine's 2,912 triangles comprised: rings 960, bell 704, pipes 480,
+cylinders 384, panel housings 264, and supports 120. Its smooth normals were
+already present; excessive subdivision was mainly on incidental hardware.
+The revised engine has 1,824 triangles: rings 320, bell 704, pipes 160,
+cylinders 256, housings 264 and supports 120. The bell retains 32 angular
+segments for its silhouette. Its small neck ring uses 16 segments, outer rim
+24, thin torus sections four sides, conduits ten path steps/four sides and
+small cylinders 16 sides. Interpolated vertex normals retain smooth lighting;
+silhouette faceting remains visible at sufficiently extreme magnification.
+
+Across 120 visible engines this removes 130,560 submitted triangles, from
+349,440 to 218,880. Whole-ship instancing shares buffers and material draws;
+it does not eliminate per-instance vertex/pixel work. This was a bounded
+geometry cleanup, not evidence that 3k triangles alone caused a bottleneck.
+
+Draw/material counts remain 7 / 7 / 6 for container / feeder / tanker. Triangle
+counts are now 62,016 / 28,500 / 28,940; the binary is 11,467,776 bytes. Editable
+metre dimensions, hollow engine bell, sockets, module placement and engine
+anchors remain intact. The exact collision bake was rebuilt for the coarser
+hardware. Focused packaging/UV tests, industrial geometry/export checks and the
+five-mode convoy collision suite pass. Regressions cover padded UVs, quiet shell
+regions, smooth ring seams and a 2,000-triangle engine budget.
+
+Visual inspection covered command front/side/underside, engine front, bell,
+side/underside, and the assembled four-engine bank. Labeled captures are in
+ignored `output/freighter-surfaces/`. Shell graphics are deliberately restrained;
+this pass does not add a normal map or photographic microdetail.
+
+The matched foreground convoy measurement retained the starting cockpit camera,
+1838 x 1461 backing resolution, DPR 1.5, 100% production artwork, 30 freighters
+and normal effects. AI/projectiles were frozen; each run used OFF/ON/ON/OFF,
+20 warm-up and 90 samples per block. Builds/tests were idle during sampling.
+Before: ON CPU median/p95 3.00/3.50 ms, 89 draws, 1,449,098 triangles;
+OFF 1.50/1.70 ms, 39 draws, 123,498 triangles. After: ON 3.20/4.20 ms,
+89 draws, 1,318,538 triangles; OFF 1.70/2.10 ms, 39 draws, 123,498 triangles.
+Both had 13.30/13.40 ms median/p95 rAF cadence. The baseline moved too; no
+submission or frame-cadence improvement was demonstrated. GPU execution was
+not timed. This confirms a modest geometry saving with unchanged draws, not a
+claim that the original engine count was an established gameplay bottleneck.
+Capital preparation, outside sampling, was 1,513.1 / 1,685.4 ms.

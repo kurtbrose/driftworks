@@ -107,6 +107,29 @@ for index, (name, color) in enumerate(PALETTE):
         x, y = (a, b) if side < 2 else (b, a)
         length = rng.randrange(1, 9)
         d.line((x, y, x+length, y+rng.randrange(-1, 2)), fill=(95, 99, 91), width=rng.choice([1, 1, 2]))
+    if index == 14:
+        # Dedicated hardware regions; 16px gutters prevent mip-edge contamination.
+        tile = Image.new("RGB", (SIZE, SIZE), (192, 193, 181))
+        d = ImageDraw.Draw(tile)
+        d.rectangle((280, 8, 504, 120), fill=(61, 70, 72))
+        d.rectangle((280, 248, 504, 504), fill=(47, 57, 60))
+        # Access cover: one perimeter seam, four fasteners, a latch and a small ID.
+        d.rounded_rectangle((24, 280, 264, 488), radius=9, fill=(182, 184, 173), outline=(111, 119, 117), width=2)
+        d.line((30, 485, 258, 485), fill=(210, 211, 199), width=2)
+        for x in [36, 252]:
+            for y in [292, 476]:
+                d.ellipse((x-2, y-2, x+2, y+2), fill=(76, 86, 87))
+        d.rectangle((230, 364, 242, 396), fill=(77, 86, 87))
+        d.text((43, 303), "ACCESS  /  01", font=font(12), fill=(83, 94, 94))
+        # Louvers belong only to the separately modeled ventilation inset.
+        for y in range(288, 481, 12):
+            d.rectangle((300, y, 484, y+5), fill=(25, 34, 37))
+            d.line((300, y+7, 484, y+7), fill=(91, 103, 103), width=1)
+        # Cargo registry retains its own compact readable rectangle.
+        d.rectangle((280, 120, 504, 248), fill=(192, 193, 181))
+        d.rectangle((300, 148, 307, 221), fill=(177, 128, 51))
+        d.text((320, 151), "DW / 014", font=font(20), fill=(53, 66, 68))
+        d.text((320, 184), "FREIGHT", font=font(13), fill=(88, 100, 100))
     atlas.paste(tile, ((index % 4)*SIZE, (index // 4)*SIZE))
 
 target = ROOT / "assets/ships/industrial-kit/panels.png"
