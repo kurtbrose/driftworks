@@ -20,8 +20,10 @@ battle prototype has become a staged ambush; convoy escort remains separate.
 
 The fixed-step encounter in `src/convoy-ambush.js` owns the following beats:
 
-- 3 seconds: one military time-on-station / formation report. Fighter comms stay
-  disciplined; conversational chatter belongs to civilian transports. No hostile or capital is
+- 3 / 10 seconds: Control requests fuel and systems status; Lancer Two answers
+  Control. The fuel percentage is authored mission context (flight has no fuel
+  consumption model). Fighter comms stay disciplined; conversational chatter
+  belongs to civilian transports. No hostile or capital is
   active, and cargo cannot take encounter damage during this quiet opening.
 - 22 seconds: Control interrupts with "Warning. Spatial discontinuity detected."
 - 28 seconds: the hostile mouth opens directly on the original route. Freighters
