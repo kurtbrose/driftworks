@@ -19,7 +19,8 @@ const batches=[{vertices:data,color:[.2,.3,.4],origin:[1,2,3],staticGeometry:tru
 viewer.setStudyActors(batches);viewer.setStudyEffects([{vertices:new Float32Array(data),color:[1,.2,.1]}]);
 viewer.render(world,1,0,0);assert.equal(frames.length,1,'One Three render submits the whole pass');
 const first=frames[0];assert.equal(first.length,3);
-assert(first[0].material.vertexShader.startsWith('#define THIN_SHELL_HULL 0'),'ordinary scenes compile without thin-shell visibility code');
+assert(!first[0].material.vertexShader.includes('THIN_SHELL_HULL'),'ordinary scenes use the shared hull program');
+assert.equal(first[0].uniforms.uTransitShell[0],0,'ordinary hulls disable transit section tests through uniforms');
 assert.deepEqual(Array.from(first[0].uniforms.uColor),batches[0].color);assert.deepEqual(Array.from(first[1].uniforms.uColor),batches[1].color);
 assert.deepEqual(Array.from(first[0].uniforms.uOrigin),batches[0].origin,'Queued draws retain their own transforms');
 assert.equal(first[0].blending,THREE.NoBlending);assert.equal(first[1].blending,THREE.NormalBlending);assert.equal(first[2].blending,THREE.AdditiveBlending);assert.equal(first[1].depthWrite,false);
@@ -524,7 +525,7 @@ for(const returning of [false,true]){
 assert(shellVisible>0&&shellOccluded>0,'sweep exercises partially hidden hulls');
 assert.equal(shellViews,504);
 const shellFragment=frames.at(-1)[0].material.fragmentShader;
-assert(shellFragment.startsWith('#define THIN_SHELL_HULL 1'),'thin-shell scene enables its own visibility variant');
+assert.equal(shellFragment,first[0].material.fragmentShader,'crossing hulls and ordinary flight share the same fragment source');
 assert(shellFragment.includes('if(uTransitShell.x>.5)')&&shellFragment.includes('along-sqrt(disc)<distance-.00001)discard;'),'local sections retain physical shell occlusion');
 assert(shellFragment.includes('if(-dot(observer,source)/max(.000001,R*S)<limit-.000001)discard;'),'unreachable remote sections are rejected per fragment');
 viewer.setStudyBridge(false);
@@ -556,3 +557,21 @@ assert(!DW.scene3d.studyBatchVisible({...instanceBatch,instanceOffsets:new Float
 instancedViewer.setStudyActors([]);instancedViewer.render(world,1,0,0);
 assert.equal(frames.at(-1).length,0,'Removing instances clears native draws');
 console.log('PASS native study instances: immutable source buffers, local translations, group culling, draw/triangle accounting and removal');
+
+
+// Switching the optical observer must preserve pooled hull resources.
+{
+ context.location.search='?mission=thin-shell&bridgeGeometry=objects';
+ const shared=DW.scene3d.create(element(),()=>world,w=>{world=w;},{study:true});
+ shared.setSurfaceCamera({region:0,eye:[0,-40,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+ shared.setStudyActors([{vertices:data,color:[1,0,0],origin:[0,-20,0],region:0,staticGeometry:true}]);
+ shared.render(world,1,0,0);const original=frames.at(-1)[0];assert(original);
+ for(const enabled of [true,false,true,false]){
+  shared.setStudyBridge(enabled);shared.render(world,1,0,0);
+  const frame=frames.at(-1)[0];assert(frame);
+  assert.equal(frame.material,original.material,'Optical toggles preserve the pooled hull material');
+  assert.equal(frame.geometry,original.geometry,'Optical toggles preserve the source geometry');
+  assert.equal(frame.uniforms.uTransitShell[0],0,'Inactive section tests remain disabled');
+ }
+}
+console.log('PASS shared hull resource lifetime across optical observer toggles');

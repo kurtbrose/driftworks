@@ -738,3 +738,8 @@ The sky renderer preloads every declared complete source/destination cube before
 the launch gate opens. Its shared Ellis pass samples those static environments
 for normal and linked views; no background composition runs in gameplay. See
 the [offline sky boundary](skybox-authoring.md#production-loading-and-offline-sources).
+
+All procedural hulls and effects use the same wormhole-capable shader source.
+Transit uniforms disable section tests when inactive. Switching foreground
+optics does not rebuild pooled materials or source geometry; native PBR and
+procedural materials retain their existing appearance roles.
