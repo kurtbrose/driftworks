@@ -439,6 +439,9 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         else if(!through)discard;
       }else if(planeActive&&dot(vec4(portalPoint,1.),uPortalPlane)<0.)discard;
     `);
+    var gunShader='precision highp float;uniform vec4 uGunLights[4];uniform float uGunHeat;vec3 gunIllumination(vec3 point){vec3 light=vec3(0.);for(int i=0;i<4;i++){float d=length(point-uGunLights[i].xyz)/'+(65/sim.METERS_PER_UNIT)+';light+=vec3(1.,.67,.28)*uGunLights[i].w*2.5*pow(max(0.,1.-d),2.);}return light;}vec3 gunEmission(vec3 point){return vec3(1.,.14,.025)*uGunHeat*smoothstep('+(15/sim.METERS_PER_UNIT)+','+(30/sim.METERS_PER_UNIT)+',-point.x)*.8;}';
+    fragmentShader=gunShader+fragmentShader;
+    fragmentShader=fragmentShader.replace('gl_FragColor=vec4(mix(col*','col+=uColor*gunIllumination(vLocal)+gunEmission(vLocal);gl_FragColor=vec4(mix(col*');
     var declarations=vertexShader+'\n'+fragmentShader;
     declarations.replace(/uniform\s+(float|vec[234]|mat[34]|sampler2D)\s+([^;]+);/g,/** @param {string} _ @param {string} type @param {string} names */ function(_,type,names){
       names.split(',').forEach(function(name){var key=name.trim().replace(/\[.*$/, ''),size=type==='float'?1:type==='mat3'?9:type==='mat4'?16:Number(type.slice(-1));var count=Number((name.match(/\[(\d+)\]/)||[])[1]||1);uniforms[key]={value:type==='sampler2D'?null:size*count===1?0:new Float32Array(size*count)};});return '';
@@ -471,6 +474,9 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
       result.defaultAttributeValues={aInstanceCargoSeed:[0],aInstanceOffset:[0,0,0],aInstanceRight:[1,0,0],aInstanceForward:[0,1,0],aInstanceUp:[0,0,1]};
       result.onBeforeCompile=function(shader){
+        shader.uniforms.uGunLights=snapshot.uGunLights;shader.uniforms.uGunHeat=snapshot.uGunHeat;
+        shader.vertexShader='varying vec3 vGunLocal;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvGunLocal=position;');
+        shader.fragmentShader=gunShader+'varying vec3 vGunLocal;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','outgoingLight+=diffuseColor.rgb*gunIllumination(vGunLocal)+gunEmission(vGunLocal);\n#include <opaque_fragment>');
         shader.uniforms.uCargoEnabled=snapshot.uCargoEnabled;shader.uniforms.uCargoSeed=snapshot.uCargoSeed;shader.uniforms.uInstanced=snapshot.uInstanced;shader.uniforms.uInstancePose=snapshot.uInstancePose;
         shader.vertexShader=cargoUvShader+'uniform float uCargoSeed;attribute float aInstanceCargoSeed;uniform float uInstanced,uInstancePose;attribute vec3 aInstanceOffset,aInstanceRight,aInstanceForward,aInstanceUp;\n'+shader.vertexShader;
         shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv=cargoUv(vMapUv,uInstanced>.5?aInstanceCargoSeed:uCargoSeed);\n#endif\n');
@@ -498,6 +504,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       };
       return result;
     }
+    var emptyGunLights=new Float32Array(16);
     var drawIndex=0;
     /** @param {string} name @param {number|number[]|Float32Array|import('./three-types').Texture|null} value */
     function setUniform(name,value){uniforms['u'+name].value=value;}
@@ -546,7 +553,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{placement?:import('../experiments/types').RenderPlacement,portalClip?:number[],clipPlane?:number[],instanceCargoSeeds?:Float32Array,cargoSeed?:number,instanceRights?:Float32Array,instanceForwards?:Float32Array,instanceUps?:Float32Array,dynamicInstances?:boolean,instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{placement?:import('../experiments/types').RenderPlacement,portalClip?:number[],clipPlane?:number[],instanceCargoSeeds?:Float32Array,cargoSeed?:number,instanceRights?:Float32Array,instanceForwards?:Float32Array,instanceUps?:Float32Array,dynamicInstances?:boolean,instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,gunLights?:Float32Array,gunHeat?:number,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {Map<Float32Array,Map<Float32Array,Mesh>>} */var instancedActorMeshes=new Map();
@@ -993,11 +1000,13 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
           if(translucent){blending=THREE.NormalBlending;depthWrite=false;}
           setFinish(batch.finish===7&&!rigLightsEnabled?8:batch.finish || 0);
           setUniform('HyperbolicLocalOrigin',batch.hyperbolicLocalOrigin||[0,0,0]);setUniform('HyperbolicLocalBasis',batch.hyperbolicLocalBasis||identityBasis);setUniform('HyperbolicRadius',batch.hyperbolicRadius||0);setUniform('HyperbolicFrame',batch.hyperbolicFrame||emptyHyperbolicFrame);
+          setUniform('GunLights',batch.gunLights||emptyGunLights);setUniform('GunHeat',batch.gunHeat||0);
           var actorScale=batch.scale===undefined?1:batch.scale;
           draw(mesh,batch.origin || [0,0,0],[actorScale,actorScale,actorScale],batch.rotation || 0,batch.color,false,false,batch.basis);
           if(translucent){depthWrite=true;blending=THREE.NoBlending;}
         });
       }
+      setUniform('GunLights',emptyGunLights);setUniform('GunHeat',0);
       setUniform('HyperbolicRadius',0);setUniform('PortalClip',[0,0,0,0]);setUniform('PortalPlane',[0,0,0,0]);
       drawRegion=0;drawLensCenter=null;drawLensRadius=0;drawLensTransit=undefined;
       setUniform('Opacity',1);
@@ -1084,7 +1093,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice();},
       /** @param {typeof studyExplosions} blasts */
       setStudyExplosions:function(blasts){if(study)studyExplosions=blasts.slice();},
-      /** @param {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
+      /** @param {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,gunLights?:Float32Array,gunHeat?:number,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},
       /** @param {boolean} enabled */

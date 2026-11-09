@@ -122,6 +122,7 @@
     }
     /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {import('./types').ShotSpace} [bridge] */
     function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors, bridge) {
+        var pulse=muzzlePulses.get(guns)||{age:100,heat:0};pulse.age+=dt;pulse.heat*=Math.exp(-dt/1.8);muzzlePulses.set(guns,pulse);
         var count = mountCount === undefined ? 2 : mountCount;
         if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
         var muzzles = anchors || Array.from({length:count}, function (/** @type {unknown} */ _, mount) {
@@ -174,6 +175,7 @@
             return;
         }
         if (ready) {
+            pulse.age=0;pulse.heat=Math.min(1,pulse.heat+.24);
             var target = aimPoint && aimPoint();
             // Keep the launch plane behind a close crosshair surface, never fire backward.
             var forward = target ? Math.max(0, target.reduce(function (sum, x, i) {
@@ -275,12 +277,14 @@
         }
         return null;
     }
-    var visualOptions={mode:'current',radius:3,exposure:.8},visualInterval=1/60,visualTime=NaN;
+    var muzzlePulses=new WeakMap();
+    var visualOptions={compactHeads:false,wakes:false,muzzleLight:false,layeredImpacts:false,barrelHeat:false,mode:'current',radius:3,exposure:.8},visualInterval=1/60,visualTime=NaN;
     /** Session-only rendering preferences; never alter gun or weapon state.
-     * @param {{mode:string,radius:number,exposure:number}} value */
+     * @param {import('./types').GunVisualOptions} value */
     function setVisualOptions(value){
         if(!['current','multiples','overlap','centered','centered-overlap','leading-edge','orb'].includes(value.mode)||!Number.isFinite(value.radius)||value.radius<.5||value.radius>8||!Number.isFinite(value.exposure)||value.exposure<0||value.exposure>1)throw new Error('Invalid projectile visual options');
-        visualOptions={mode:value.mode,radius:value.radius,exposure:value.exposure};
+        visualOptions=Object.assign({},visualOptions,value);
+        /** @type {('compactHeads'|'wakes'|'muzzleLight'|'layeredImpacts'|'barrelHeat')[]} */(['compactHeads','wakes','muzzleLight','layeredImpacts','barrelHeat']).forEach(function(key){visualOptions[key]=value[key]===true;});
     }
     /** @param {number} seconds */
     function visualFrame(seconds){var elapsed=seconds-visualTime;if(elapsed>0&&elapsed<=.25)visualInterval=elapsed;else if(elapsed<0)visualInterval=1/60;visualTime=seconds;}
@@ -332,6 +336,12 @@
                 return x - pose.eye[i];
             })) * units;
             var visualScale = Math.min(1, distanceM / 30);
+            var width = bolt.weapon.headRadius / units * visualScale;
+            if(visualOptions.wakes&&!optical&&!bolt.curvature){
+                var reach=Math.min(bolt.age,.035)*bolt.weapon.speed/units;
+                for(var wake=5;wake>=1;wake--){var point=bolt.position.map(function(v,i){return v-bolt.direction[i]*reach*wake/5;});quad(group.data,point,pose.right,pose.up,width*(1-wake*.1),width*(1-wake*.1),.26*(1-wake/6));}
+            }
+            if(visualOptions.compactHeads){quad(group.data,bolt.position,pose.right,pose.up,width,width,1);return;}
             if(visualOptions.mode!=='current'){
                 /** Reverse only the rendered exposure; simulation/collision retain the true head.
                  * @param {number} ago */
@@ -409,9 +419,14 @@
                 return x + pose.back[i] * .08 / units;
             });
             quad(impacts, center, pose.up, pose.right, r, r, 1 - hit.age / .22);
+            if(visualOptions.layeredImpacts){
+                var flash=Math.max(0,1-hit.age/.065),scale=(hit.scale||1)/units;
+                quad(impacts,center,pose.up,pose.right,scale*.65,scale*.65,flash*2);
+                for(var spark=0;spark<6;spark++){var angle=spark*Math.PI/3,travel=hit.age*18*scale,sparkPoint=center.map(function(v,i){return v+travel*(pose.right[i]*Math.cos(angle)+pose.up[i]*Math.sin(angle));});quad(impacts,sparkPoint,pose.up,pose.right,scale*.14,scale*.14,(1-hit.age/.22)*.7);}
+            }
         });
         batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3], projected:!!optical, region:pose.region||0 });
         return batches;
     }
-    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = {setVisualOptions:setVisualOptions,getVisualOptions:function(){return Object.assign({},visualOptions);},visualFrame:visualFrame, throatContact:throatContact, bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
+    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = {muzzlePulse:function(guns){return Object.assign({age:100,heat:0},muzzlePulses.get(guns));},setVisualOptions:setVisualOptions,getVisualOptions:function(){return Object.assign({},visualOptions);},visualFrame:visualFrame, throatContact:throatContact, bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
 }());

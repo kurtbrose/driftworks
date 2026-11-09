@@ -84,18 +84,18 @@
         var mounts=asset.turrets.map(function(t,index){
             var basis=new Float32Array([1,0,0,0,1,0,0,0,1]),pivot=/** @type {[number,number,number]} */(t.position.map(function(v,i){return v/U+origin[i];}));
             var batches=t.batches.map(function(b){
-                return {vertices:vertices(b.vertices),color:livery(b.color),origin:pivot,basis:basis,staticGeometry:true};
+                return {gunHeat:0,vertices:vertices(b.vertices),color:livery(b.color),origin:pivot,basis:basis,staticGeometry:true};
             });
             return {source:t,state:state.mounts[index],basis:basis,batches:batches};
         });
-        var engines=(asset.engines||[]).map(function(e){return {source:e,batches:e.batches.map(function(b){return {vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(worldEngine(e.position)),basis:new Float32Array([1,0,0,0,1,0,0,0,1]),staticGeometry:true};})};});
+        var engines=(asset.engines||[]).map(function(e){return {source:e,batches:e.batches.map(function(b){return {gunHeat:0,vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(worldEngine(e.position)),basis:new Float32Array([1,0,0,0,1,0,0,0,1]),staticGeometry:true};})};});
         /** @param {Vector} p */function worldEngine(p){return rotate(p).map(function(v,i){return v/U+origin[i];});}
         var world=worldEngine;
         var parts=state.parts;
         /** @type {{state:import('../experiments/types').AegisVisualPart;batches:Batch[];original:{vertices:Float32Array;color:[number,number,number]}[];dead:boolean}[]} */
         var visualParts=mounts.map(function(m,i){return {state:parts[i],batches:m.batches,original:m.batches.map(function(b){return {vertices:b.vertices,color:b.color};}),dead:false};}).concat(engines.map(function(e,i){return {state:parts[mounts.length+i],batches:e.batches,original:e.batches.map(function(b){return {vertices:b.vertices,color:b.color};}),dead:false};}));
         var hullBasis=new Float32Array([1,0,0,0,1,0,0,0,1]);
-        /** @type {Batch[]} */var staticBatches=asset.batches.concat(asset.interiors||[]).map(function(b){return {vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true};});
+        /** @type {Batch[]} */var staticBatches=asset.batches.concat(asset.interiors||[]).map(function(b){return {gunHeat:0,vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true};});
         /** @param {Batch} b @param {import('../experiments/types').AegisSurfaceFinish|undefined} finish @param {import('../experiments/types').AegisVisualPart|null} part */
         function prepareSurface(b,finish,part){if(!finish)return null;var texture=finish.atlas?interiorTextures.get(finish.atlas):surfaceTexture;if(!texture)return null;
             var prepared=surfaceBuffers.get(b.vertices);
@@ -136,6 +136,18 @@
                 m.batches.forEach(function(batch){if(batch.origin)for(var k=0;k<3;k++)batch.origin[k]=pivot[k];});
                 // Column-major Rz(yaw) * Ry(elevation), shared by all material batches.
                 b[0]=cy*ce;b[1]=sy*ce;b[2]=-se;b[3]=-sy;b[4]=cy;b[5]=0;b[6]=cy*se;b[7]=sy*se;b[8]=ce;
+            });
+            var preferences=DW.flightGuns.getVisualOptions();
+            /** @type {{position:number[];power:number}[]} */var flashes=[];
+            mounts.forEach(function(m,index){
+                var pulse=DW.flightGuns.muzzlePulse(m.state.guns),alive=parts[index].hp>0;
+                m.batches.forEach(function(b){b.gunHeat=alive&&preferences.barrelHeat&&m.source.kind==='heavy'?pulse.heat:0;});
+                if(alive&&preferences.muzzleLight&&pulse.age<.16){var b=m.basis,p=m.batches[0].origin;flashes.push({position:p.map(function(v,i){return v-b[i]*(m.source.kind==='heavy'?45.09:9.9)/U;}),power:Math.exp(-pulse.age/.045)*(m.source.kind==='heavy'?1:.25)});}
+            });
+            flashes.sort(function(a,b){return b.power-a.power;});flashes.length=Math.min(4,flashes.length);
+            renderBatches.forEach(function(batch){
+                var lights=batch.gunLights||(batch.gunLights=new Float32Array(16));lights.fill(0);
+                flashes.forEach(function(f,index){var delta=f.position.map(function(v,i){return v-(batch.origin||origin)[i];}),b=batch.basis||hullBasis;for(var axis=0;axis<3;axis++)lights[index*4+axis]=delta[0]*b[axis*3]+delta[1]*b[axis*3+1]+delta[2]*b[axis*3+2];lights[index*4+3]=f.power;});
             });
             if(options&&options.bridge)renderBatches.forEach(function(b){b.region=options.state.region||0;b.lensCenter=options.state.position;b.lensRadius=750;});
             return renderBatches;

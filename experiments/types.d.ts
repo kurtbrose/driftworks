@@ -216,6 +216,7 @@ export type Impact = {
     age: number;
     scale?: number;
 };
+export type GunVisualOptions={mode:string;radius:number;exposure:number;compactHeads?:boolean;wakes?:boolean;muzzleLight?:boolean;layeredImpacts?:boolean;barrelHeat?:boolean};
 export type Guns = {
     bolts: Bolt[];
     impacts: Impact[];
@@ -424,6 +425,8 @@ export type Batch = {
     normalUV?: Float32Array;
     normalTexture?: HTMLImageElement;
     bakedDocking?: Float32Array;
+    gunLights?: Float32Array;
+    gunHeat?: number;
     rigLights?: import('../src/types').RigLighting[];
     color: [
         number,
@@ -820,8 +823,9 @@ export type ExperimentModules = {
         contact: (state: FlightState, point: Vector, radius: number) => boolean;
     };
     flightGuns: {
-        setVisualOptions:(value:{mode:string;radius:number;exposure:number})=>void;
-        getVisualOptions:()=>{mode:string;radius:number;exposure:number};
+        setVisualOptions:(value:GunVisualOptions)=>void;
+        muzzlePulse:(guns:Guns)=>{age:number;heat:number};
+        getVisualOptions:()=>GunVisualOptions;
         visualFrame:(seconds:number)=>void;
         bridgeVector:(vector:Vector,normal:Vector)=>Vector;
         throatContact:(before:Vector,after:Vector,velocity:Vector,side:number,hullRadius:number,crossRadius?:number)=>{eye:Vector;velocity:Vector}|null;

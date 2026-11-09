@@ -254,3 +254,37 @@ Operational spin assumes a symmetric hub at midspan: radius = span / 2, tip spee
 The separation preserves source mesh coordinates, material data, attachment
 positions and the existing baked hull indices. See [flight architecture](flight-architecture.md)
 for capital simulation/visual ownership and load-order contracts.
+
+### Experimental gun effects
+
+Flight lab & diagnostics → Experimental projectile visuals provides independent
+compact heads, short fading wakes, capital muzzle illumination, layered impacts,
+and heavy capital barrel heat/cooling. Current disables all five and restores
+current bolt appearance; Restrained enables the first four; Heavy capital guns
+enables all five. Individual edits select Custom. Preferences are session-only.
+Compact heads override the selected plasma silhouette while enabled. Wakes are
+currently limited to straight-space fire; curved/optically projected shots retain
+their existing appearance. Impact sparks are camera-facing presentation samples,
+not simulated debris or surface-normal ejecta.
+
+Gun pulse age and accumulated heat live in a presentation WeakMap keyed by guns,
+advance with gun simulation steps, freeze on pause and disappear with reset guns.
+No serialized state, damage, collision or firing timing depends on these values.
+Capital illumination uses up to four strongest live mount pulses, at the authored
+45.09 m heavy / 9.9 m point-defense muzzle distances. It adds local, unshadowed
+warm light to that capital's surfaces; it does not illuminate other ships. Heavy
+barrels add local emission beyond 15–30 m along their negative X axis and cool
+with a 1.8 s time constant. Immutable geometry, materials and turret pivots are
+preserved; light uniforms and heat update without new hull buffers or draws.
+
+
+A fixed-pose production-renderer close view of the current Aegis heavy turret
+was checked with Current and Heavy, including visible hull spill and barrel glow.
+At 1898 x 975 backing resolution, DPR 1.5, an ABBA comparison with 20 warm-up
+and 55 measured frames per block submitted 56 draws in both modes and
+27,462 / 27,496 triangles. Combined effect preparation/render submission medians
+were 1.3 / 1.4 / 1.3 / 1.3 ms (p95 1.6 / 1.8 / 1.6 / 1.6 ms);
+median browser cadence was 13.3 ms throughout. This embedded-browser frozen
+snapshot is a local cost check, not GPU timing or a full fleet combat budget.
+The live flight menu was checked for Heavy, individual Custom edits and Current
+reset. Captures and measurement details are under ignored output/gun-effects/.

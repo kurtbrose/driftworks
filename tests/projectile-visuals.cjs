@@ -62,3 +62,30 @@ assert.equal(JSON.stringify(state),original,'All new treatments are presentation
 guns.setVisualOptions({mode:'current',radius:3,exposure:.8});
 assert.deepEqual(guns.geometry(state,pose),baseline,'Current mode exactly preserves the production reference');
 console.log('PASS gameplay projectile visuals: production reference, 3D samples, launch clipping, energy, impacts and physics isolation');
+
+// Independently switch each treatment, then return exactly to the production reference.
+const flags=['compactHeads','wakes','muzzleLight','layeredImpacts','barrelHeat'];
+for(let mask=0;mask<32;mask++){
+    const options={mode:'current',radius:3,exposure:.8};
+    flags.forEach((key,i)=>options[key]=!!(mask&(1<<i)));
+    guns.setVisualOptions(options);
+    const result=guns.geometry(state,pose);
+    assert(result.every(b=>Array.from(b.vertices).every(Number.isFinite)));
+    assert.equal(result[0].vertices.length,options.wakes?216:36,'Wake toggle adds five bounded path samples');
+    assert.equal(result.at(-1).vertices.length,options.layeredImpacts?288:36,'Impact layers switch independently');
+    assert.equal(JSON.stringify(state),original,'Combinations preserve simulation state');
+}
+guns.setVisualOptions({mode:'current',radius:3,exposure:.8});
+assert.deepEqual(guns.geometry(state,pose),baseline,'Current resets every experimental treatment');
+const live=guns.create();
+guns.step(live,pose,DW.retailWeapons[0],true,.01);
+assert.equal(guns.muzzlePulse(live).age,0);
+assert(guns.muzzlePulse(live).heat>0);
+const hot=guns.muzzlePulse(live);hot.heat=999;
+assert(guns.muzzlePulse(live).heat<1,'Pulse observations are copies');
+guns.step(live,pose,DW.retailWeapons[0],false,0);
+assert.equal(guns.muzzlePulse(live).age,0,'Pause preserves flash age');
+guns.step(live,pose,DW.retailWeapons[0],false,1.8);
+assert(Math.abs(guns.muzzlePulse(live).heat-.24/Math.E)<1e-9,'Heat cools by elapsed simulation seconds');
+assert.equal(guns.muzzlePulse(guns.create()).heat,0,'Reset guns have no stale glow');
+console.log('PASS independent gun effects: 32 combinations, baseline reset, bounded layers, pause and cooling');
