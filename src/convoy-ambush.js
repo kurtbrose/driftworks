@@ -50,7 +50,7 @@
             // A dogfight can delay opening for minutes; use the live convoy, not
             // the place it occupied when Control first detected the anomaly.
             var here=center(combat);e.entry=here.map(function(v,k){return (v+(k===1?1500:0))/U;});
-            e.capitals[1].position=e.entry.map(function(v,k){return v+([0,5000,180][k])/U;});
+            e.capitals[1].position.splice(0,3,...e.entry.map(function(v,k){return v+([0,5000,180][k])/U;}));
             s.arrivalPortal={position:e.entry.slice(),normal:[0,-1,0],radiusM:650,opensAt:t,closesAt:1000000,spawned:true};e.capitals[1].present=true;e.nextWaveAt=t+4;
             DW.wormholes.linkPortal(combat,s.arrivalPortal,'fleet-hostile',1,'hostile',U);
             e.rally=e.entry.map(function(v,k){return v*U+([-1600,800,0][k]);});
@@ -61,7 +61,7 @@
             if(e.waves>=4||e.waves>=2&&e.incidentAt!==null&&t-e.incidentAt>=120){
                 e.rescueAt=t;e.bastionClearAt=t+20;e.exit.opensAt=t;
             }else if(e.reserves>=3){
-                s.arrivalPortal.spawned=false;e.reserves-=3;e.waves++;e.nextWaveAt=t+20;e.bombardUntil=t+18;
+                s.arrivalPortal.spawned=false;e.reserves-=3;e.waves++;e.nextWaveAt=t+20;
             }
         }
         e.phase=e.warningAt===null?'patrol':!s.arrivalPortal?'warning':e.incidentAt!==null&&t<e.incidentAt+10?'ambush':t<e.rescueAt?'defense':t<e.bastionClearAt?'rescue':'extraction';
@@ -89,10 +89,30 @@
                 if(t>=e.bastionClearAt&&along>=140&&radial<e.exit.radiusM-80){ship.arrived=true;ship.velocity=[0,0,0];arrived++;}
             });if(arrived)DW.flightSim.collisionChanged(combat);
         }
+        stepHarrow(combat,dt);
         stepSalvos(combat,dt);
         if(s.ships.every(function(ship){return ship.hull<=0||ship.arrived;})){s.complete=true;e.phase='complete';s.director.waypoint=null;if(s.battle)s.battle.order=null;}
     }
-    /** Real finite-speed shots emerge from the hostile aperture; no scripted cargo kills.
+    /** A live capital approaches a standoff orbit around its own mouth. Its native
+     * batteries independently solve lead, slew, clearance and firing readiness.
+     * @param {Combat} combat @param {number} dt */function stepHarrow(combat,dt){
+        const s=combat.convoy,e=s&&s.evacuation;if(!s||!e)return;const ship=e.capitals[1];
+        if(!ship.present||ship.integrity<=0){ship.velocity=[0,0,0];return;}
+        var cargo=s.ships.filter(function(c){return c.hull>0&&!c.arrived;});
+        cargo.sort(function(a,b){return Math.hypot(...a.position.map(function(v,k){return v-e.entry[k];}))-Math.hypot(...b.position.map(function(v,k){return v-e.entry[k];}));});
+        var target=cargo[0],outward=target?unit(e.entry.map(function(v,k){return k===2?0:v-target.position[k];})):[0,1,0];
+        if(Math.hypot(...outward)<.1)outward=[0,1,0];
+        var flank=[outward[1],-outward[0],0],phase=s.elapsed*.012;
+        // Reposition opposite the live convoy's bearing, keeping the mouth clear
+        // of the hull and presenting a broadside rather than following a shot timer.
+        var goal=e.entry.map(function(v,k){return v*U+outward[k]*1900+flank[k]*Math.sin(phase)*250+(k===2?300:0);});
+        var delta=goal.map(function(v,k){return v-ship.position[k]*U;}),distance=Math.hypot(...delta),speed=Math.min(65,distance/3),desired=unit(delta).map(function(v){return v*speed;});
+        ship.velocity=ship.velocity.map(function(v,k){return v+Math.max(-2*dt,Math.min(2*dt,desired[k]-v));});
+        ship.position.forEach(function(v,k){ship.position[k]=v+ship.velocity[k]*dt/U;});
+        var bearing=Math.atan2(e.entry[1]-ship.position[1],e.entry[0]-ship.position[0])+Math.PI/2;
+        var turn=Math.atan2(Math.sin(bearing-ship.heading),Math.cos(bearing-ship.heading));ship.heading+=Math.max(-.035*dt,Math.min(.035*dt,turn));
+    }
+    /** Drain legacy in-flight rounds; all new Harrow fire comes from its native AI.
      * @param {Combat} combat @param {number} dt */function stepSalvos(combat,dt){
         const s=combat.convoy,e=s&&s.evacuation;if(!s||!e)return;
         var weapon=Object.assign({},DW.retailWeapons[0],{name:'Harrow portal battery',speed:850,lifetime:7,damage:1800,armorFactor:1,length:65,headRadius:2.6,tailRadius:1.7,fireWait:2.4});
@@ -102,12 +122,7 @@
             if(hit){DW.convoyMission.damage(combat,hit.shipId,weapon,hit.point);e.capitalHits++;e.guns.hits++;return false;}
             bolt.position=end;return bolt.age<weapon.lifetime;
         });
-        if(s.complete||!s.arrivalPortal||s.elapsed>=e.bombardUntil||s.elapsed>=e.rescueAt||s.elapsed<e.nextSalvo)return;
-        var cargo=s.ships.filter(function(c){return c.hull>0&&!c.arrived;}),target=cargo.filter(function(c){return c.packet===0;})[e.salvos%3]||cargo[0];if(!target)return;
-        var origin=e.entry.map(function(v,k){return v+([e.salvos%2?45:-45,-550,60][k])/U;});
-        var travel=Math.hypot(...target.position.map(function(v,k){return (v-origin[k])*U;}))/weapon.speed;
-        var aim=target.position.map(function(v,k){return v+target.velocity[k]*travel/U+(e.salvos%4===3&&k===0?110/U:0);});
-        e.guns.bolts.push({position:origin,direction:unit(aim.map(function(v,k){return v-origin[k];})),weapon:weapon,age:0,team:'enemy'});e.guns.fired++;e.salvos++;e.nextSalvo=s.elapsed+(e.waves===1?2.4:5);
+
     }
     /** Persistent event facts let priority warnings interrupt chatter without stale queues.
      * @param {Combat} combat @returns {{key:string;text:string;wing?:boolean;civilian?:boolean;priority?:boolean}|null} */function radio(combat){

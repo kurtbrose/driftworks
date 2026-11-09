@@ -78,7 +78,8 @@ export type FlightStudiesHost={
     shipStretching:HTMLInputElement|null;view:()=>Snapshot;
 };
 export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number;region?:number;mainBatteryClear?:boolean};
-export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean;bridge?:boolean};
+export type AegisBatteryTarget={id:string;position:Vector;velocity:Vector;region:number;integrity:number};
+export type AegisRigOptions={batteryTargets?:(combat:Combat)=>AegisBatteryTarget[];state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean;bridge?:boolean};
 export type Pose = {
     curvature?:number;
     spaceFrame?:number[][];

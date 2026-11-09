@@ -27,10 +27,10 @@ for(let t=59;t<700&&!s.complete;t++){
  if(e.waves!==samples.at(-1)?.waves||e.phase!==samples.at(-1)?.phase)samples.push({seconds:Math.round(s.elapsed),phase:e.phase,waves:e.waves});
  previousPhase=a.phase;
 }
-assert(s.complete);assert(dodged);assert(e.guns.fired>0&&e.capitalHits>0);assert(e.waves>=2&&e.waves<=4);assert(maxFighters<=8,'Waves do not stack into a second dogfight');assert(rests.length>=2&&rests.every(t=>t>=10&&t<=30));assert(e.rescueAt>120);assert(s.ships.some(ship=>ship.arrived));
+assert(s.complete);assert(dodged);assert.equal(e.guns.fired,0,'No synthetic portal-side battery; native capital combat is covered by harrow-ai.cjs');assert(e.waves>=2&&e.waves<=4);assert(maxFighters<=8,'Waves do not stack into a second dogfight');assert(rests.length>=2&&rests.every(t=>t>=10&&t<=30));assert(e.rescueAt>120);assert(s.ships.some(ship=>ship.arrived));
 assert(f.transcript.some(line=>line.text.includes('Spatial discontinuity')));assert(f.transcript.some(line=>line.text.includes('Bastion is inbound')));assert(f.transcript.some(line=>line.text.includes('Bastion to convoy')));
 const escaped=s.ships.find(ship=>ship.arrived);assert(!f.DW.convoyMission.targets(c).some(ship=>ship.id===escaped.id));const hull=escaped.hull;f.DW.convoyMission.damage(c,escaped.id,f.DW.retailWeapons[0],escaped.position);assert.equal(escaped.hull,hull);
 assert.equal(s.battle.order,null);assert.equal(s.director.waypoint,null);assert.doesNotThrow(()=>JSON.stringify(s));
 f.reset();const fresh=f.snapshot().combat;assert.equal(fresh.enemies.length,2);assert.equal(fresh.convoy.evacuation.phase,'patrol');assert.equal(fresh.convoy.evacuation.reserves,12);assert(!fresh.convoy.arrivalPortal);assert.equal(fresh.convoy.evacuation.guns.fired,0);
 fresh.convoy.ships.forEach(ship=>{ship.hull=0;});f.DW.convoyMission.step(fresh,0);assert(fresh.convoy.complete);
-console.log('PASS dynamically paced convoy ambush: quiet chatter, priority warning, route obstruction/dodge, real capital rounds and damage, bounded waves, delayed Bastion, opposite-direction extraction, ownership and reset',JSON.stringify({maxFighters,rests,rescueAt:e.rescueAt,samples}));
+console.log('PASS dynamically paced convoy ambush: quiet chatter, priority warning, route obstruction/dodge, native capital movement (weapon checks in harrow-ai.cjs), bounded waves, delayed Bastion, opposite-direction extraction, ownership and reset',JSON.stringify({maxFighters,rests,rescueAt:e.rescueAt,samples}));

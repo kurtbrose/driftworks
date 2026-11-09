@@ -58,7 +58,8 @@
     /** Armed capitals observe the mission's numeric plan; no second movement clock.
      * @returns {import('./types').AegisFlightRig} */
     function createEvacuationFleet(){
-        var states=DW.convoyBattle.capitals(),configs=states.map(function(state,i){return {state:state,opponent:states[1-i],opponentRig:/** @type {import('./types').AegisFlightRig|undefined} */(undefined)};});
+        var states=DW.convoyBattle.capitals(),configs=states.map(function(state,i){return {batteryTargets:/** @type {import('./types').AegisRigOptions['batteryTargets']} */(undefined),state:state,opponent:states[1-i],opponentRig:/** @type {import('./types').AegisFlightRig|undefined} */(undefined)};});
+        configs[1].batteryTargets=function(combat){const convoy=combat.convoy;return convoy&&!convoy.complete?convoy.ships.filter(function(ship){return ship.hull>0&&!ship.arrived;}).map(function(ship){return {id:ship.id,position:ship.position,velocity:ship.velocity,region:0,integrity:ship.hull};}):[];};
         var placements=states.map(function(){return /** @type {import('./types').RenderPlacement} */({visible:false});});
         var ships=configs.map(function(config,i){return DW.wormholes.bindRig(DW.aegisFlight.create(config),placements[i]);});configs.forEach(function(config,i){config.opponentRig=ships[1-i];});
         /** @type {import('./types').FleetEvacuation|undefined} */var plan;
@@ -95,9 +96,9 @@
                 var fresh=plan?plan.capitals:DW.convoyBattle.capitals();
                 states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;state.present=!!source.present;state.remote=!!source.remote;state.region=source.region||0;state.mainBatteryClear=source.mainBatteryClear;ships[i].reset();});
                 if(plan){plan.capitals=states;if(combat&&combat.convoy)combat.convoy.arrivalFleet=states;}
-            },step:function(dt,view){if(view.combat.convoy&&states[0].present)ships[0].step(dt,view);},
+            },step:function(dt,view){if(view.combat.convoy)ships.forEach(function(ship,i){if(states[i].present)ship.step(dt,view);});},
             geometry:geometry,
-            effects:function(pose,shields){updatePlacements(pose.region);return states[0].present?ships[0].effects(pose,shields):[];},
+            effects:function(pose,shields){updatePlacements(pose.region);return ships.flatMap(function(ship,i){return states[i].present?ship.effects(pose,shields):[];});},
             readout:function(){return states.filter(function(s){return s.present;}).map(function(ship){return ship.callsign+' / '+Math.ceil(ship.integrity/200)+'%';}).join(' / ');},
             hit:function(a,b,bolt){var space=bolt&&bolt.region||0,hits=ships.flatMap(function(ship,i){var point=states[i].present&&(states[i].region||0)===space?ship.hit(a,b,bolt):null;return point?[point]:[];});hits.sort(function(one,two){return Math.hypot(...one.map(function(v,k){return v-a[k];}))-Math.hypot(...two.map(function(v,k){return v-a[k];}));});return hits[0]||null;},
             damage:function(point,amount,combat,region){var space=region===undefined?combat.player.pose.region||0:region;return ships.some(function(ship,i){return !!states[i].present&&(states[i].region||0)===space&&!!ship.damage&&ship.damage(point,amount,combat);});},

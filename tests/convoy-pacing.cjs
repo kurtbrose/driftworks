@@ -21,5 +21,8 @@ survivor.hp=0;r.step(.1);r.step(8);assert.equal(r.a.phase,'rest');r.step(r.a.res
 // Shooting empty space does not count as a dogfight. Incoming damage does.
 const empty=fixture();empty.c.player.guns.fired++;empty.step(60);assert.notEqual(empty.e.warningAt,null);
 const damage=fixture();damage.c.player.shield-=1;damage.step(.1);assert.equal(damage.a.phase,'combat');damage.f.reset();assert.equal(damage.f.snapshot().combat.convoy.director.attention.phase,'settling');
+const artillery=fixture();artillery.s.ships[0].hull-=100;artillery.step(.1);assert.equal(artillery.a.phase,'settling','Remote artillery pressure alone does not invent a player dogfight');
+const attackCapital=fixture();attackCapital.e.capitals[1].present=true;attackCapital.e.capitals[1].region=0;attackCapital.e.capitals[1].position=attackCapital.c.player.pose.eye.slice();attackCapital.c.player.guns.fired++;attackCapital.step(.1);assert.equal(attackCapital.a.phase,'combat','Actively attacking a native capital occupies the pilot');
+const remoteFight=fixture(),remoteBandit=remoteFight.enemy();remoteBandit.pose.region=1;remoteBandit.guns.fired=1;remoteFight.c.player.guns.fired++;remoteFight.step(.1);assert.equal(remoteFight.a.phase,'settling','Same-coordinate craft in another chart do not invent a local dogfight');
 assert.doesNotThrow(()=>JSON.stringify(r.s));
 console.log('PASS dynamic attention: sustained dogfight blocks beats, uncapped clock, cooling, variable rest, occupied radio, pursued survivors, reset on renewed combat, damage, empty-space fire and replacement reset');

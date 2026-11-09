@@ -72,6 +72,8 @@
         });
         /** @param {Vector} a @param {Vector} b */function hullHit(a,b){return traceBoxes(a,b,collisionBoxes);}
         var launchClock=1,launched=0;
+        /** @type {import('../experiments/types').AegisBatteryTarget[]} */var batteryTargets=[];
+        var batteryTargetId='',batterySearchAfter=0;
         var weapon=Object.assign({},DW.retailWeapons[0],{name:'Aegis point defense',fireWait:.16,damage:3});
         var heavyWeapon=Object.assign({},weapon,{name:'Aegis main battery',speed:700,lifetime:8,length:35,headRadius:2.5,tailRadius:2,damage:20,fireWait:.55});
         var mounts=asset.turrets.map(function(t,index){
@@ -184,13 +186,18 @@
             hangars.forEach(function(h){if(Math.abs(m.aimOffset[0]-h.position[0])<h.halfWidth&&Math.abs(m.aimOffset[2]-h.position[2])<h.halfHeight)m.aimOffset[0]=h.position[0]+h.halfWidth+10+random()*25;});
         }
         /** @param {import('../experiments/types').Combat} [combat] */
-        function reset(combat){shieldHits=[];lastSurface=null;parts.forEach(function(p){p.hp=p.maxHp;});launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}contactEyes=new WeakMap();seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.routeWait=-(i%12)*.01;m.route=null;m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
+        function reset(combat){batteryTargetId='';batterySearchAfter=0;batteryTargets=[];shieldHits=[];lastSurface=null;parts.forEach(function(p){p.hp=p.maxHp;});launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}contactEyes=new WeakMap();seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.routeWait=-(i%12)*.01;m.route=null;m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
         /** Main batteries engage the opposing hull, never the fighter roster.
          * @param {typeof mounts[number]} m @param {number} dt @param {FlightView} view */
         function stepHeavy(m,dt,view){
             if(!options)return;
-            var opponent=options.opponent,p=m.source.position,side=m.source.side;
-            var ch=Math.cos(opponent.heading),sh=Math.sin(opponent.heading),offset=m.aimOffset;
+            var selected=options.batteryTargets?batteryTargets.find(function(t){return t.id===batteryTargetId;}):null;
+            if(options.batteryTargets&&!selected){
+                m.targetId='';m.burst=0;
+                DW.flightGuns.step(m.guns,view.state,heavyWeapon,false,dt,function(a,b,bolt){return traceRound(m,view,a,b,bolt);},undefined,undefined,undefined,shotMetric);return;
+            }
+            var opponent=selected||options.opponent,p=m.source.position,side=m.source.side;
+            var heading=selected?0:options.opponent.heading,ch=Math.cos(heading),sh=Math.sin(heading),offset=selected?[0,0,0]:m.aimOffset;
             var target=opponent.position.map(function(v,i){return v+(i===0?ch*offset[0]-sh*offset[1]:i===1?sh*offset[0]+ch*offset[1]:offset[2])/U;});
             var bridge=!!options.bridge||!!(view.combat.wormholes&&view.combat.wormholes.length),path=/** @type {{direction:Vector;distance:number}|null} */(null);
             if(bridge){
@@ -207,7 +214,7 @@
             var travelTime=time===null?0:time;
             var aim=(!bridge?(options.state.region||0)===(opponent.region||0):!!path)&&time!==null&&time<=heavyWeapon.lifetime?target.map(function(v,i){return v+(bridge?0:opponent.velocity[i]*travelTime/U);}):null;
             var d=aim?sub(local(aim),p):relative,goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI),goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),bridge?-.2:0,Math.PI*.47);
-            m.targetId='capital-'+opponent.team;
+            m.targetId=selected?selected.id:'capital-'+options.opponent.team;
             m.yaw+=clamp(wrap(goalYaw-m.yaw),-.35*dt,.35*dt);m.elevation=approach(m.elevation,goalElevation,.25*dt);
             var cy=Math.cos(m.yaw),sy=Math.sin(m.yaw),ce=Math.cos(m.elevation),se=Math.sin(m.elevation),forward=[-cy*ce,-sy*ce,se];
             var clear=!!aim&&(bridge||d[2]*side>0)&&Math.abs(wrap(goalYaw-m.yaw))<.018&&Math.abs(goalElevation-m.elevation)<.018&&!hullHit(p.map(function(v,i){return v+forward[i]*45.1;}),local(aim));
@@ -232,7 +239,7 @@
         function traceRound(m,view,a,b,bolt){
             var own=(bolt.region||0)!==(options&&options.state.region||0)?null:hit(a,b,m,bolt),opponentRig=options&&options.opponentRig,other=opponentRig&&(!options||(bolt.region||0)===(options.opponent.region||0))?opponentRig.hit(a,b,bolt):null;
             var point=other&&(!own||Math.hypot(...sub(other,a))<Math.hypot(...sub(own,a)))?other:own;
-            if(m.source.kind==='heavy'){
+            if(m.source.kind==='heavy'&&!(options&&options.batteryTargets)){
                 if(point===other&&other&&options){
                     if(opponentRig&&opponentRig.damage)opponentRig.damage(other,bolt.weapon.damage,view.combat);else options.opponent.integrity=Math.max(0,options.opponent.integrity-bolt.weapon.damage);
                     // Sustained evacuation salvos use impact flashes; actual capital
@@ -242,7 +249,7 @@
             }
             /** @type {import('../experiments/types').TerrainHit} */var surface=function(){return point;};
             surface.onImpact=function(p,round){if(opponentRig&&opponentRig.damage&&opponentRig.damage(p,round.weapon.damage,view.combat))confirmedHits++;};
-            return DW.flightSim.trace(view.combat,a,b,bolt,team==='ally'?'player':'capital-enemy',surface,view.state,.25,function(){confirmedHits++;});
+            return DW.flightSim.trace(view.combat,a,b,bolt,team==='ally'?'player':'capital-enemy',surface,view.state,.25,function(){confirmedHits++;if(team==='enemy'&&view.combat.convoy&&view.combat.convoy.evacuation)view.combat.convoy.evacuation.capitalHits++;});
         }
         /** @param {number} elapsed @param {FlightView} view */
         function step(elapsed,view){
@@ -250,6 +257,20 @@
             shotMetric=view.combat.wormholes&&view.combat.wormholes.length?{links:view.combat.wormholes,time:view.combat.time}:bridgeMetric;
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
             var dt=Math.min(.1,elapsed),combat=view.combat;seconds+=dt;
+            if(options&&options.batteryTargets){
+                batteryTargets=options.batteryTargets(combat).filter(function(t){return t.integrity>0;});
+                if(seconds>=batterySearchAfter||batteryTargetId!==''&&!batteryTargets.some(function(t){return t.id===batteryTargetId;})){
+                    var origin=options.state.position,region=options.state.region||0;
+                    var current=batteryTargets.find(function(t){return t.id===batteryTargetId;});
+                    /** @param {import('../experiments/types').AegisBatteryTarget} target */
+                    function reachable(target){var route=DW.flightGuns.ballisticPath(origin,target.position,region,target.region,shotMetric);return !!route&&route.distance*U<=heavyWeapon.speed*heavyWeapon.lifetime;}
+                    if(!current||!reachable(current)){
+                        batteryTargets.sort(function(a,b){return Math.hypot(...sub(a.position,origin))-Math.hypot(...sub(b.position,origin));});
+                        var candidate=batteryTargets.find(reachable);batteryTargetId=candidate?candidate.id:'';
+                    }
+                    batterySearchAfter=seconds+.75;
+                }
+            }
             // A smooth shield catches fast incoming craft before hull corners can trap them.
             DW.flightSim.participants(combat).forEach(function(craft){
             var pose=craft.pose;if(craft.hp<=0||craft.hangarLaunch||options&&(pose.region||0)!==(options.state.region||0))return;
@@ -354,7 +375,7 @@
                     var actual=DW.wormholes.advanceRay(combat.wormholes,shotStart,direction,reach/U,options&&options.state.region||0,combat.time,U);
                     if(actual.region!==(target.pose.region||0))trigger=false;
                 }
-                if(trigger&&combat.convoy){
+                if(trigger&&team==='ally'&&combat.convoy){
                     var reach=aim?Math.hypot(...sub(local(aim),p)):weapon.speed*weapon.lifetime;
                     var muzzle=world(p.map(function(v,k){return v+forward[k]*10.12;}));
                     var end=world(p.map(function(v,k){return v+forward[k]*reach;}));

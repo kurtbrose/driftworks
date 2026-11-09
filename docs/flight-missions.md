@@ -19,8 +19,9 @@ convoy and its forward course clears the planet disk toward open stars. The earl
 battle prototype has become a staged ambush; convoy escort remains separate.
 
 The fixed-step encounter in `src/convoy-ambush.js` consumes the convoy director's
-`attention` state. It observes nearby player firing, incoming attacks, player
-hull/shield damage and threats/damage to cargo. A distant surviving enemy alone
+`attention` state. It observes nearby player firing (including attacks on a
+hostile capital), incoming attacks, player hull/shield damage and local fighter
+threats to cargo. Remote artillery damage remains strategic pressure. A distant surviving enemy alone
 does not count as a dogfight. The phases are settling, combat, cooling, rest and
 ready. Eight continuous quiet seconds earn a replayable, variable 10-30 second
 rest; renewed combat resets both cooling and rest. Optional exposition waits for
@@ -42,13 +43,17 @@ The encounter owns the following beats:
 - Six available seconds later: the hostile mouth opens ahead of the live convoy. Freighters
   physically turn port toward a new rally point, with shared flocking, acceleration,
   predictive hull separation and a threat field around the mouth.
-- Four seconds after opening: the first strike wing arrives and Harrow fires
-  finite-speed capital rounds through the mouth for an 18-second salvo window.
-  These use real swept cargo hull hits and normal damage; no cargo loss is scripted.
+- Four seconds after opening: the first strike wing arrives. Harrow independently
+  acquires live cargo targets and repositions at standoff on the opposite side
+  of its mouth from the convoy's current bearing.
+  Its native Aegis batteries lead targets, slew, check hull clearance and solve
+  the shared cross-mouth route before firing. There is no timed shot or portal-side
+  substitute emitter; a closed route, unavailable target or unsettled barrel holds fire.
   Up to four three-fighter strike wings arrive. Each subsequent wing waits for
   the current fight to cool and the rest window to finish; waves do not stack
-  just because a launch timer expires. Bombardment stops between encounters so
-  the capital cannot prevent the director from ever observing a lull.
+  just because a launch timer expires. Remote bombardment remains strategic
+  pressure; it does not, by itself, claim the pilot is dogfighting. Nearby fighter
+  combat, pilot damage, and firing at a hostile capital still own attention.
   Capital-caused pressure does not cancel healthy ambush wings. Strike pilots
   take short defensive breaks and then recommit to cargo; depleted wings still
   retreat to a fixed, distant exit that can satisfy the departure condition.
@@ -71,15 +76,21 @@ The encounter owns the following beats:
   move, hit and expire; completion never freezes visible projectiles.
 
 `combat.convoy.evacuation` is transient, JSON-safe mission state. Positions use
-scene units; routes, rally, coverGoal and cruise intent use SI units. Bastion's main batteries are masked: Harrow is a remote aperture view, not a
-valid local capital target. Point defense engages real local fighters. A moving
-capital duel or routed cross-mouth main-battery fire is not part of this mission.
-Harrow's outgoing rounds are stepped headlessly as well as in the browser; its remote hull does
-not collide with local fighters. Bastion's native Aegis combat remains owned by
-the browser facade and has a separate actual-rig regression. The seeded unattended
-route test (durable test pilot only) runs through separated fights, earned
-rest windows, delayed relief and physical extraction. Encounter timestamps and
-losses are observed replay output, not scheduled event times or forced outcomes. This verifies progression, not player difficulty.
+scene units; routes, rally, coverGoal and cruise intent use SI units. Bastion's
+main batteries remain masked against the remote capital. Harrow's main batteries
+use a live cargo-target policy on the ordinary Aegis simulation; its physical
+rounds cross the shared wormhole graph and resolve ordinary swept hull damage.
+Maneuvering updates Harrow's existing position array in place so the hull,
+collision, turret pivots and muzzle origins retain the same pose owner.
+
+Both capitals' native gun states are stepped by the capital facade. The lightweight
+route replay tests navigation/director/extraction without native capital weapons;
+`tests/harrow-ai.cjs` loads the actual gun simulation and production facade into a
+real headless session and checks sustained autonomous fire, cargo damage, movement,
+closed-route inhibition, target loss and reset. Legacy emitter rounds only drain;
+`evacuation.guns` never emits a new shot. There are no invulnerable transports:
+each has 5,000 hull, and the ordinary 20-damage main battery currently deals about
+16 per armored hull hit. This increment does not rebalance those values.
 The hostile opening is 1.3 km in diameter; the rescue opening is 1.6 km. These
 are initial staging values, not a requirement imposed by the capital's length.
 
@@ -92,7 +103,8 @@ dead, withdrawing and departed ships and never changes the player's target lock.
 Focused checks: `node tests/fleet-evacuation.cjs`,
 `node tests/evacuation-capitals.cjs`, `node tests/flight-hud-markers.cjs`, and the
 `node tests/convoy-ambush-tactics.cjs`, `node tests/convoy-pacing.cjs` and
-`node tests/convoy-projectile-cleanup.cjs` and `node tests/convoy-cover.cjs` regressions, plus the
+`node tests/convoy-projectile-cleanup.cjs`, `node tests/convoy-cover.cjs` and
+`node tests/harrow-ai.cjs` regressions, plus the
 convoy battle/director/arrival checks. Original prototype measurements are retained
 in `docs/benchmarks/fleet-evacuation.md`; they predate this staged encounter.
 

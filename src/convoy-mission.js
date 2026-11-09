@@ -125,11 +125,14 @@
         var cargo=s.ships.filter(function(c){return c.hull>0&&!c.arrived;}),hostiles=combat.enemies.filter(function(c){return c.hp>0&&c.team==='enemy';});
         var hull=s.ships.reduce(function(n,c){return n+c.hull;},0),hostileFire=false;
         /** @type {Record<string,number>} */var shots={};
-        hostiles.forEach(function(c){shots[c.id]=c.guns.fired;if(c.guns.fired>(a.lastHostileShots[c.id]||0)&&range(c.pose.eye,player.pose.eye)<2500)hostileFire=true;});
-        var near=hostiles.some(function(c){return range(c.pose.eye,player.pose.eye)<2500;});
-        var incoming=hostiles.some(function(c){return c.targetId===player.id&&range(c.pose.eye,player.pose.eye)<1400;});
+        hostiles.forEach(function(c){shots[c.id]=c.guns.fired;if(c.guns.fired>(a.lastHostileShots[c.id]||0)&&(c.pose.region||0)===(player.pose.region||0)&&range(c.pose.eye,player.pose.eye)<2500)hostileFire=true;});
+        var near=hostiles.some(function(c){return (c.pose.region||0)===(player.pose.region||0)&&range(c.pose.eye,player.pose.eye)<2500;});
+        if(s.evacuation)near=near||s.evacuation.capitals.some(function(ship){return ship.team==='enemy'&&ship.present&&ship.integrity>0&&(ship.region||0)===(player.pose.region||0)&&range(ship.position,player.pose.eye)<4000;});
+        var incoming=hostiles.some(function(c){return c.targetId===player.id&&(c.pose.region||0)===(player.pose.region||0)&&range(c.pose.eye,player.pose.eye)<1400;});
         var attackingCargo=hostiles.some(function(c){var raid=s.raids.find(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing;});return !!raid&&!['hold','withdraw','departed'].includes(raid.phase)&&cargo.some(function(ship){return range(c.pose.eye,ship.position)<3200;});});
-        var busy=incoming||attackingCargo||near&&player.guns.fired>a.lastPlayerShots||hostileFire||player.hp<a.lastHull||(player.shield||0)<a.lastShield||hull<a.lastCargoHull;
+        // Remote bombardment remains strategic pressure, not proof that the pilot
+        // is dogfighting. Local raiders and attacks on the pilot still own attention.
+        var busy=incoming||attackingCargo||near&&player.guns.fired>a.lastPlayerShots||hostileFire||player.hp<a.lastHull||(player.shield||0)<a.lastShield;
         a.lastPlayerShots=player.guns.fired;a.lastHostileShots=shots;a.lastHull=player.hp;a.lastShield=player.shield||0;a.lastCargoHull=hull;
         if(busy){if(a.phase!=='combat')a.beat++;a.phase='combat';a.quiet=0;a.rest=0;return;}
         a.quiet+=dt;
