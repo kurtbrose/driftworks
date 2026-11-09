@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Driftworks · Plasma motion lab</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080e18;color:#d7e4f1;font:14px system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:24px}h1{font-size:26px;margin:0 0 8px}p{color:#92a8bf;line-height:1.5;max-width:950px}header small{color:#66d9dd;text-transform:uppercase;letter-spacing:2px}nav{display:flex;flex-wrap:wrap;gap:16px;background:#111e2e;padding:16px;margin:20px 0}label{display:grid;gap:5px;min-width:135px}input,select,button{accent-color:#65dbe4;background:#1c3046;color:#e3f2ff;border:1px solid #37536c;border-radius:4px;padding:6px}button{cursor:pointer;align-self:end;min-height:34px}#grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}article{border:1px solid #263b50;background:#0b1420;border-radius:8px;overflow:hidden}h2{font-size:15px;margin:12px 14px 4px}article p{margin:0 14px 12px;font-size:12px;min-height:36px}canvas{display:block;width:100%;height:220px}output{font-variant-numeric:tabular-nums;color:#7ee5e6}footer{margin-top:20px;color:#92a8bf;line-height:1.6}@media(max-width:760px){#grid{grid-template-columns:1fr}main{padding:12px}}
+</style>
+<main>
+<header><small>Driftworks / visual experiments</small><h1>Plasma, without the lance</h1><p>Six synchronized views of identical shots. Compare the <b>motion</b>, especially at 30 FPS and during a camera sweep. Every orb stays sharp; only the projectile receives extra exposures.</p></header>
+<nav aria-label="Experiment controls">
+<label>Projectile speed <output id="speedValue"></output><input id="speed" type="range" min="200" max="3000" step="100" value="1200"></label>
+<label>Render cadence<select id="fps"><option>60</option><option selected>30</option><option>20</option><option>15</option></select></label>
+<label>Exposure <output id="shutterValue"></output><input id="shutter" type="range" min="0" max="100" value="80"></label>
+<label>Orb radius <output id="radiusValue"></output><input id="radius" type="range" min="2" max="10" step="0.5" value="4"></label>
+<label>View<select id="view"><option value="cross">Crossing fire</option><option value="away">Firing forward</option><option value="toward">Incoming fire</option></select></label>
+<label>Camera<select id="camera"><option value="still">Stationary</option><option value="sweep">Yaw sweep</option><option value="track">Track the volley</option></select></label>
+<label>Energy color<select id="color"><option value="cyan">Cyan</option><option value="orange">Amber</option><option value="green">Green</option></select></label>
+<button id="pause">Pause</button><button id="step">Step frame</button><button id="reset">Restart</button>
+</nav>
+<div id="grid"></div>
+<footer><output id="stats"></output><p>This is a screen-space motion study, not a change to weapon physics or the flight renderer. Speeds are illustrative metres/second; orb radius is deliberately held in CSS pixels to isolate motion readability. Samples cover the last rendered interval × exposure, including camera movement. No samples predict future positions. At extreme displacement, capped samples will still strobe.</p></footer>
+</main>
+<script src="plasma-motion.js"></script>
+</html>
