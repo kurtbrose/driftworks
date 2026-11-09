@@ -636,7 +636,7 @@ intact/damaged rendering samples. See [measured readiness](benchmarks/capital-sy
 
 The flight bake removes the old raised stripe and light blocks and stores three
 `interiors` batches: deck, ceiling and bulkheads. Each has six-float authored
-vertices; deck and bulkheads carry an `AegisSurfaceFinish` with a local `atlas`
+vertices; deck, ceiling and bulkheads carry an `AegisSurfaceFinish` with a local `atlas`
 override. The loader shares those textures and prepared buffers across ships.
 Idle ships retain seven hull batches plus the interior batches. Surface
 toggles/reset preserve the selected textures; collision dimensions, launch
@@ -1001,7 +1001,7 @@ command factories to the toybox and military fleet study. The revised naval
 silhouette uses broad armored deckhouses, integrated planar sensor faces,
 roof overhangs and short enclosed upper structures. Exposed lattice bracing,
 crossarms, dishes and radome poles have been removed. The sensor assembly is
-approximately 40 × 38 × 33 m; the command citadel is 46 × 56 × 47 m.
+approximately 40 ï¿½ 38 ï¿½ 33 m; the command citadel is 46 ï¿½ 56 ï¿½ 47 m.
 
 The original stepped command decks retain 286 individual window panes in
 wraparound banks, with additional panes on solid bridge wings. The main panes
