@@ -1165,7 +1165,7 @@
   "assets/ships/industrial-kit/convoy-flight.json": "fb6174b4efa3",
   "assets/ships/industrial-kit/dome-source-v1.png": "09e354fae6e4",
   "assets/ships/industrial-kit/kit.js": "1833ba8f2f2f",
-  "assets/ships/industrial-kit/panels.png": "d4b10a851370",
+  "assets/ships/industrial-kit/panels.png": "f9ffd034e9d2",
   "assets/ships/industrial-kit/scale.js": "974d2130042b",
   "assets/ships/ohio-vehicles/meshes.js": "ce57f8e016e3",
   "assets/ships/ohio-vehicles/palette.png": "f4cdc950e0ab",

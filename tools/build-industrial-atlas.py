@@ -1,7 +1,7 @@
 """Rebuild the industrial kit's deterministic paint/marking atlas (Pillow)."""
 from pathlib import Path
 import random
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 SIZE = 512
@@ -137,6 +137,12 @@ for index, (name, color) in enumerate(PALETTE):
     ImageDraw.Draw(tile).rectangle((0, 0, 7, 7), fill=color)
     atlas.paste(tile, ((index % 4)*SIZE, (index // 4)*SIZE))
 
+def seam_weight(image):
+    # A light dark-only spread adds coverage to thin welds as mipmaps shrink them.
+    # Preserve highlights and broad paint variation; never sharpen the whole atlas.
+    spread = Image.blend(image, image.filter(ImageFilter.MinFilter(3)), .25)
+    return ImageChops.darker(image, spread)
+
 # One-time planar artwork preparation, packed beside the original atlas.
 # Preserve generated seam drawing; normalize its ivory field to vessel paint.
 source = Image.open(ROOT / "assets/ships/industrial-kit/dome-source-v1.png").convert("RGB")
@@ -147,7 +153,7 @@ channels = source.split()
 source = Image.merge("RGB", tuple(ch.point(lambda v, delta=PALETTE[15][1][i]-center[i]: max(0,min(255,v+delta))) for i,ch in enumerate(channels)))
 wide = Image.new("RGB", (4096, 3072), PALETTE[15][1])
 wide.paste(atlas, (0, 0))
-wide.paste(source, (2048, 0))
+wide.paste(seam_weight(source), (2048, 0))
 # A periodic 2048x1024 barrel strip; only its axial ends fade to quiet paint.
 barrel = Image.open(ROOT / "assets/ships/industrial-kit/barrel-source-v1.png").convert("RGB")
 base = barrel.getpixel((12, 12))
@@ -156,6 +162,7 @@ barrel = Image.merge("RGB", tuple(ch.point(lambda v, delta=PALETTE[15][1][i]-bas
 w,h = barrel.size
 barrel = barrel.crop((0, round(h*.065), w, round(h*.935)))
 barrel = barrel.resize((2048, 1024), Image.Resampling.LANCZOS)
+barrel = seam_weight(barrel)
 # Match both boundary bands to one shared row, retaining the welds at the join.
 pix = barrel.load()
 join = [tuple(round((pix[x,20][c]+pix[x,1003][c])/2) for c in range(3)) for x in range(2048)]

@@ -713,3 +713,11 @@ the axial ends fade to quiet paint. UVs sample eight pixels inside those bands.
 Top-view inspection confirms continuous weld rings across the former blank gap;
 matched pixel rows preserve line detail at the join. Atlas size, triangles and
 batches are unchanged.
+
+### Slight seam weight increase
+
+The atlas builder blends 25 percent of a three-pixel minimum filter into only
+the generated dome and barrel regions, adding a small dark-edge footprint so
+fine welds retain more coverage when minified. Broad paint and highlights are
+preserved. Compared the same rear-quarter view before/after; no texture-size,
+geometry, material, shader or draw-count changes.
