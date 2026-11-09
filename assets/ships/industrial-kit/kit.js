@@ -30,7 +30,7 @@ function chamferGeometry(size,b,tile,region){
     const center=new T.Vector3();points.forEach(p=>center.add(new T.Vector3(...p)));if(normal.dot(center)<0){points=points.slice().reverse();normal.negate();}
     const components=[Math.abs(normal.x),Math.abs(normal.y),Math.abs(normal.z)],axis=components.indexOf(Math.max(...components));
     const axes=axis===0?[2,1]:axis===1?[0,2]:[0,1],start=vertices.length/3;
-    for(const p of points){vertices.push(...p);normals.push(normal.x,normal.y,normal.z);let u=.5+p[axes[0]]/size[axes[0]],v=.5+p[axes[1]]/size[axes[1]];if((axis===0&&normal.x>0)||(axis===1&&normal.y>0)||(axis===2&&normal.z<0))u=1-u;if(edge){u=.025+u*.018;v=.025+v*.018;}const index=tile===null?0:tiles[tile];if(region){const r=edge?region.edge:region.face;const ru=edge?(u-.025)/.018:u,rv=edge?(v-.025)/.018:v;uvs.push((1024+r[0]+ru*(r[2]-r[0]))/2048,1-(1536+r[1]+(1-rv)*(r[3]-r[1]))/2048);}else uvs.push(((index%4)+.008+u*.984)/4,(3-Math.floor(index/4)+.008+v*.984)/4);}
+    for(const p of points){vertices.push(...p);normals.push(normal.x,normal.y,normal.z);let u=.5+p[axes[0]]/size[axes[0]],v=.5+p[axes[1]]/size[axes[1]];if((axis===0&&normal.x>0)||(axis===1&&normal.y>0)||(axis===2&&normal.z<0))u=1-u;const index=tile===null?0:tiles[tile];if(region){const r=edge?region.edge:region.face;const ru=u,rv=v;uvs.push((1024+r[0]+ru*(r[2]-r[0]))/2048,1-(1536+r[1]+(1-rv)*(r[3]-r[1]))/2048);}else if(edge){uvs.push(((index%4)*512+4.5)/2048,1-(Math.floor(index/4)*512+4.5)/2048);}else uvs.push(((index%4)+.008+u*.984)/4,(3-Math.floor(index/4)+.008+v*.984)/4);}
     for(let i=1;i<points.length-1;i++)indices.push(start,start+i,start+i+1);
   }
   for(let axis=0;axis<3;axis++)for(const sign of [-1,1]){const other=[0,1,2].filter(i=>i!==axis);face([[-1,-1],[1,-1],[1,1],[-1,1]].map(pair=>{const p=[0,0,0];p[axis]=sign*h[axis];other.forEach((j,k)=>p[j]=pair[k]*a[j]);return p;}));}
@@ -39,7 +39,7 @@ function chamferGeometry(size,b,tile,region){
     for(const si of [-1,1])for(const sj of [-1,1])face([[-1,0],[1,0],[1,1],[-1,1]].map(([s,k])=>{const p=[0,0,0];p[along]=s*a[along];p[i]=si*(k?a[i]:h[i]);p[j]=sj*(k?h[j]:a[j]);return p;}),true);
   }
   for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1]){const signs=[x,y,z];face([0,1,2].map(axis=>signs.map((s,i)=>s*(i===axis?h[i]:a[i]))),true);}
-  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeBoundingSphere();return geo;
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeBoundingSphere();if(!region)geo.userData.bevelPaintTile=tile===null?0:tiles[tile];return geo;
 }
 function box(g,s,p,mat='steel',bevel=0){
   const tile=Object.hasOwn(tiles,mat)?mat:null,b=Math.min(bevel,...s.map(v=>v*.24));

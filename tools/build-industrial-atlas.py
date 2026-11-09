@@ -137,6 +137,9 @@ for index, (name, color) in enumerate(PALETTE):
         d.rectangle((300, 148, 307, 221), fill=(177, 128, 51))
         d.text((320, 151), "DW / 014", font=font(20), fill=(53, 66, 68))
         d.text((320, 184), "FREIGHT", font=font(13), fill=(88, 100, 100))
+    # Dedicated flat-paint texel for bevels. Never magnify the border/wear crop.
+    # Face artwork begins beyond this gutter; keep its decals and panel lines.
+    ImageDraw.Draw(tile).rectangle((0, 0, 7, 7), fill=color)
     atlas.paste(tile, ((index % 4)*SIZE, (index // 4)*SIZE))
 
 target = ROOT / "assets/ships/industrial-kit/panels.png"

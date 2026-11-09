@@ -119,6 +119,16 @@ for(const pane of windows){
 }
 assert.equal(kit.batchStatic(command).children.length,5,'canopy reuses existing command materials');
 assert.equal(kit.batchStatic(engine).children.length,5,'polish reuses existing engine material batches');
+// Generic bevels sample a single flat-paint swatch, never a stretched edge crop.
+let bevelVertices=0;
+kit.part('service').traverse(o=>{
+ if(!o.isMesh||o.geometry.userData.bevelPaintTile===undefined)return;
+ const tile=o.geometry.userData.bevelPaintTile,n=o.geometry.attributes.normal,uv=o.geometry.attributes.uv;
+ const u=((tile%4)*512+4.5)/2048,v=1-(Math.floor(tile/4)*512+4.5)/2048;
+ for(let i=0;i<n.count;i++)if([n.getX(i),n.getY(i),n.getZ(i)].filter(v=>Math.abs(v)>.001).length>1){
+  assert(Math.abs(uv.getX(i)-u)<1e-6&&Math.abs(uv.getY(i)-v)<1e-6,'bevel paint does not stretch atlas borders into pixelated bands');bevelVertices++;
+ }
+});assert(bevelVertices>0,'exercise actual service-panel chamfers');
 // Production bake keeps source-authored mouths in the flight coordinate convention.
 const meta=require('../assets/ships/industrial-kit/convoy-flight.json');
 assert.equal(meta.sourceSha256,require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync('assets/ships/industrial-kit/kit.js')).digest('hex'),'flight bake matches its editable source');

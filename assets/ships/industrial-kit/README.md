@@ -615,3 +615,23 @@ blocks warmed for 20 frames and sampled 90. ON CPU submission median/p95 was
 123,498 triangles. Both had 13.30/13.40 ms median/p95 rAF cadence. GPU execution
 was unmeasured. This establishes the current scene cost, not a whole-game
 speedup; capital preparation was 1,680.3 ms outside sampling.
+
+
+## Bevel atlas sampling correction (2026-11-08)
+
+The pixelated edge bands were a UV-mapping artifact: generic chamfers stretched
+a roughly nine-pixel-square atlas-border crop over long physical bevels. That
+crop included the panel outline and its wear marks, producing large camouflage-
+like patches beside otherwise sharp decals. Generic bevels now sample one fixed
+texel from a reserved flat-paint swatch in each tile's gutter. Face artwork keeps
+its detailed mapping, and the dedicated hardware-region mapping is preserved.
+The generator fills the eight-by-eight swatches deterministically with each
+paint color. No additional texture, material, shader or geometry was introduced.
+
+A focused regression checks diagonal chamfer normals against the fixed swatch
+UV, using real service-panel geometry. Freighter and industrial geometry/export
+checks passed. Exact baked position/normal fingerprints, triangle counts and
+material batch counts match the preceding alignment revision for all three
+production variants. Only UVs/atlas pixels and source fingerprints changed.
+Visual review repeated the pump-and-shield close-up, including the long bevels
+beside the face decals. Captures are under ignored `output/freighter-edge-paint/`.
