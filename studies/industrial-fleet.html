@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Standard parts / busy fleet</title>
 <style>body{margin:0;background:#172228;color:#e3e6df;font:14px system-ui}aside{position:absolute;left:24px;top:20px;width:285px;z-index:2;background:#172228ed;padding:20px;border:1px solid #536268}h1{font-size:28px;margin:8px 0}p{line-height:1.5;color:#b5c3c5}select,button{background:#2a3c43;color:#fff;border:1px solid #74858a;padding:9px;margin:4px 0;width:100%}canvas{display:block;margin-left:360px}small{color:#ddbb74}#stats{font:12px monospace}a{color:#ddbb74}@media(max-width:650px){aside{width:210px;left:8px;top:8px;padding:12px}}</style>
-<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
-<script type="importmap">{"imports":{"industrial-kit":"../assets/ships/industrial-kit/kit.js?v=ff90512804d8","three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head><body>
+<script src="../src/asset-versions.js?v=156a6390f894"></script>
+<script type="importmap">{"imports":{"industrial-kit":"../assets/ships/industrial-kit/kit.js?v=8cd59c051bcb","three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head><body>
 <aside><small>DRIFTWORKS / ASSEMBLY STUDY</small><h1>Standard parts.<br>Busy fleet.</h1><p>Nine working configurations at one metre scale. Shared DW-14 frames, cabins, drives and fittings.</p><select id="model" aria-label="Fleet or vessel"></select><button id="view">View from above</button><button id="parts">Show interchangeable modules</button><label><input id="spin" type="checkbox"> Rotate slowly</label><p id="note"></p><div id="stats"></div><p>Drag to orbit · Wheel to zoom · Right drag to pan</p><p>Offline concept study. External radiators and sensor gear need clearance/collision contracts before flight integration.</p><a href="industrial-kit.html?model=modular">Original route builder</a></aside>
 <script type="module">
 import * as T from 'three';

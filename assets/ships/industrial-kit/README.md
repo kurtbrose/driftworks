@@ -287,3 +287,53 @@ view. The overview capture is `output/industrial-fleet/fleet.png` (ignored).
 Undersides, every individual recipe, deployed-arm clearance and flight behavior
 remain unreviewed. Regression checks cover standard interfaces, lane/bay counts
 and preserved geometry under static batching.
+
+## Freighter finish and layout pass (2026-11-08)
+
+[Freighter finishes](../../../studies/freighter-finishes.html) compares closed
+service sills, open perimeter rails and crossed braces on each production
+carrier. Drag to orbit; cycle views for bow, stern and belly. The atlas toggle
+compares painted detail with plain surfaces. This intentional review page uses
+Three.js; flight continues to use the existing static-buffer renderer.
+
+`buildFreighter(name, {treatment})` authors the three existing flight model IDs.
+Container carriers have two parallel three-bay cargo lanes and closed lower
+service sills. Bulk-fluid carriers have two parallel double-vessel lanes and
+open rails. Mixed ships retain one spine. Both wider layouts share one cabin
+and four-engine drive bank, with terminal crossmembers joining the cargo lanes.
+Interior locks follow their lane; no locks float in the centre gap. Module pitch,
+payload scale, terminal positions and engine effect anchors stay in metres.
+The exporter rebuilds the exact collision tree from the final geometry.
+
+Painted access panels, fasteners, vents, rubbed edges and seams use the existing
+2048-square color atlas. There are no added runtime textures or shader features.
+The static export remains 9 / 9 / 8 material batches for container / mixed /
+fluid. Triangle counts changed from 70,826 / 67,262 / 54,114 to
+99,658 / 65,294 / 64,506. The wider silhouettes deliberately add cargo geometry;
+paint detail adds none. GPU geometry remains shared across convoy instances.
+
+Focused checks: `node tests/freighter-finishes.cjs`, industrial-kit geometry and
+export checks, convoy collision and mission checks. The high-speed collision
+fixture now targets the middle of a cargo side, avoiding the new corner contact
+that can deflect rather than reverse the fighter's lateral velocity.
+
+Visual review includes container stern three-quarter and tanker stern/belly
+in the finish viewer. Captures are under ignored `output/freighter-detail/`.
+This is an initial visual pass for further art direction; no whole-game GPU
+headroom or every-angle visual approval is claimed.
+
+The foreground production convoy comparison used the unchanged starting cockpit
+camera, 1838 x 1461 backing resolution, DPR 1.5, production artwork, 100% render
+scale, normal effects, frozen actors/projectiles and 30 freighters. Each old/new
+asset run used OFF/ON/ON/OFF, 20 warm-up and 90 sample frames per block.
+Original assets: ON CPU median/p95 3.10/3.80 ms, 95 draws, 2,045,998 triangles;
+OFF 1.50/1.80 ms, 39 draws, 123,498 triangles. Revised assets: ON 3.10/3.60 ms,
+95 draws, 2,418,558 triangles; OFF 1.40/1.70 ms, 39 draws, 123,498 triangles.
+All legs had 13.30/13.40 ms median/p95 rAF cadence. This supports unchanged
+submission cost in this snapshot despite broader silhouettes; it establishes
+neither GPU headroom nor live-combat FPS. No GPU timer was used. Tests/builds
+were complete during the measured revised run. The old run reused the original
+geometry/collision bake with the current atlas and current renderer. Capital
+preparation was outside sampling and varied strongly between page loads.
+The runtime convoy starting view was also inspected in motion; engine effects
+remain aligned to the shared central drive bank.

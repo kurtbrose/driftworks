@@ -85,6 +85,22 @@ for index, (name, color) in enumerate(PALETTE):
             d.line((x-3, y-2, x+2, y-2), fill=highlight, width=2)
             for k in range(rng.randrange(3, 11)):
                 d.line((x+rng.randrange(-3, 4), y+6+k, x+rng.randrange(-2, 3), y+7+k), fill=tuple(int(c*.83) for c in color))
+    # Baked relief cues: seams, inset access plates, fasteners and rubbed edges.
+    # One existing color atlas: no added shader, material, draw or geometry cost.
+    if index not in [8, 9, 10, 13]:
+        for x, y, w, h in [(288, 164, 156, 82), (56, 182, 116, 94)]:
+            d.rectangle((x, y, x+w, y+h), fill=tuple(int(c*.94) for c in color), outline=seam, width=2)
+            d.line((x+2, y+h+2, x+w, y+h+2), fill=highlight, width=2)
+            for bx in [x+6, x+w-6]:
+                for by in [y+6, y+h-6]:
+                    d.ellipse((bx-2, by-2, bx+2, by+2), fill=seam)
+            for n in range(7):
+                yy=y+18+n*5
+                d.line((x+16, yy, x+w-16, yy), fill=seam, width=2)
+                d.line((x+16, yy+2, x+w-16, yy+2), fill=highlight, width=1)
+        for _ in range(70):
+            x, y = rng.randrange(24, 488), rng.randrange(24, 488)
+            d.line((x, y, x+rng.randrange(2, 14), y), fill=tuple(int(c*.88) for c in color))
     for _ in range(240):
         side = rng.randrange(4)
         a, b = rng.randrange(18, 495), rng.choice([12, 18, 492, 498]) + rng.randrange(-4, 5)

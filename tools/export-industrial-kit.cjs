@@ -11,7 +11,7 @@ function loadKit(){
   vm.runInContext(fs.readFileSync(path.join(root,'vendor/three/build/three.global.js'),'utf8'),context);
   const source=fs.readFileSync(path.join(root,'assets/ships/industrial-kit/kit.js'),'utf8')
     .replace(/^import .*?;\s*/m,'const T=THREE;\n').replace(/^export (?=(?:const|function) )/gm,'');
-  vm.runInContext(source+'\nglobalThis.kit={moduleStandard,routePresets,standardBay,buildConsist,dimensions,part,assembly,shipNames,setSurfaceTexture,setCranePose,setArmExtension,setHoistPayout,batchStatic,disposeBatch,exportGLTF};',context);
+  vm.runInContext(source+'\nglobalThis.kit={buildFreighter,moduleStandard,routePresets,standardBay,buildConsist,dimensions,part,assembly,shipNames,setSurfaceTexture,setCranePose,setArmExtension,setHoistPayout,batchStatic,disposeBatch,exportGLTF};',context);
   context.kit.setSurfaceTexture(new context.THREE.Texture(),'data:image/png;base64,'+fs.readFileSync(path.join(root,'assets/ships/industrial-kit/panels.png')).toString('base64'));
   return {kit:context.kit,THREE:context.THREE};
 }

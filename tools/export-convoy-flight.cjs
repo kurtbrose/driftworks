@@ -6,11 +6,11 @@ process.chdir(path.resolve(__dirname,'..'));
 const context={console,AbortController};context.window=context;vm.createContext(context);
 vm.runInContext(fs.readFileSync('vendor/three/build/three.global.js','utf8'),context);
 const source=fs.readFileSync('assets/ships/industrial-kit/kit.js','utf8');
-vm.runInContext(source.replace(/^import .*?;\s*/m,'const T=THREE;\n').replace(/^export (?=(?:const|function) )/gm,'')+'\nglobalThis.kit={buildConsist,routePresets,batchStatic};',context);
+vm.runInContext(source.replace(/^import .*?;\s*/m,'const T=THREE;\n').replace(/^export (?=(?:const|function) )/gm,'')+'\nglobalThis.kit={buildFreighter,routePresets,batchStatic};',context);
 const {build}=require('./bake-hull-indices.cjs');
 const variants={};let offset=0;const chunks=[];
 for(const name of ['container','mixed','fluid']){
- const root=context.kit.buildConsist(context.kit.routePresets[name]),baked=context.kit.batchStatic(root),batches=[],collisionVertices=[];
+ const root=context.kit.buildFreighter(name),baked=context.kit.batchStatic(root),batches=[],collisionVertices=[];
  for(const mesh of baked.children){
   const geo=mesh.geometry,p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv,vertices=new Float32Array(p.count*8);
   for(let i=0;i<p.count;i++)vertices.set([p.getZ(i),-p.getX(i),p.getY(i),n.getZ(i),-n.getX(i),n.getY(i),uv.getX(i),1-uv.getY(i)],i*8);

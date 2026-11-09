@@ -313,7 +313,7 @@ function undercarriage(g,x,z){
 
 export const moduleStandard=Object.freeze({pitch:14,halfWidth:6.2,interface:'DW-14 / four-corner rigid lock',payloads:['cargo','tank','machinery','habitat','empty','bulkFluid']});
 export const routePresets=Object.freeze({container:['cargo','cargo','cargo'],mixed:['cargo','tank','machinery','empty'],fluid:['bulkFluid','bulkFluid'],support:['habitat','machinery','empty','cargo']});
-function standardFrame(g,span=1){
+function standardFrame(g,span=1,treatment='rail'){
   const length=14*span,h=6.2;
   for(const y of [-h,h])for(const z of [-h,h])beam(g,[-length/2+.25,y,z],[length/2-.25,y,z],.30,'steel');
   for(let bay=0;bay<=span;bay++){
@@ -322,13 +322,18 @@ function standardFrame(g,span=1){
     for(const z of [-h,h])beam(g,[x,-h,z],[x,h,z],.25,'edge');
     for(const y of [-h,h])for(const z of [-h,h])panel(g,[.7,.72,.72],[x,y,z],'ochrePaint',.08);
   }
-  // Triangulate the perimeter faces; every brace terminates on frame nodes.
+  // A single shear diagonal on the belly leaves the payload readable.
+  // Closed service sills and perimeter rails share the same DW-14 lock planes.
   for(let bay=0;bay<span;bay++){
-    const x=-length/2+bay*14,left=x+(bay===0?.22:0),right=x+14-(bay===span-1?.22:0);
-    for(const z of [-h,h]){beam(g,[left,-h,z],[right,h,z],.16,'steel');beam(g,[left,h,z],[right,-h,z],.16,'steel');}
-    for(const y of [-h,h])beam(g,[left,y,-h],[right,y,h],.14,'edge');
+    const x=-length/2+bay*14;
+    if(treatment==='lattice'){
+      for(const z of [-h,h])for(const y of [-1,1])beam(g,[x,-h*y,z],[x+14,h*y,z],.16,'steel');
+      for(const y of [-h,h])beam(g,[x,y,-h],[x+14,y,h],.14,'edge');
+    }else if(treatment==='sill'){
+      for(const z of [-h,h])panel(g,[13.5,1.15,.38],[x+7,-h+.45,z],'dark',.10);
+    }else beam(g,[x+.22,-h,-h],[x+13.78,-h,h],.18,'steel');
   }
-  for(const z of [-h,h]){pipe(g,[[-length/2,0,z],[0,0,z],[length/2,0,z]],.10,z>0?'ochre':'edge');handholdRun(g,[-length/2+1,h+.15,z],[length/2-1,h+.15,z]);}
+  for(const z of [-h,h])pipe(g,[[-length/2,-h+.5,z],[0,-h+.5,z],[length/2,-h+.5,z]],.10,'edge');
   g.userData.interface=moduleStandard.interface;g.userData.span=span;
   g.userData.sockets={forward:[-length/2,0,0],aft:[length/2,0,0]};
 }
@@ -370,17 +375,17 @@ function modulePayload(g,type,span){
   }
   g.userData.payloadEnvelope={length:14*span-2,width:11.6,height:11.6};
 }
-export function standardBay(type='empty'){
+export function standardBay(type='empty',options={}){
   if(!moduleStandard.payloads.includes(type))throw new Error('Unknown standard payload: '+type);
   const span=type==='bulkFluid'?2:1,g=new T.Group();g.name='DW-14 bay / '+type;g.userData.standardBay=true;g.userData.payload=type;
-  standardFrame(g,span);modulePayload(g,type,span);return g;
+  standardFrame(g,span,options.treatment);modulePayload(g,type,span);return g;
 }
 export function buildConsist(types=routePresets.mixed,options={}){
   if(!Array.isArray(types)||types.length<1||types.length>6||types.some(t=>!moduleStandard.payloads.includes(t)))throw new Error('Choose one to six standard payload modules');
   const gap=Math.max(0,Math.min(8,Number(options.separation)||0)),g=new T.Group();g.name='modular';g.userData.units='metres';g.userData.interface=moduleStandard.interface;g.userData.manifest=types.slice();g.userData.separation=gap;
   let cursor=-7;const joints=[];
   for(const [i,type] of types.entries()){
-    const bay=standardBay(type),length=14*bay.userData.span;bay.position.x=cursor+length/2;g.add(bay);if(i>0&&gap===0)rigidLock(g,cursor);
+    const bay=standardBay(type,options),length=14*bay.userData.span;bay.position.x=cursor+length/2;g.add(bay);if(i>0&&gap===0)rigidLock(g,cursor);
     joints.push({index:i,payload:type,span:bay.userData.span,forward:cursor,aft:cursor+length});cursor+=length+(i<types.length-1?gap:0);
   }
   const end=cursor;
@@ -390,6 +395,31 @@ export function buildConsist(types=routePresets.mixed,options={}){
   engineBank(g,end+8,[[-2.8,-3],[-2.8,3],[2.8,-3],[2.8,3]]);neck(g,end,end+3);
   for(const x of [-6,end-1])for(const z of [-6.2,6.2])addPart(g,'rcs',[x,0,z]);
   g.userData.bays=joints;g.userData.structuralLength=end+7;return g;
+}
+
+// Production recipes retain the existing model IDs and physical module pitch.
+// Wider carriers use one command/drive spine and passive parallel cargo lanes.
+export function buildFreighter(name,options={}){
+  const configs={container:{load:routePresets.container,lanes:[-7,7],treatment:'sill'},mixed:{load:routePresets.mixed,lanes:[0],treatment:'rail'},fluid:{load:routePresets.fluid,lanes:[-7,7],treatment:'rail'}};
+  const c=configs[name];if(!c)throw new Error('Unknown freighter: '+name);
+  c.treatment=options.treatment||c.treatment;
+  const root=buildConsist(c.load,{treatment:c.treatment});
+  if(c.lanes.length>1){
+    // Reuse the terminal hardware once, with payload lanes joined at lock stations.
+    const originals=root.children.filter(o=>o.userData.standardBay);
+    originals.forEach(bay=>{root.remove(bay);for(const z of c.lanes){const copy=bay.clone();copy.position.z=z;root.add(copy);}});
+    const end=-7+root.userData.structuralLength;
+    // Interior locks belong to the payload lanes, never float in the centre gap.
+    const locks=root.children.filter(o=>o.name==='DW-14 rigid interface'&&o.position.x>-7&&o.position.x<end);
+    locks.forEach(lock=>{root.remove(lock);for(const z of c.lanes){const copy=lock.clone();copy.position.z=z;root.add(copy);}});
+    for(const x of [-7,end]){
+      panel(root,[1.4,1.1,27.2],[x,-6.2,0],'dark',.12);
+      panel(root,[1.4,1.1,27.2],[x,6.2,0],'dark',.12);
+      for(const z of [-13.2,13.2])beam(root,[x,-6.2,z],[x,6.2,z],.32,'steel');
+    }
+  }
+  root.userData.layout=c.lanes.length>1?'paired cargo lanes':'single spine';
+  root.userData.treatment=c.treatment;return root;
 }
 
 export function assembly(kind){

@@ -107,7 +107,7 @@ assert.equal(f.DW.convoyMission.trace(c,at(mixed,[0,-42,-4]),at(mixed,[0,-42,4])
 assert.equal(f.DW.convoyMission.trace(c,at(cargo,[-30,0,70]),at(cargo,[30,0,70]),7),null,'Clearance above the actual hull is unobstructed');
 // A real fixed tick must stop a fighter even when it crosses the whole ship.
 let pose=f.snapshot().state;
-pose.eye=at(cargo,[-30,0,2.6]);pose.right=[0,-1,0];pose.up=[0,0,1];pose.back=[-1,0,0];
+pose.eye=at(cargo,[-30,0,0]);pose.right=[0,-1,0];pose.up=[0,0,1];pose.back=[-1,0,0];
 pose.velocity=[20000,25,0];pose.ramp=[0,0,20000];pose.throttle=1;
 f.advance(1/120);
 assert((pose.eye[0]-cargo.position[0])*U< -5,'Swept contact prevents high-speed tunneling');
