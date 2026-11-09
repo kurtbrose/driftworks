@@ -1,5 +1,20 @@
 # Fleet evacuation prototype readiness
 
+## Dynamic director follow-up
+
+The encounter now waits for player/convoy combat to cool before optional
+exposition or another incident. The full-session regression observes two or more
+separated fights, earned 10-30 second rests, delayed relief and physical escape.
+Timestamps and losses are diagnostic output, never a mission schedule. Sustained
+player pursuit can delay the next beat indefinitely. The focused attention
+regression checks this independently of the end-to-end replay.
+
+The render measurements and combat windows below predate dynamic gating.
+They remain historical evidence for the unchanged artwork/native weapons, not
+claims that the current encounter fires those same numbers of rounds or follows
+that timeline. The capital regression still exercises native live weapons in an
+explicit arrival fixture; relief now deliberately waits for an earned lull.
+
 ## Staged Jade ambush follow-up
 
 The current mission replaces the original opening battle below with a quiet

@@ -18,29 +18,47 @@ the existing Jade tableau 65 degrees down: the night-side limb sits below the
 convoy and its forward course clears the planet disk toward open stars. The earlier capital
 battle prototype has become a staged ambush; convoy escort remains separate.
 
-The fixed-step encounter in `src/convoy-ambush.js` owns the following beats:
+The fixed-step encounter in `src/convoy-ambush.js` consumes the convoy director's
+`attention` state. It observes nearby player firing, incoming attacks, player
+hull/shield damage and threats/damage to cargo. A distant surviving enemy alone
+does not count as a dogfight. The phases are settling, combat, cooling, rest and
+ready. Eight continuous quiet seconds earn a replayable, variable 10–30 second
+rest; renewed combat resets both cooling and rest. Optional exposition waits for
+rest, and a busy radio holds the next incident. Tactical warnings and live
+interception orders remain available under fire. The physical simulation keeps
+running throughout; this gates new events, never pauses enemies or changes damage.
+
+The encounter owns the following beats:
 
 - 3 / 10 seconds: Control requests fuel and systems status; Lancer Two answers
   Control. The fuel percentage is authored mission context (flight has no fuel
   consumption model). Fighter comms stay disciplined; conversational chatter
   belongs to civilian transports. No hostile or capital is
   active, and cargo cannot take encounter damage during this quiet opening.
-- 22 seconds: Control interrupts with "Warning. Spatial discontinuity detected."
-- 28 seconds: the hostile mouth opens directly on the original route. Freighters
+- After the opening patrol settles (normally at least 60 seconds), when attention
+  and the radio are free, Control
+  warns "Warning. Spatial discontinuity detected." A dogfight postpones this
+  opening as long as necessary.
+- Six available seconds later: the hostile mouth opens ahead of the live convoy. Freighters
   physically turn port toward a new rally point, with shared flocking, acceleration,
   predictive hull separation and a threat field around the mouth.
-- From 32 seconds: Harrow fires finite-speed capital rounds through the mouth.
+- Four seconds after opening: the first strike wing arrives and Harrow fires
+  finite-speed capital rounds through the mouth for an 18-second salvo window.
   These use real swept cargo hull hits and normal damage; no cargo loss is scripted.
-  Up to four three-fighter strike wings arrive, at least 20 seconds apart, with
-  no new wing while more than three fresh raiders are active.
+  Up to four three-fighter strike wings arrive. Each subsequent wing waits for
+  the current fight to cool and the rest window to finish; waves do not stack
+  just because a launch timer expires. Bombardment stops between encounters so
+  the capital cannot prevent the director from ever observing a lull.
   Capital-caused pressure does not cancel healthy ambush wings. Strike pilots
   take short defensive breaks and then recommit to cargo; depleted wings still
   retreat to a fixed, distant exit that can satisfy the departure condition.
-- 38 seconds: Control confirms the rally and delayed relief. Existing stable
+- During the first earned rest: Control confirms the rally and delayed relief. Existing stable
   interception assignments and amber TASK radar/ship/edge cues identify live wings.
-- 96 seconds: a rescue mouth opens ahead of the rerouted convoy. Bastion emerges
+- After at least two wings and 120 seconds since the incident, the next earned
+  rest can end with relief instead of another wing (four-wing maximum). The
+  rescue mouth opens ahead of the rerouted convoy. Bastion emerges
   toward the convoy, then moves aside. Its actual Aegis weapons provide cover.
-- From 116 seconds: transports cross that mouth in the opposite direction.
+- Twenty seconds after relief arrives: transports cross that mouth in the opposite direction.
   Escape requires crossing its plane inside the aperture, not reaching an elapsed
   time or deleting every remaining enemy. Damage, targeting, rendering and reset
   ownership remain separate from escape bookkeeping.
@@ -50,8 +68,9 @@ scene units; routes, rally and cruise intent use SI units. Harrow's outgoing
 rounds are stepped headlessly as well as in the browser; its remote hull does
 not collide with local fighters. Bastion's native Aegis combat remains owned by
 the browser facade and has a separate actual-rig regression. The seeded unattended
-route test (durable test pilot only) currently ends around 207 seconds: 27 escaped,
-three lost to physical hits. This verifies progression, not player difficulty.
+route test (durable test pilot only) runs through separated fights, earned
+rest windows, delayed relief and physical extraction. Encounter timestamps and
+losses are observed replay output, not scheduled event times or forced outcomes. This verifies progression, not player difficulty.
 The hostile opening is 1.3 km in diameter; the rescue opening is 1.6 km. These
 are initial staging values, not a requirement imposed by the capital's length.
 
@@ -63,7 +82,7 @@ dead, withdrawing and departed ships and never changes the player's target lock.
 
 Focused checks: `node tests/fleet-evacuation.cjs`,
 `node tests/evacuation-capitals.cjs`, `node tests/flight-hud-markers.cjs`, and the
-`node tests/convoy-ambush-tactics.cjs` regression, plus the
+`node tests/convoy-ambush-tactics.cjs` and `node tests/convoy-pacing.cjs` regressions, plus the
 convoy battle/director/arrival checks. Original prototype measurements are retained
 in `docs/benchmarks/fleet-evacuation.md`; they predate this staged encounter.
 

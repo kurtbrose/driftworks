@@ -326,8 +326,9 @@ assert.ok(maneuver(undefined).includes('—'));
 // Control assignments follow the real wing, not a stale marker or selected ship.
 const taskFlight=createFlight({mission:'fleet-evacuation',seed:29}),taskView=taskFlight.snapshot(),tc=taskView.combat,ts=tc.convoy,tu=taskFlight.DW.sim.METERS_PER_UNIT;
 DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
-tc.time=ts.elapsed=45;taskFlight.DW.convoyMission.step(tc,0);
-tc.time=ts.elapsed=49;taskFlight.DW.convoyMission.step(tc,0);
+ts.evacuation.warningAt=22;ts.evacuation.incidentAt=28;ts.director.attention.phase='ready';
+tc.time=ts.elapsed=28;taskFlight.DW.convoyMission.step(tc,0);
+tc.time=ts.elapsed=32;taskFlight.DW.convoyMission.step(tc,0);
 tc.time=ts.elapsed=64;taskFlight.DW.convoyBattle.dispatch(tc);
 assert.equal(ts.battle.order.kind,'intercept');
 let members=DW.convoyBattle.assignmentTargets(tc);assert.equal(members.length,3,'Mark the entire assigned raid wing');

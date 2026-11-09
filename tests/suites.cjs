@@ -42,6 +42,7 @@ const suites = {
     "convoy-battle.cjs",
     "fleet-evacuation.cjs",
     "convoy-ambush-tactics.cjs",
+    "convoy-pacing.cjs",
     "evacuation-capitals.cjs",
     "convoy-collision.cjs",
     "headless.cjs",
