@@ -18,11 +18,13 @@ assert(broken.b.fronts[0].released);assert.equal(broken.c.enemies.length,populat
 assert.equal(new Set(broken.s.raids.map(g=>g.id)).size,broken.s.raids.length);
 // The larger battle cannot consume the arrival exchange or attack cargo during its quiet first minute.
 f.advance(13);assert.equal(f.transcript.length,3);assert(f.transcript[0].text.includes('visual range'));assert(f.transcript[1].text.includes('Convoy in sight'));assert(f.transcript[2].text.includes('Glad to have you'));
-assert(c.enemies.some(e=>e.convoyBattle&&e.guns.fired>0),'Background fighters shoot real weapons immediately, not index-delayed placeholders');
-f.advance(46.9);assert(!s.raidStarted);assert(s.ships.every(ship=>ship.hull===ship.maxHull));assert(c.enemies.some(e=>e.convoyBattle&&e.hp<e.maxHp),'Background fights have real consequences');
+// Loose wings first close the 1.8 km gap, then ordinary combat owns firing.
+f.advance(12);
+assert(c.enemies.some(e=>e.convoyBattle&&e.guns.fired>0),'Background wings break their approach and shoot real weapons after contact');
+f.advance(34.9);assert(!s.raidStarted);assert(s.ships.every(ship=>ship.hull===ship.maxHull));assert(c.enemies.some(e=>e.convoyBattle&&e.hp<e.maxHp),'Background fights have real consequences');
 f.advance(.1);assert(s.raidStarted);assert(s.raids.length>0);assert(!c.dead);
 // Arrival resolves the escort without demanding that the player erase every distant battle.
-c.enemies.filter(e=>e.convoyRaider).forEach(e=>{e.hp=0;});s.elapsed=300;s.ships.forEach(ship=>{ship.arrived=true;ship.velocity=[0,0,0];});f.DW.convoyMission.step(c,0);assert(s.complete);assert(c.enemies.some(e=>e.convoyBattle&&e.team==='enemy'&&e.hp>0));
+const arrival=fixture(),arrivalState=arrival.s;arrivalState.elapsed=300;arrivalState.ships.forEach(ship=>{ship.arrived=true;ship.velocity=[0,0,0];});arrival.f.DW.convoyMission.step(arrival.c,0);assert(arrivalState.complete);assert(arrival.c.enemies.some(e=>e.convoyBattle&&e.team==='enemy'&&e.hp>0));
 f.reset();assert.equal(f.snapshot().combat.convoy.battle.fronts.length,4);assert.equal(f.snapshot().combat.convoy.battle.order,null);assert.equal(f.snapshot().combat.enemies.length,26);assert.doesNotThrow(()=>JSON.stringify(f.snapshot().combat.convoy));
 const isolated=createFlight({mission:'convoy',seed:29,convoyBattlefield:false});assert(!isolated.snapshot().combat.convoy.battle);assert.equal(isolated.snapshot().combat.enemies.length,2);
 console.log('PASS convoy battlefield: 24 real background fighters, live fire/losses, quiet local opening, four fronts, dispatch priority/hysteresis, urgent preemption, physical breakthroughs, arrival and reset');

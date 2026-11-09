@@ -292,6 +292,7 @@ export type Craft = ArtCraft & {
     goal: Vector;
     guns: Guns;
     damagedAt: number;
+    wingEngagedUntil?: number;
     fire: boolean;
     targetId: string | null;
     retarget: number;
@@ -828,6 +829,7 @@ export type ExperimentModules = {
     flightStudies:{mount:(host:FlightStudiesHost)=>{readonly benchmarking:boolean;readonly enabled:boolean;beforeRender:(time:number)=>void;afterRender:()=>void}};
     flightBlockout:Pick<ExperimentModules['flightSim'],'geometry'>;
     flightOpponent:Pick<ExperimentModules['flightSim'],'intercept'|'steer'> & {
+        wingTravel:(craft:Craft,members:Craft[],destination:Vector)=>{goal:Vector;speed:number};
         trackAim:(combat:Combat,craft:Craft,target:FlightState)=>{point:Vector;time:number};
         decide:(combat:Combat,craft:Craft,target:FlightState)=>void;
         progressFreeSpace:(combat:Combat,craft:Craft,target:FlightState,dt:number)=>void;

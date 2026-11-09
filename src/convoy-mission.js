@@ -244,14 +244,9 @@
         }
         if(raid.phase==='approach'){
             craft.mode='approach';r.stage='form';craft.targetId=r.role==='strike'?cargo.id:null;craft.retarget=.75;
-            var slot=members.indexOf(craft),aim=cargo.position.map(function(v,k){return v+cargo.velocity[k]*2/U;}),speed=craft.profile.maxVelocity[2]*.9;
-            if(craft!==leader){
-                var station=leader.pose.eye.map(function(v,k){return v+(leader.pose.right[k]*(slot===1?-130:130)+leader.pose.back[k]*180+leader.pose.up[k]*(slot===1?40:-40))/U;});
-                var error=station.map(function(v,k){return (v-craft.pose.eye[k])*U;});
-                speed=Math.hypot.apply(null,leader.pose.velocity)-error.reduce(function(n,v,k){return n+v*craft.pose.back[k];},0)*.25;
-                aim=station.map(function(v,k){return v+leader.pose.velocity[k]*2/U;});
-            }
-            flyRaider(craft,aim,speed,craft!==leader&&range(craft.pose.eye,aim)>450,dt);return true;
+            var destination=cargo.position.map(function(v,k){return v+cargo.velocity[k]*2/U;});
+            var travel=DW.flightOpponent.wingTravel(craft,members,destination);
+            flyRaider(craft,travel.goal,travel.speed,false,dt);return true;
         }
         if(raid.phase==='regroup'||r.stage==='extend'){
             craft.mode='regroup';r.stage='extend';craft.targetId=null;craft.retarget=.75;

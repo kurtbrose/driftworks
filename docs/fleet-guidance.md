@@ -145,3 +145,27 @@ buffers change as the ships turn.
 
 The current implementation borrows the local steering structure; it does not
 claim the convergence or collision guarantees of those research models.
+
+## Fighter travel and combat handoff
+
+Free-space furballs and battle screens use loose three-fighter travel groups
+before contact. Group membership follows the stable team/region/zone roster;
+dead members are excluded without assigning new geometric stations. The shared
+`flightOpponent.wingTravel(craft, members, destination)` supplies a steering goal
+and speed from the destination, group centroid, soft cohesion beyond 180 m and
+personal clearance inside 85 m. Existing fighter steering and acceleration own
+all movement. This is separate from the slower freighter locomotion.
+
+Any wing member within 1,100 m of an eligible enemy, or damaged within three
+seconds, releases the group to the existing target selection, pursuit, evasion,
+lead and firing policies. An eight-second commitment and 1,800 m disengagement
+range prevent travel/combat chatter. Distant surviving wings can reform and
+approach the next contact. Travel snapshots precede movement for the whole wing;
+there is no designated leader whose death breaks navigation. Travel suppresses
+fire and boost rather than altering dogfight handling. Asteroid-range, curved
+space, hangar launches and scripted withdrawals retain their specialized policies.
+
+Convoy raid approaches also use this loose steering instead of follower wedge
+stations. Their existing director still decides hold, approach, engage, cover,
+strike and regroup; engagement returns control to the ordinary dogfight loop.
+Cargo escorts retain their protected-freighter coverage assignments.

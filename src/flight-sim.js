@@ -506,6 +506,34 @@
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), t.player.pose.curvature||(mission(t).sky.thinShell?'thin-shell':!!mission(t).sky.wormhole));
         }
         var neighbors=separationGrid(living), roster=participants(t).concat(t.convoy?DW.convoyMission.targets(t):[]), byId=new Map((t.mode==='battle'||t.convoy?roster:living).map(function(craft){return [craft.id,craft];}));
+        // Snapshot wing decisions before moving any fighter, so handoff does not
+        // depend on roster order. Existing raid/escort/withdrawal directors own
+        // their missions; this covers ordinary free-space and battle-screen travel.
+        /** @type {Map<string,{goal:Vector,speed:number}>} */var wingPlans=new Map();
+        if(mission(t).encounter.kind==='furball'&&(mission(t).emptySpace||!!t.convoy||t.mode==='battle')&&!t.scramble&&!player.curvature&&!mission(t).sky.wormhole){
+            /** @type {Map<string,Craft[]>} */var wings=new Map();
+            t.enemies.forEach(function(c){
+                if(c.controller==='input'||c.convoyRaider||t.convoy&&!c.convoyBattle||c.hangarLaunch)return;
+                var key=c.team+':'+(c.pose.region||0)+':'+(c.battleZone?c.battleZone.id:'open');
+                var list=wings.get(key)||[];list.push(c);wings.set(key,list);
+            });
+            wings.forEach(function(list){for(var start=0;start<list.length;start+=3){
+                var members=list.slice(start,start+3).filter(function(c){return c.hp>0;});if(members.length<2)continue;
+                var center=members.reduce(function(sum,c){return add(sum,c.pose.eye);},[0,0,0]).map(function(v){return v/members.length;});
+                var opponents=participants(t).filter(function(c){return c.hp>0&&c.team!==members[0].team&&(c.pose.region||0)===(members[0].pose.region||0)&&(!members[0].battleZone||length(sub(c.pose.eye,members[0].battleZone.center))*U<members[0].battleZone.radiusM);});
+                var target=opponents.reduce(function(best,c){return !best||length(sub(c.pose.eye,center))<length(sub(best.pose.eye,center))?c:best;},/** @type {Craft|undefined} */(undefined));
+                if(!target)continue;
+                var nearest=Infinity;
+                members.forEach(function(c){opponents.forEach(function(other){nearest=Math.min(nearest,length(sub(c.pose.eye,other.pose.eye))*U);});});
+                var contact=nearest<1100||members.some(function(c){return t.time-c.damagedAt<3;});
+                if(contact)members.forEach(function(c){c.wingEngagedUntil=t.time+8;});
+                if(contact||nearest<1800&&members.some(function(c){return (c.wingEngagedUntil||0)>0;})||members.some(function(c){return t.time<(c.wingEngagedUntil||0);})){
+                    members.forEach(function(c){if(c.mode==='wing-travel'){c.decision=0;c.retarget=0;c.until=0;c.gunGoal=undefined;opponentPolicy.forget(c);}});continue;
+                }
+                var destination=add(target.pose.eye,scale(target.pose.velocity,2/U));
+                members.forEach(function(c){wingPlans.set(c.id,opponentPolicy.wingTravel(c,members,destination));});
+            }});
+        }
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
             if(e.hp>0&&e.hangarLaunch){
@@ -525,6 +553,12 @@
                 if(DW.convoyBattle.stepEvacuationWing(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 if(t.convoy&&e.team==='ally'&&!e.convoyBattle&&!escortThreat){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt,t);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 if(t.convoy&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
+                var wingPlan=wingPlans.get(e.id);
+                if(wingPlan){
+                    e.mode='wing-travel';e.goal=wingPlan.goal;e.targetId=null;e.gunValid=false;
+                    stepInput(e,Object.assign({},steer(e.pose,e.goal),{throttle:Math.min(1,wingPlan.speed/e.profile.maxVelocity[2]),throttleRate:0,fire:false,boost:false}),dt);
+                    neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;
+                }
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
@@ -715,6 +749,7 @@
             e.guns.bolts.forEach(function(b){result.bolts.push(Object.assign({},b,{team:e.team||'enemy'}));});
             e.guns.impacts.forEach(function(hit){result.impacts.push(hit);});
         });
+        if(t.convoy&&t.convoy.evacuation)t.convoy.evacuation.guns.bolts.forEach(function(b){result.bolts.push(b);});
         return result;
     }
     DW.flightSim = { rebaseGeometry:function(t){if(t.player.pose.curvature){DW.flightHyperbolic.rebase(t,function(c){return opponentPolicy.trackFor(c);});collision.changed(t);}}, setCollisionMode: setCollisionMode, collisionBatch: collisionBatch, collisionStats: collisionStats, collisionChanged: collisionChanged, stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, firingSolution:firingSolution, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };

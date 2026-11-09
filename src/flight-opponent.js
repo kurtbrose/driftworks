@@ -264,6 +264,23 @@
         e.pose.throttle=e.mode==='break'||style==='passer'?1:style==='aggressor'?.92:distance<350?.68:1;
         e.decision=[.65,.42,.28][e.skill];
     }
-    DW.flightOpponent={/** @param {Craft} craft */forget:function(craft){tracks.delete(craft);},intercept:intercept,steer:steer,trackAim:trackAim,decide:decide,progressFreeSpace:progressFreeSpace,
+    /** Loose travel steering: shared course and speed, soft neighbor cohesion and
+     * personal clearance. No assigned stations and no pose/velocity replacement.
+     * @param {Craft} craft @param {Craft[]} members @param {Vector} destination
+     * @returns {{goal:Vector,speed:number}} */
+    function wingTravel(craft,members,destination){
+        var center=members.reduce(function(sum,c){return add(sum,c.pose.eye);},[0,0,0]).map(function(v){return v/members.length;});
+        var forward=unit(sub(destination,center)),correction=[0,0,0];
+        members.forEach(function(other){if(other===craft)return;
+            var delta=sub(other.pose.eye,craft.pose.eye),distance=length(delta)*U;
+            if(distance>180)correction=add(correction,scale(unit(delta),Math.min(140,(distance-180)*.4)/Math.max(1,members.length-1)));
+            if(distance<85)correction=add(correction,scale(distance>1?unit(delta):craft.pose.right,-(85-distance)*3));
+        });
+        var goal=add(craft.pose.eye,scale(add(scale(forward,650),correction),1/U));
+        var along=dot(sub(craft.pose.eye,center),forward)*U;
+        var speed=Math.min.apply(null,members.map(function(c){return c.profile.maxVelocity[2];}))*.85-along*.12;
+        return {goal:goal,speed:Math.max(20,speed)};
+    }
+    DW.flightOpponent={/** @param {Craft} craft */forget:function(craft){tracks.delete(craft);},wingTravel:wingTravel,intercept:intercept,steer:steer,trackAim:trackAim,decide:decide,progressFreeSpace:progressFreeSpace,
         /** @param {Craft} craft */trackFor:function(craft){return tracks.get(craft);}};
 }());
