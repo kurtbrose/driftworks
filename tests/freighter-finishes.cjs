@@ -50,6 +50,17 @@ engine.traverse(o=>{
 });
 assert(engineTriangles<=2000,'engine hardware triangle budget');
 assert.equal(engine.getObjectByName('recessed engine bell').geometry.parameters.segments,32,'retain the visible bell outline');
+// Small functional details stay readable without extra material submissions.
+assert(engine.getObjectByName('engineId identification'));
+assert(engine.getObjectByName('engine bell inner liner').material.color.getHex()<engine.getObjectByName('recessed engine bell').material.color.getHex(),'darker internal liner');
+const command=kit.buildFreighter('container').getObjectByName('freight command module');
+assert(command.getObjectByName('commandId identification'));
+const ports=command.children.filter(o=>o.name==='cylinder / glass');
+for(const port of ports){
+ const ring=command.children.find(o=>o.name==='retaining hoop'&&Math.abs(o.position.z-port.position.z)<1e-6);
+ assert(port.position.x-port.geometry.parameters.height/2-(ring.position.x-ring.geometry.parameters.tube)>.08,'glass sits behind the protective port rim');
+}
+assert.equal(kit.batchStatic(engine).children.length,5,'polish reuses existing engine material batches');
 // Production bake keeps source-authored mouths in the flight coordinate convention.
 const meta=require('../assets/ships/industrial-kit/convoy-flight.json');
 assert.equal(meta.sourceSha256,require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync('assets/ships/industrial-kit/kit.js')).digest('hex'),'flight bake matches its editable source');

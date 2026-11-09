@@ -457,3 +457,47 @@ submission or frame-cadence improvement was demonstrated. GPU execution was
 not timed. This confirms a modest geometry saving with unchanged draws, not a
 claim that the original engine count was an established gameplay bottleneck.
 Capital preparation, outside sampling, was 1,513.1 / 1,685.4 ms.
+
+
+## Command and drive close-up polish (2026-11-08)
+
+The front viewports now sit 105 mm behind their protective rim. The port rims
+use 24 angular segments and four tube sides with smooth normals, retaining a
+round close-up outline without the former 40-by-6 tessellation. Rear command
+collars use 16 sides. The command module now has 1,582 triangles versus 2,252.
+
+The engine bell's inner liner uses the existing darker steel material while
+the outer shell and rim retain their brighter metal finish. The profile is
+split at the lip without adding profile stations or changing the 32-sided bell
+silhouette, hollow throat or exhaust anchor. Its two existing materials batch
+with the other steel and edge parts, so the isolated engine still has five
+material batches. The engine now has 1,826 triangles; a flush identification
+mark accounts for the two added triangles relative to the previous pass.
+
+Both modules have restrained E-04 / C-01 identification marks in dedicated
+hardware-atlas rectangles, separate from the quiet paint and trim regions.
+These are opaque two-triangle surface marks using the existing shared atlas,
+not transparent decal passes. The access-cover latch has a clearer metal edge
+and recess painted into its existing graphic. No additional runtime textures,
+materials or shader features were added.
+
+The review now offers named rear-quarter, front-quarter, underside, aft, front,
+side and top cameras. Visual checks covered engine three-quarter/liner and
+command front-quarter/front, including the round port outlines and hatch latch.
+Captures are under ignored `output/freighter-polish/`. Focused regressions cover
+the actual glass-to-rim depth, identification marks, darker liner, shared material
+batches and the existing geometry/UV/normal/engine-throat contracts. The industrial
+kit suite, freighter checks and five-mode convoy collision suite passed.
+
+Final container / feeder / tanker triangles are 61,354 / 27,838 / 28,278, with
+7 / 7 / 6 shared material batches. The runtime binary is 11,277,120 bytes.
+
+A foreground production-convoy readiness sample at the unchanged starting
+cockpit camera used 1838 x 1461 backing pixels, DPR 1.5 and 100% production
+artwork. OFF/ON/ON/OFF, 20 warm-up and 90 frames per block, frozen AI/projectiles,
+normal effects, no concurrent builds/tests. ON CPU median/p95 was 3.30/4.20 ms,
+89 draws and 1,298,678 triangles; OFF was 1.70/2.30 ms, 39 draws and 123,498
+triangles. Both had 13.30/13.40 ms median/p95 rAF cadence. GPU execution was not
+measured; this is a readiness sample, not a whole-game speedup claim. Capital
+preparation was 1,744.5 ms, outside sampling. Counts preserve existing draws and
+remove 19,860 triangles from the preceding 30-ship snapshot.

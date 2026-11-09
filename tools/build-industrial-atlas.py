@@ -113,13 +113,20 @@ for index, (name, color) in enumerate(PALETTE):
         d = ImageDraw.Draw(tile)
         d.rectangle((280, 8, 504, 120), fill=(61, 70, 72))
         d.rectangle((280, 248, 504, 504), fill=(47, 57, 60))
+        # Two restrained identification plates, separate from quiet trim samples.
+        for x, label in [(288, "E-04"), (396, "C-01")]:
+            d.rectangle((x, 64, x+100, 112), fill=(61, 70, 72))
+            d.rectangle((x+5, 71, x+9, 104), fill=(177, 128, 51))
+            d.text((x+18, 76), label, font=font(18), fill=(205, 209, 196))
         # Access cover: one perimeter seam, four fasteners, a latch and a small ID.
         d.rounded_rectangle((24, 280, 264, 488), radius=9, fill=(182, 184, 173), outline=(111, 119, 117), width=2)
         d.line((30, 485, 258, 485), fill=(210, 211, 199), width=2)
         for x in [36, 252]:
             for y in [292, 476]:
                 d.ellipse((x-2, y-2, x+2, y+2), fill=(76, 86, 87))
-        d.rectangle((230, 364, 242, 396), fill=(77, 86, 87))
+        d.rectangle((228, 362, 244, 398), fill=(77, 86, 87))
+        d.rectangle((232, 365, 241, 393), fill=(142, 150, 146))
+        d.line((232, 365, 241, 365), fill=(210, 213, 202), width=2)
         d.text((43, 303), "ACCESS  /  01", font=font(12), fill=(83, 94, 94))
         # Louvers belong only to the separately modeled ventilation inset.
         for y in range(288, 481, 12):

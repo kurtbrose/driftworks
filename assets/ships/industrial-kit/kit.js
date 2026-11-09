@@ -51,7 +51,9 @@ function panel(g,s,p,tile='ivory',b=.08){return box(g,s,p,tile,b);}
 // only physical hatches/vents receive the corresponding graphic, once per face.
 const hardwareRegions={
   shell:{face:[16,16,272,240],edge:[24,24,56,56]},
-  frame:{face:[288,16,496,112],edge:[300,24,328,48]},
+  frame:{face:[288,16,496,48],edge:[300,24,328,48]},
+  engineId:{face:[288,64,388,112],edge:[300,24,328,48]},
+  commandId:{face:[396,64,496,112],edge:[300,24,328,48]},
   access:{face:[16,272,272,496],edge:[24,24,56,56]},
   vent:{face:[288,272,496,496],edge:[300,24,328,48]},
   registry:{face:[288,128,496,240],edge:[300,24,328,48]}
@@ -60,6 +62,16 @@ function hardwarePanel(g,size,p,finish='shell',bevel=.08){
   const b=Math.min(bevel,...size.map(v=>v*.24)),region=hardwareRegions[finish];
   const geo=geometry(['hardware',...size,b,finish].join(','),()=>chamferGeometry(size,b,'registry',region));
   const m=mesh(g,geo,'paint',p,'hardware / '+finish);m.userData.hardwareFinish=finish;return m;
+}
+// Flush opaque markings reuse the hardware atlas: two triangles, no decal pass.
+function hardwareMark(g,finish,size,p,normal){
+  const r=hardwareRegions[finish].face,geo=geometry('hardware marking '+finish+size,()=>{
+    const geo=new T.PlaneGeometry(...size),uv=geo.attributes.uv;
+    for(let i=0;i<uv.count;i++)uv.setXY(i,(1024+r[0]+uv.getX(i)*(r[2]-r[0]))/2048,1-(1536+r[1]+(1-uv.getY(i))*(r[3]-r[1]))/2048);
+    return geo;
+  });
+  const m=mesh(g,geo,'paint',p,finish+' identification');
+  m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(...normal));return m;
 }
 function cylinder(g,r1,r2,length,p,mat='steel',axis='x',segments=16){const m=mesh(g,geometry(['c',r1,r2,length,segments].join(','),()=>new T.CylinderGeometry(r1,r2,length,segments)),mat,p,'cylinder / '+mat);if(axis==='x')m.rotation.z=-Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;return m;}
 function beam(g,a,b,width=.16,mat='steel',depth=width){const av=new T.Vector3(...a),bv=new T.Vector3(...b),delta=bv.clone().sub(av);const m=mesh(g,geometry('beam'+width+','+depth,()=>new T.BoxGeometry(width,1,depth)),mat);m.name='structural beam';m.position.copy(av.add(bv).multiplyScalar(.5));m.scale.y=delta.length();m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return m;}
@@ -194,10 +206,12 @@ function engine(g){
   cylinder(g,1.32,1.32,3,[-1.3,0,0],'steel','x',16);
   for(const x of [-3.8,-1.8])cylinder(g,1.52,1.52,.22,[x,0,0],x===-1.8?'ochre':'edge','x',16);
   ring(g,.5,.78,'edge',.10,16,4);
-  const bell=geometry('hollow engine bell',()=>{
-    const points=[[.7,.4],[.75,.7],[.95,1.4],[1.35,2.15],[1.95,3.2],[2.05,3.35],[1.86,3.4],[1.73,3.16],[1.17,2.2],[.8,1.4],[.60,.7],[.6,.4]].map(([r,x])=>new T.Vector2(r,x));const geo=new T.LatheGeometry(points,32);geo.normalizeNormals();return geo;
-  });
-  const nozzle=mesh(g,bell,'edge',[0,0,0],'recessed engine bell');nozzle.rotation.z=-Math.PI/2;
+  const profile=[[.7,.4],[.75,.7],[.95,1.4],[1.35,2.15],[1.95,3.2],[2.05,3.35],[1.86,3.4],[1.73,3.16],[1.17,2.2],[.8,1.4],[.60,.7],[.6,.4]];
+  for(const [name,points,material] of [['recessed engine bell',profile.slice(0,7),'edge'],['engine bell inner liner',profile.slice(6),'steel']]){
+    const bell=geometry(name+' / 32',()=>{const geo=new T.LatheGeometry(points.map(([r,x])=>new T.Vector2(r,x)),32);geo.normalizeNormals();return geo;});
+    const nozzle=mesh(g,bell,material,[0,0,0],name);nozzle.rotation.z=-Math.PI/2;
+  }
+  hardwareMark(g,'engineId',[1.05,.28],[-1.8,1.579,0],[0,1,0]);
   cylinder(g,.59,.59,.05,[.47,0,0],'hot','x',16);ring(g,3.28,1.96,'steel',.09,24,4);
   for(let i=0;i<8;i++){const angle=i*Math.PI/4,y=Math.cos(angle),z=Math.sin(angle);beam(g,[.6,y*.98,z*.98],[2.8,y*1.82,z*1.82],.06,'steel');}
   for(const z of [-1.68,1.68]){
@@ -442,14 +456,14 @@ function freightCommand(g){
   cabin.userData.designFamily='industrial drive cassette';
   hardwarePanel(cabin,[3.8,3.15,3.15],[-1.8,0,0],'shell',.45).name='command chamfered housing';
   hardwarePanel(cabin,[2.6,3.15,3.15],[1.5,0,0],'shell',.45);
-  cylinder(cabin,1.32,1.32,1.8,[3.0,0,0],'steel','x',24);
-  cylinder(cabin,1.52,1.52,.22,[.15,0,0],'ochre','x',24);
-  cylinder(cabin,1.52,1.52,.22,[2.8,0,0],'edge','x',24);
+  cylinder(cabin,1.32,1.32,1.8,[3.0,0,0],'steel','x',16);
+  cylinder(cabin,1.52,1.52,.22,[.15,0,0],'ochre','x',16);
+  cylinder(cabin,1.52,1.52,.22,[2.8,0,0],'edge','x',16);
   // Small instrument/view ports in an opaque forward plate, not a windshield.
   hardwarePanel(cabin,[.12,1.1,2.1],[-3.73,.35,0],'frame',.08);
   for(const z of [-.58,.58]){
-    cylinder(cabin,.29,.29,.08,[-3.82,.35,z],'glass','x',16);
-    ring(cabin,-3.86,.34,'edge',.055).position.set(-3.86,.35,z);
+    cylinder(cabin,.29,.29,.02,[-3.80,.35,z],'glass','x',16);
+    ring(cabin,-3.86,.34,'edge',.055,24,4).position.set(-3.86,.35,z);
   }
   for(const z of [-1.68,1.68]){
     hardwarePanel(cabin,[2.4,1.7,.45],[-1.6,0,z],'frame',.14);
@@ -458,6 +472,8 @@ function freightCommand(g){
   }
   hardwarePanel(cabin,[2.8,.4,1.6],[-2,-1.7,0],'frame',.1);
   hardwarePanel(cabin,[2.0,.24,1.7],[1.2,1.65,0],'vent',.08);
+  hardwareMark(cabin,'commandId',[1.05,.28],[-1.8,1.579,0],[0,1,0]);
+  cabin.userData.portRecessM=.105;
   return cabin;
 }
 
