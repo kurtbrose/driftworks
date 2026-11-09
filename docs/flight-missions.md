@@ -10,63 +10,51 @@ catalog refresh, backups, applying revisions and the boundary between fixed
 lines and dynamic runtime reports. Plot and trigger notes remain authoring
 drafts until integrated into mission logic.
 
-## Fleet evacuation prototype
+## Fleet evacuation / Jade ambush
 
-Open `experiments/flight.html?mission=fleet-evacuation` for a separate battle
-built on convoy escort. Thirty transports cross the same 7.5 km route, then
-leave the active scene individually at the cyan extraction mouth. Three opposing
-screen pairs (18 fighters) and the two player wingmates start in flight. Control
-assigns crossing cover, support for a weakened screen, or interception of a real
-cargo threat. Existing priority hysteresis keeps assignments stable and urgent
-attacks can interrupt them; orders never change the player's selected target.
+Open `experiments/flight.html?mission=fleet-evacuation`. Thirty transports and
+the player's two wingmates begin a quiet patrol over Jade. The earlier capital
+battle prototype has become a staged ambush; convoy escort remains separate.
 
-Control's assigned enemies carry amber TASK corner brackets on radar, ship
-markers and offscreen arrows. The whole live raid wing (or enemy screen for a
-support order) is marked, rather than only its original leader. Beyond radar
-range, assigned contacts remain bracketed at the rim and the TASK legend reports
-the count outside range. Intercept orders use a fixed task banner and distance
-to the nearest surviving attacker, replacing the floating waypoint square;
-individual brackets/arrows show where to fly. `convoyBattle.assignmentTargets`
-derives this membership from the current order on each render, excluding dead,
-withdrawing and departed ships;
-escort/patrol orders and completed missions have no hostile TASK highlights.
-Selection rings, faction colors and speaker halos retain their own meanings.
+The fixed-step encounter in `src/convoy-ambush.js` owns the following beats:
 
-Bastion covers the convoy while Harrow advances to intercept it. Their positions
-and SI velocities belong to JSON-safe `combat.convoy.evacuation.capitals`;
-`convoyBattle.updateEvacuation` moves them in the fixed-step mission. The
-browser's armed Aegis rigs observe those same states, retaining original scale,
-materials, collision and component damage. Capital weapons use the existing
-presentation-side Aegis simulation, so the ordinary headless session does not
-include their gunfire. `tests/evacuation-capitals.cjs` separately exercises the
-actual capital facade and numeric/visual state ownership without a GPU.
+- 3 / 11 seconds: two short, tired patrol exchanges. No hostile or capital is
+  active, and cargo cannot take encounter damage during this quiet opening.
+- 22 seconds: Control interrupts with "Warning. Spatial discontinuity detected."
+- 28 seconds: the hostile mouth opens directly on the original route. Freighters
+  physically turn port toward a new rally point, with shared flocking, acceleration,
+  predictive hull separation and a threat field around the mouth.
+- From 32 seconds: Harrow fires finite-speed capital rounds through the mouth.
+  These use real swept cargo hull hits and normal damage; no cargo loss is scripted.
+  Up to four three-fighter strike wings arrive, at least 20 seconds apart, with
+  no new wing while more than three fresh raiders are active.
+- 38 seconds: Control confirms the rally and delayed relief. Existing stable
+  interception assignments and amber TASK radar/ship/edge cues identify live wings.
+- 96 seconds: a rescue mouth opens ahead of the rerouted convoy. Bastion emerges
+  toward the convoy, then moves aside. Its actual Aegis weapons provide cover.
+- From 116 seconds: transports cross that mouth in the opposite direction.
+  Escape requires crossing its plane inside the aperture, not reaching an elapsed
+  time or deleting every remaining enemy. Damage, targeting, rendering and reset
+  ownership remain separate from escape bookkeeping.
 
-The plan changes from crossing to pressure at 90 seconds and withdrawal at 210.
-Capitals below 7,000 integrity also retreat; destroyed capitals stop. Losing
-Bastion triggers an early emergency withdrawal and a matching Control call. Screens
-withdraw when depleted, when their opponents are gone, or in stages during the
-final withdrawal. Fighters steer to exit stations and leave only after physically
-reaching them; withdrawal is neither a kill nor a teleport.
+`combat.convoy.evacuation` is transient, JSON-safe mission state. Positions use
+scene units; routes, rally and cruise intent use SI units. Harrow's outgoing
+rounds are stepped headlessly as well as in the browser; its remote hull does
+not collide with local fighters. Bastion's native Aegis combat remains owned by
+the browser facade and has a separate actual-rig regression. The seeded unattended
+route test (durable test pilot only) currently ends around 175 seconds: 27 escaped,
+three lost to physical hits. This verifies progression, not player difficulty.
 
-Enemy reserves contain nine fighters, released in three-ship packets through a
-fixed violet entry mouth. The first window is at 45 seconds, subsequent windows
-are at least 65 seconds apart, each mouth appears four seconds before release,
-and no arrival window opens with more than three active raiders. Existing
-screen breakthroughs reuse surviving actors. Capital hangars do not replenish
-this roster. Raid regrouping and abort rules remain the convoy rules.
+Control's assigned enemies carry amber TASK brackets on radar, ship markers and
+offscreen arrows. Entire live wings are marked, including survivors after leader
+loss. Outside-range contacts remain at the radar rim. Intercept orders use a fixed
+banner and nearest-attacker distance. `convoyBattle.assignmentTargets` excludes
+dead, withdrawing and departed ships and never changes the player's target lock.
 
-All transports either escaping or being destroyed ends the mission, regardless
-of surviving hostiles. Escape removes rendering, targeting and collision without
-destroying transport hull. The route anchor continues beyond the exit so trailing
-formation members can finish; the seeded unattended regression finishes at about
-330 seconds. This is an initial pacing experiment: it has no bomber-specific
-weapons, rearming, distant-combat abstraction, or branching campaign outcome.
-
-`Flight lab & diagnostics` includes Battle overview and Bastion underside review
-cameras plus the existing frozen capital ABBA benchmark. Focused checks:
-`node tests/fleet-evacuation.cjs`, `node tests/evacuation-capitals.cjs`, and the
-convoy battle/director/arrival checks. Render measurements and visual inspection
-are recorded in `docs/benchmarks/fleet-evacuation.md`.
+Focused checks: `node tests/fleet-evacuation.cjs`,
+`node tests/evacuation-capitals.cjs`, `node tests/flight-hud-markers.cjs`, and the
+convoy battle/director/arrival checks. Original prototype measurements are retained
+in `docs/benchmarks/fleet-evacuation.md`; they predate this staged encounter.
 
 ## Convoy escort / battlefield direction
 

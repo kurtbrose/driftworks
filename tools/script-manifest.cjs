@@ -19,7 +19,7 @@ const groups = {
   ],
   dialogue: ['experiments/mumble.js', 'experiments/flight-dialogue.js'],
   flightRuntime: [
-    'src/fleet-guidance.js', 'src/convoy-battle.js', 'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
+    'src/fleet-guidance.js', 'src/convoy-battle.js', 'src/convoy-ambush.js', 'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
     'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'src/flight-prediction.js'
   ],
   flightAi: ['experiments/flight-ai.js', 'experiments/flight-duel.js'],

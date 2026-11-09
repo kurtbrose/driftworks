@@ -64,7 +64,8 @@
         });
         if(s.evacuation){
             var cargo=s.ships.filter(function(ship){return ship.hull>0&&!ship.arrived;}),ship=cargo[0];
-            if(ship)list.push({id:'crossing-cover',kind:'escort',front:null,packet:ship.packet,targetId:ship.id,position:ship.position.map(function(v,k){return v+([0,-350,220][k])/U;}),label:s.evacuation.phase==='withdrawal'?'Final transports':'Evacuation crossing',priority:20,since:combat.time});
+            const e=s.evacuation;
+            if(ship)list.push({id:'crossing-cover',kind:'escort',front:null,packet:ship.packet,targetId:ship.id,position:s.elapsed>=e.rescueAt?e.exit.position.slice():e.phase==='patrol'||e.phase==='warning'?ship.position.map(function(v,k){return v+([0,-350,220][k])/U;}):e.rally.map(function(v){return v/U;}),label:s.elapsed>=e.rescueAt?'Rescue mouth':e.phase==='patrol'||e.phase==='warning'?'Convoy patrol':'New rally point',priority:20,since:combat.time});
         }
         return list.sort(function(a,b){return b.priority-a.priority||a.id.localeCompare(b.id);});
     }
@@ -108,42 +109,9 @@
         {id:'evac-harrow',callsign:'Harrow',team:'enemy',position:[1900/U,3300/U,1200+650/U],heading:Math.PI/2,velocity:[0,0,0],integrity:20000,mainBatteryClear:true}
     ];}
     /** @param {Combat} combat */
-    function startEvacuation(combat){
-        const s=combat.convoy;if(!s)return;
-        s.evacuation={phase:'crossing',withdrawalAt:null,capitals:capitals(),nextWaveAt:45,waves:0,reserves:9,
-            entry:[3000/U,4000/U,1200+650/U],exit:{position:[0,7500/U,1200],opensAt:-3,closesAt:1000000,spawned:true}};
-        s.arrivalFleet=s.evacuation.capitals;
-        // The battle briefing replaces the convoy rendezvous exchange.
-        s.radio.opening=2;s.radio.said.push('intro-control','visual-reply','welcome');
-    }
-    /** Advance towards tactical stations; damaged capitals fall back, never orbit forever.
-     * @param {Combat} combat @param {number} dt */
-    function updateEvacuation(combat,dt){
-        const s=combat.convoy,e=s&&s.evacuation;if(!s||!e)return;
-        var count=combat.enemies.length;combat.enemies=combat.enemies.filter(function(c){return c.mode!=='departed';});if(count!==combat.enemies.length)DW.flightSim.collisionChanged(combat);
-        if(e.withdrawalAt===null&&(s.elapsed>=210||e.capitals[0].integrity<=0))e.withdrawalAt=s.elapsed;
-        e.phase=s.complete?'complete':e.withdrawalAt!==null?'withdrawal':s.elapsed>=90?'pressure':'crossing';
-        var anchor=s.navigation?s.navigation.anchor[1]:s.elapsed*s.speedMps;
-        e.capitals.forEach(function(ship,i){
-            var retreat=e.phase==='withdrawal'||ship.integrity<7000;
-            var goal=[i?1900:-1800,i?(retreat?anchor+3500:anchor+2300):(retreat?Math.min(8700,anchor+1600):anchor+1100),1200*U+(i?650:200)];
-            var delta=goal.map(function(v,k){return v-ship.position[k]*U;}),distance=Math.hypot.apply(null,delta),speed=Math.min(retreat?38:30,distance/4);
-            ship.velocity=delta.map(function(v){return ship.integrity>0&&distance>1?v/distance*speed:0;});
-            ship.position.forEach(function(v,k){ship.position[k]=v+ship.velocity[k]*dt/U;});
-        });
-        // Individual arrivals leave the active scene. Pursuers cannot hold the outcome hostage.
-        var arrived=0;s.ships.forEach(function(ship){if(ship.hull>0&&!ship.arrived&&ship.position[1]>=s.destinationY){ship.arrived=true;ship.velocity=[0,0,0];arrived++;}});
-        if(arrived)DW.flightSim.collisionChanged(combat);
-        if(s.ships.every(function(ship){return ship.hull<=0||ship.arrived;})){s.complete=true;e.phase='complete';s.director.waypoint=null;if(s.battle)s.battle.order=null;return;}
-        // Finite, announced three-ship packets. Never accumulate more than two active raid wings.
-        var attackers=combat.enemies.filter(function(c){return c.hp>0&&c.convoyRaider&&s.raids.some(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing&&r.phase!=='departed'&&r.phase!=='withdraw';});});
-        if(e.reserves>0&&s.elapsed>=e.nextWaveAt&&s.elapsed<235&&attackers.length<=3&&(!s.arrivalPortal||combat.time>=s.arrivalPortal.closesAt)){
-            s.arrivalPortal={position:e.entry.slice(),opensAt:combat.time,closesAt:combat.time+14,spawned:false};
-            e.reserves-=3;e.waves++;e.nextWaveAt=s.elapsed+65;s.director.events.push({wing:-1,kind:'portal'});
-        }
-        // Screens advance with the crossing, then fall back to cover the final extraction.
-        if(s.battle)s.battle.fronts.forEach(function(front){front.offset[1]=layout[front.id].offset[1]+(e.phase==='withdrawal'?-1200:0);});
-    }
+    function startEvacuation(combat){DW.convoyAmbush.start(combat);}
+    /** @param {Combat} combat @param {number} dt */
+    function updateEvacuation(combat,dt){DW.convoyAmbush.step(combat,dt);}
     /** Depleted screens and relieved wings leave through ordinary flight physics.
      * @param {Combat} combat @param {import('../experiments/types').Craft} craft @param {number} dt */
     function stepEvacuationWing(combat,craft,dt){

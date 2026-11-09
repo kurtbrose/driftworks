@@ -537,9 +537,9 @@
                 var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy'&&!e.convoyBattle;}).length;
                 combatHud.fillText(!survivors?'CONVOY LOST / Esc to restart':convoy.complete?'ESCORT COMPLETE / '+survivors+' ARRIVED':(raiders?'DEFEND ':'ESCORT ')+survivors+' FREIGHTERS / '+raiders+' RAIDERS / '+(remaining/1000).toFixed(1)+' km remaining',w/2,86);
                 if(convoy.evacuation){
-                    combatHud.fillText('FLEET / '+convoy.evacuation.phase.toUpperCase()+' / '+convoy.evacuation.reserves+' RESERVES / '+convoy.evacuation.capitals.map(function(ship){return ship.callsign.toUpperCase()+' '+Math.ceil(ship.integrity/200)+'%';}).join(' / '),w/2,108);
+                    combatHud.fillText('FLEET / '+convoy.evacuation.phase.toUpperCase()+' / '+convoy.evacuation.reserves+' RESERVES / '+convoy.evacuation.capitals.filter(function(ship){return ship.present;}).map(function(ship){return ship.callsign.toUpperCase()+' '+Math.ceil(ship.integrity/200)+'%';}).join(' / '),w/2,108);
                     var exit=DW.flightSkybox.project(convoy.evacuation.exit.position.map(function(v,k){return v-state.eye[k];}),state,w/h);
-                    if(exit){combatHud.fillStyle='#72eaff';combatHud.fillText('EVACUATION EXIT',w*(exit.x+1)/2,h*(1-exit.y)/2-25);}
+                    if(exit&&convoy.elapsed>=convoy.evacuation.rescueAt){combatHud.fillStyle='#72eaff';combatHud.fillText('EVACUATION EXIT',w*(exit.x+1)/2,h*(1-exit.y)/2-25);}
                 }
                 var assignment=convoy.director.waypoint;
                 if(assignment&&!convoy.complete&&(assignment.kind!=='intercept'||taskMembers.length)){
@@ -557,6 +557,7 @@
                     combatHud.strokeStyle='#72c8d5';combatHud.fillStyle='#b9e7ed';
                 }
                 convoy.arrivalFleet.forEach(function(ship){
+                    if(convoy.evacuation){var active=convoy.evacuation.capitals.find(function(c){return c.id===ship.id;});if(active&&(!active.present||active.remote))return;}
                     var direction=ship.position.map(function(v,k){return v-state.eye[k];}),q=DW.flightSkybox.project(direction,state,w/h);
                     if(q&&Math.abs(q.x)<.85&&Math.abs(q.y)<.65){var capital=convoy.evacuation&&convoy.evacuation.capitals.find(function(c){return c.id===ship.id;});combatHud.fillStyle=capital&&capital.team==='enemy'?'#ff655d':'#b9e7ed';combatHud.fillText((capital?(capital.integrity>0?'CAPITAL / ':'DISABLED / '):'RECEPTION / ')+ship.callsign.toUpperCase(),w*(q.x+1)/2,h*(1-q.y)/2-45);combatHud.fillStyle='#b9e7ed';}
                 });

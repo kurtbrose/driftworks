@@ -1,46 +1,24 @@
 'use strict';
-const assert=require('node:assert/strict');
-const {createFlight}=require('../tools/headless.cjs');
+const assert=require('node:assert/strict'),{createFlight}=require('../tools/headless.cjs');
 const {assertFlightInvariants}=require('../tools/flight-invariants.cjs');
-function fixture(){const f=createFlight({mission:'fleet-evacuation',seed:29}),c=f.snapshot().combat,s=c.convoy;return {f,c,s,e:s.evacuation,U:f.DW.sim.METERS_PER_UNIT};}
-const q=fixture(),{f,c,s,e,U}=q;
-assert.equal(c.enemies.length,20);assert.equal(s.battle.fronts.length,3);assert.equal(e.reserves,9);
-assert.equal(f.snapshot().world.asteroids.length,0);assert.equal(f.snapshot().world.ships.length,0);
-const starts=e.capitals.map(ship=>ship.position.slice());
-f.advance(6);assert.equal(s.battle.order.kind,'escort');assert(f.transcript.some(line=>line.text.includes('Cover the evacuation')));
-assert(e.capitals.every((ship,i)=>ship.position.some((v,k)=>v!==starts[i][k])),'Both capitals travel towards tactical stations');
-// Reinforcements are visible and announced before any fighters emerge, in finite packets.
-c.time=s.elapsed=45;f.DW.convoyMission.step(c,0);assert(s.arrivalPortal&&!s.arrivalPortal.spawned);assert.equal(s.raids.length,0);assert.equal(e.reserves,6);
-const entry=s.arrivalPortal.position.slice();c.time=s.elapsed=49;f.DW.convoyMission.step(c,0);assert(s.arrivalPortal.spawned);assert.equal(s.raids.length,1);assert.equal(c.enemies.filter(ship=>ship.convoyRaider).length,3);
-const leader=c.enemies.find(ship=>ship.id===s.raids[0].leaderId);assert.deepEqual(leader.pose.eye,entry);
-// Active raids bound arrivals even after another window is due.
-for(const t of [110,175]){c.time=s.elapsed=t;f.DW.convoyMission.step(c,0);}
-assert(e.reserves>=0);assert(e.waves<=3);assert(c.enemies.filter(ship=>ship.hp>0&&ship.convoyRaider).length<=6);
-// A depleted wing actually steers away, retains health, and does not teleport.
-const friendly=c.enemies.filter(ship=>ship.team==='ally'&&ship.convoyBattle?.front===0);friendly.forEach(ship=>{ship.hp=ship.maxHp*.3;});
-const wing=friendly[0],eye=wing.pose.eye.slice(),health=wing.hp;
-assert(f.DW.convoyBattle.stepEvacuationWing(c,wing,1/120));assert.equal(wing.mode,'withdraw');assert.equal(wing.targetId,null);assert.equal(wing.hp,health);
-assert(Math.hypot(...wing.pose.eye.map((v,k)=>v-eye[k]))*U<10);
-// Disabled capitals stop; damaged ones retreat; final withdrawal changes stations.
-e.capitals[0].integrity=0;const disabled=e.capitals[0].position.slice();
-c.time=s.elapsed=220;f.DW.convoyMission.step(c,.1);assert.equal(e.phase,'withdrawal');assert.deepEqual(e.capitals[0].position,disabled);assert(e.capitals[1].velocity[1]>0);
-// Extraction is per transport and removes target/collision ownership without erasing hull.
-s.ships[0].position[1]=s.destinationY+.01;f.DW.convoyMission.step(c,0);assert(s.ships[0].arrived);assert(!s.complete);assert(s.ships[0].hull>0);
-assert(!f.DW.convoyMission.targets(c).some(ship=>ship.id===s.ships[0].id));
-const before=s.ships[0].hull;f.DW.convoyMission.damage(c,s.ships[0].id,f.DW.retailWeapons[0],s.ships[0].position);assert.equal(s.ships[0].hull,before);
-// Surviving enemy screens and raiders never force a mop-up objective.
-s.ships.forEach(ship=>{ship.arrived=true;});f.DW.convoyMission.step(c,0);assert(s.complete);assert.equal(e.phase,'complete');assert.equal(s.director.waypoint,null);assert.equal(s.battle.order,null);
-assert(c.enemies.some(ship=>ship.hp>0&&ship.team==='enemy'));
-assert.doesNotThrow(()=>JSON.stringify(s));f.reset();assert.equal(f.snapshot().combat.convoy.evacuation.reserves,9);assert.equal(f.snapshot().combat.enemies.length,20);
-const lost=fixture();lost.s.ships.forEach(ship=>{ship.hull=0;});lost.f.DW.convoyMission.step(lost.c,0);assert(lost.s.complete);assert.equal(lost.e.phase,'complete');
-const emergency=fixture();emergency.s.elapsed=80;emergency.c.time=80;emergency.e.capitals[0].integrity=0;emergency.f.DW.convoyMission.step(emergency.c,0);assert.equal(emergency.e.phase,'withdrawal');assert(Math.abs(emergency.e.withdrawalAt-80)<1e-8);
-emergency.s.radio.said.push('evac-brief');emergency.s.radio.wait=0;assert(emergency.f.DW.convoyMission.radio(emergency.c,3,false).text.includes('Bastion is lost'));
-// Real fixed-step session: observe the whole unattended crossing with an invulnerable
-// test pilot. No injected outcomes, altered NPC durability, or killed-off hostiles.
-const replay=fixture();replay.c.player.hp=replay.c.player.maxHp=1000000;
-let maxFighters=0;const samples=[];
-for(let t=0;t<350;t+=10){replay.f.advance(10,{stop:true});const view=replay.f.snapshot();assertFlightInvariants(view);maxFighters=Math.max(maxFighters,view.combat.enemies.filter(ship=>ship.hp>0).length);samples.push({seconds:t+10,phase:replay.e.phase,arrived:replay.s.ships.filter(ship=>ship.arrived).length,raids:replay.s.raids.length});if(replay.s.complete)break;}
-assert(replay.s.complete,'The real route must finish, including the trailing formation slots');
-assert(replay.s.ships.some(ship=>ship.arrived),'Some civilians escape without requiring all attackers to die');
-assert(replay.e.waves<=3);assert(replay.e.reserves>=0);assert(maxFighters<=35);
-console.log('PASS fleet evacuation: movement, finite announced waves, retreat, per-ship extraction, no mop-up, loss/reset, full fixed-step crossing',JSON.stringify({maxFighters,samples}));
+const f=createFlight({mission:'fleet-evacuation',seed:29}),c=f.snapshot().combat,s=c.convoy,e=s.evacuation,U=f.DW.sim.METERS_PER_UNIT;
+assert.equal(c.enemies.length,2);assert(c.enemies.every(ship=>ship.team==='ally'));assert.equal(e.phase,'patrol');assert(e.capitals.every(ship=>!ship.present));assert(!s.arrivalPortal);
+assert(f.DW.flightMissions.resolve('fleet-evacuation').sky.gasGiant);assert(!f.DW.flightMissions.resolve('fleet-evacuation').weaponsDisabled);
+c.player.hp=c.player.maxHp=1000000;
+f.advance(21);assert.equal(f.transcript.length,2);assert(f.transcript[0].text.includes('Six hours'));assert(!s.arrivalPortal);assert(s.ships.every(ship=>ship.hull===ship.maxHull));
+f.advance(1);assert.equal(e.phase,'warning');assert(f.transcript.some(line=>line.text.includes('Spatial discontinuity')));assert(!s.arrivalPortal,'Warning precedes the opening');
+f.advance(6);assert(s.arrivalPortal);assert.equal(e.phase,'ambush');assert.equal(e.capitals[0].present,false);assert(e.capitals[1].present);assert.equal(c.enemies.length,2);
+assert.equal(s.arrivalPortal.position[0],0,'Hostile mouth lies directly on the original flight path');assert(s.arrivalPortal.position[1]*U>s.ships[0].position[1]*U);
+f.advance(20);assert.equal(e.phase,'defense');assert(s.ships.every(ship=>ship.velocity[0]<-1),'All surviving freighters physically change course to dodge');assert(e.guns.fired>0);assert(e.capitalHits>0,'Capital rounds hit actual cargo hulls');assert(s.ships.some(ship=>ship.hull<ship.maxHull));
+assert(f.transcript.some(line=>line.text.includes('Intercept the marked wing')));assert(f.transcript.some(line=>line.text.includes('Bastion is inbound')));
+f.advance(47);assert.equal(e.capitals[0].present,false,'No friendly capital before relief is due');
+f.advance(2);assert(e.capitals[0].present);assert.equal(e.phase,'rescue');assert(f.transcript.some(line=>line.text.includes('Bastion to convoy')));
+assert(e.capitals[0].velocity.reduce((n,v,k)=>n+v*e.exit.normal[k],0)<0,'Bastion emerges toward the convoy; transports cross in the other direction');assert(s.ships.every(ship=>!ship.arrived),'Opening a rescue mouth does not teleport cargo out');
+const samples=[];let maxFighters=c.enemies.filter(ship=>ship.hp>0).length;
+for(let t=97;t<360&&!s.complete;t+=10){f.advance(10);assertFlightInvariants(f.snapshot());maxFighters=Math.max(maxFighters,c.enemies.filter(ship=>ship.hp>0).length);samples.push({seconds:Math.round(s.elapsed),phase:e.phase,escaped:s.ships.filter(ship=>ship.arrived).length,lost:s.ships.filter(ship=>ship.hull<=0).length,waves:e.waves,hits:e.capitalHits});}
+assert(s.complete,'The rerouted convoy must reach the actual rescue aperture');assert.equal(e.phase,'complete');assert(s.ships.some(ship=>ship.arrived));assert(e.waves<=4);assert(e.reserves>=0);assert(maxFighters<=14);
+const escaped=s.ships.find(ship=>ship.arrived);assert(!f.DW.convoyMission.targets(c).some(ship=>ship.id===escaped.id));const hull=escaped.hull;f.DW.convoyMission.damage(c,escaped.id,f.DW.retailWeapons[0],escaped.position);assert.equal(escaped.hull,hull);
+assert.equal(s.battle.order,null);assert.equal(s.director.waypoint,null);assert.doesNotThrow(()=>JSON.stringify(s));
+f.reset();const fresh=f.snapshot().combat;assert.equal(fresh.enemies.length,2);assert.equal(fresh.convoy.evacuation.phase,'patrol');assert.equal(fresh.convoy.evacuation.reserves,12);assert(!fresh.convoy.arrivalPortal);assert.equal(fresh.convoy.evacuation.guns.fired,0);
+fresh.convoy.ships.forEach(ship=>{ship.hull=0;});f.DW.convoyMission.step(fresh,0);assert(fresh.convoy.complete);
+console.log('PASS staged convoy ambush: quiet chatter, priority warning, route obstruction/dodge, real capital rounds and damage, bounded waves, delayed Bastion, opposite-direction extraction, ownership and reset',JSON.stringify({maxFighters,samples}));

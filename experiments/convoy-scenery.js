@@ -52,19 +52,32 @@
     function createEvacuationFleet(){
         var states=DW.convoyBattle.capitals(),configs=states.map(function(state,i){return {state:state,opponent:states[1-i],opponentRig:/** @type {import('./types').AegisFlightRig|undefined} */(undefined)};});
         var ships=configs.map(function(config){return DW.aegisFlight.create(config);});configs.forEach(function(config,i){config.opponentRig=ships[1-i];});
-        var batches=ships.flatMap(function(ship){return ship.geometry();});
+        /** @type {import('./types').FleetEvacuation|undefined} */var plan;
+        var groups=ships.map(function(ship){return ship.geometry();}),batches=groups.flat();
+        function geometry(){
+            ships.forEach(function(ship){ship.geometry();});
+            var active=states.map(function(state,i){return state.present?groups[i]:[];}).flat();
+            if(active.length!==batches.length||active.some(function(batch,i){return batch!==batches[i];}))batches=active;
+            if(plan){
+                const e=plan;groups[1].forEach(function(batch){batch.portalClip=e.entry.concat(650/U);});
+                var normal=e.exit.normal,point=e.exit.position;
+                var plane=normal.map(function(v){return -v;}).concat(normal.reduce(function(n,v,k){return n+v*point[k];},0));
+                groups[0].forEach(function(batch){batch.clipPlane=plane;});
+            }
+            return batches;
+        }
         return {reset:function(combat){
-                var plan=combat&&combat.convoy&&combat.convoy.evacuation;
+                plan=combat&&combat.convoy?combat.convoy.evacuation:undefined;
                 var fresh=plan?plan.capitals:DW.convoyBattle.capitals();
-                states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;ships[i].reset();});
+                states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;state.present=!!source.present;state.remote=!!source.remote;ships[i].reset();});
                 if(plan){plan.capitals=states;if(combat&&combat.convoy)combat.convoy.arrivalFleet=states;}
-            },step:function(dt,view){if(view.combat.convoy&&!view.combat.convoy.complete)ships.forEach(function(ship){ship.step(dt,view);});},
-            geometry:function(){ships.forEach(function(ship){ship.geometry();});return batches;},
-            effects:function(pose,shields){return ships.flatMap(function(ship){return ship.effects(pose,shields);});},
-            readout:function(){return states.map(function(ship){return ship.callsign+' / '+Math.ceil(ship.integrity/200)+'%';}).join(' / ');},
-            hit:function(a,b,bolt){var hits=ships.map(function(ship){return ship.hit(a,b,bolt);}).filter(function(hit){return !!hit;});hits.sort(function(one,two){return Math.hypot(...one.map(function(v,k){return v-a[k];}))-Math.hypot(...two.map(function(v,k){return v-a[k];}));});return hits[0]||null;},
-            damage:function(point,amount,combat){var nearest=states[0].position.reduce(function(n,v,k){return n+(v-point[k])**2;},0)<states[1].position.reduce(function(n,v,k){return n+(v-point[k])**2;},0)?0:1;const ship=ships[nearest];return !!ship.damage&&ship.damage(point,amount,combat);},
-            components:function(){return ships.flatMap(function(ship){return ship.components?ship.components():[];});},
+            },step:function(dt,view){if(view.combat.convoy&&!view.combat.convoy.complete&&states[0].present)ships[0].step(dt,view);},
+            geometry:geometry,
+            effects:function(pose,shields){return states[0].present?ships[0].effects(pose,shields):[];},
+            readout:function(){return states.filter(function(s){return s.present;}).map(function(ship){return ship.callsign+' / '+Math.ceil(ship.integrity/200)+'%';}).join(' / ');},
+            hit:function(a,b,bolt){return states[0].present?ships[0].hit(a,b,bolt):null;},
+            damage:function(point,amount,combat){const ship=ships[0];return !!states[0].present&&!!ship.damage&&ship.damage(point,amount,combat);},
+            components:function(){return states[0].present&&ships[0].components?ships[0].components():[];},
             telemetry:function(){var stats=ships.map(function(ship){return ship.telemetry();});return {seconds:stats[0].seconds,contacts:stats.reduce(function(n,s){return n+s.contacts;},0),launches:0,shots:stats.reduce(function(n,s){return n+s.shots;},0),hits:stats.reduce(function(n,s){return n+s.hits;},0),mounts:stats.flatMap(function(s){return s.mounts;}),capitals:states.map(function(ship,i){return {team:ship.team,position:ship.position.slice(),heading:ship.heading,integrity:ship.integrity,shots:stats[i].shots,hits:stats[i].hits};})};}};
     }
     DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
@@ -75,8 +88,8 @@
             return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:axes.right,back:axes.back,up:axes.up,velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
         });
         [state.arrivalPortal,state.evacuation?state.evacuation.exit:undefined].forEach(function(portal){
-        if(portal&&combat.time<portal.closesAt){
-            var age=combat.time-portal.opensAt,growth=Math.min(1,age/3,(portal.closesAt-combat.time)/2),radius=(state.evacuation&&portal===state.evacuation.exit?520:210)*Math.max(0,growth)/U;
+        if(portal&&combat.time>=portal.opensAt&&combat.time<portal.closesAt){
+            var age=combat.time-portal.opensAt,growth=Math.min(1,age/3,(portal.closesAt-combat.time)/2),radius=(portal.radiusM||210)*Math.max(0,growth)/U;
             /** @type {number[]} */var vertices=[];
             // Tangent silhouette of the spherical mouth, rather than a debug globe.
             var normal=view.eye.map(function(v,k){return v-portal.position[k];}),distance=Math.hypot.apply(null,normal);
@@ -120,6 +133,8 @@
             var rights=batch.instanceRights,forwards=batch.instanceForwards,ups=batch.instanceUps;
             ships.forEach(function(s,i){offsets.set([s.position[0],s.position[1],s.position[2]-1200],i*3);var axes=DW.fleetGuidance.frame(s.forward||[0,1,0]);if(rights)rights.set(axes.right,i*3);if(forwards)forwards.set(axes.back.map(function(v){return -v;}),i*3);if(ups)ups.set(axes.up,i*3);});
         });
-        return cached.batches.map(function(batch){return Object.assign({},batch,{origin:origin,dynamicInstances:true});});
+        const exit=state.evacuation&&state.elapsed>=state.evacuation.rescueAt?state.evacuation.exit:null;
+        var plane=exit?exit.normal.map(function(v){return -v;}).concat(exit.normal.reduce(function(n,v,k){return n+v*exit.position[k];},0)):undefined;
+        return cached.batches.map(function(batch){return Object.assign({},batch,{origin:origin,dynamicInstances:true,clipPlane:plane});});
     }};
 }());

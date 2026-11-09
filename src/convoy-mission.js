@@ -35,7 +35,7 @@
         var settledShips=combat.convoy.ships;
         bodies.forEach(function(body){var ship=settledShips.find(function(s){return s.id===body.id;});if(ship){ship.position=body.position.map(function(v){return v/U;});ship.forward=body.forward;ship.velocity=body.velocity;}});
         // Begin as an established cruise; startup spacing relaxation happens before time zero.
-        if(battlefield!==false)DW.convoyBattle.start(combat);
+        if(battlefield!==false&&combat.mode!=='fleet-evacuation')DW.convoyBattle.start(combat);
         if(combat.mode==='fleet-evacuation')DW.convoyBattle.startEvacuation(combat);
         targets(combat);
         combat.targetId=null;combat.roundOver=false;
@@ -43,10 +43,10 @@
     /** Spawn one coherent approach relative to the moving convoy.
      * @param {import('../experiments/types').Combat} combat @param {boolean} [reserve] */
     function beginRaid(combat,reserve){
-        const s=combat.convoy;if(!s||s.director.raids>=3)return;
+        const s=combat.convoy;if(!s||s.director.raids>=(s.evacuation?4:3))return;
         var survivors=s.ships.filter(function(ship){return ship.hull>0&&(!s.evacuation||!ship.arrived);});if(!survivors.length)return;
         s.raidStarted=true;
-        var wave=s.director.raids++,wingId=s.raids.length,base=wave*3,packet=[4,0,1][wave],offset=[[2600,-1000,500],[-2600,900,650],[2100,1800,-700]][wave];
+        var wave=s.director.raids++,wingId=s.raids.length,base=wave*3,packet=s.evacuation?[0,3,4,1][wave]:[4,0,1][wave],offset=[[2600,-1000,500],[-2600,900,650],[2100,1800,-700]][wave%3];
         if(reserve)offset=offset.map(function(v){return v*1.7;});
         var portal=!reserve&&s.arrivalPortal&&!s.arrivalPortal.spawned?s.arrivalPortal:null;
         var objective=survivors.find(function(ship){return ship.packet===packet;})||survivors[0],origin=objective.position.map(function(v,k){return v+offset[k]/U;});
@@ -89,14 +89,15 @@
         var bodies=freighters(combat),navigation=s.navigation;
         if(navigation){
             var route=[0,Math.min(s.destinationY*U+(s.evacuation?1400:0),s.elapsed*s.speedMps),1200*U];
-            DW.fleetGuidance.step(navigation,bodies,route,[0,s.speedMps,0],navigationThreats(combat),dt);
+            var ambush=DW.convoyAmbush.navigation(combat);
+            DW.fleetGuidance.step(navigation,bodies,ambush?ambush.route:route,ambush?ambush.cruise:[0,s.speedMps,0],navigationThreats(combat),dt);
 
             bodies.forEach(function(body){
                 var ship=s.ships.find(function(candidate){return candidate.id===body.id;});if(!ship)return;
                 ship.position=body.position.map(function(v){return v/U;});ship.velocity=body.velocity;ship.forward=body.forward;
 
             });
-            if(s.elapsed*s.speedMps>=s.destinationY*U&&s.ships.every(function(ship){return ship.hull<=0||ship.position[1]>=s.destinationY;}))s.ships.forEach(function(ship){if(ship.hull>0){ship.arrived=true;ship.velocity=[0,0,0];}});
+            if(!s.evacuation&&s.elapsed*s.speedMps>=s.destinationY*U&&s.ships.every(function(ship){return ship.hull<=0||ship.position[1]>=s.destinationY;}))s.ships.forEach(function(ship){if(ship.hull>0){ship.arrived=true;ship.velocity=[0,0,0];}});
             if(combat.time>=(s.nextCoverage||0)){
                 s.nextCoverage=combat.time+1;
                 var escorts=DW.flightSim.participants(combat).filter(function(c){return c.team==='ally'&&c.hp>0&&c!==combat.player&&!c.convoyBattle;}).map(function(c){return {id:c.id,position:c.pose.eye.map(function(v){return v*U;}),velocity:c.pose.velocity,radius:10};});
@@ -117,7 +118,7 @@
     function freighters(combat){return combat.convoy?combat.convoy.ships.filter(function(s){return s.hull>0&&!s.arrived;}).map(function(s){var hull=hulls[s.model],halfSize=hull?hull.max.map(function(v,k){return Math.max(Math.abs(v),Math.abs(hull.min[k]));}):[9,61,7];return {id:s.id,position:s.position.map(function(v){return v*U;}),velocity:s.velocity.slice(),radius:hull?DW.shipHulls.hullRadius(hull.model):80,crossRadius:Math.hypot(halfSize[0],halfSize[2]),halfSize:halfSize,packet:s.packet,forward:s.forward,turnRate:.035+12/(halfSize[1]*20)};}):[];}
     /** Only attackers committed to the cargo influence its route; distant screen fights do not.
      * @param {import('../experiments/types').Combat} combat */
-    function navigationThreats(combat){return combat.enemies.filter(function(c){return c.hp>0&&c.team==='enemy'&&!!c.convoyRaider&&!!combat.convoy&&combat.convoy.raids.some(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing&&r.phase!=='hold'&&r.phase!=='withdraw'&&r.phase!=='departed';});}).map(function(c){return {position:c.pose.eye.map(function(v){return v*U;}),radius:2500,weight:1};});}
+    function navigationThreats(combat){var threats=combat.enemies.filter(function(c){return c.hp>0&&c.team==='enemy'&&!!c.convoyRaider&&!!combat.convoy&&combat.convoy.raids.some(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing&&r.phase!=='hold'&&r.phase!=='withdraw'&&r.phase!=='departed';});}).map(function(c){return {position:c.pose.eye.map(function(v){return v*U;}),radius:2500,weight:1};});const state=combat.convoy,e=state&&state.evacuation;if(e){if(state.arrivalPortal)threats.push({position:e.entry.map(function(v){return v*U;}),radius:2000,weight:3});const b=e.capitals[0];if(b.present&&b.integrity>0)threats.push({position:b.position.map(function(v){return v*U;}),radius:1300,weight:2});}return threats;}
     /** @param {number[]} a @param {number[]} b */
     function range(a,b){return Math.hypot.apply(null,a.map(function(v,k){return v-b[k];}))*U;}
     /** Observe the real battle; pacing never changes damage, aim, shields or existing positions.
@@ -394,8 +395,8 @@
             r.phase='combat';r.report=0;
         }else if(r.phase==='combat'){r.phase='damage-report';r.report=0;}
         // Count silence, not time spent speaking. Urgent facts still leave a short gap.
-        if(busy)return null;
-        r.wait=Math.max(0,r.wait-dt);if(r.wait>25)return null;
+        if(busy&&!s.evacuation)return null;
+        r.wait=Math.max(0,r.wait-dt);if(r.wait>25&&!s.evacuation)return null;
         /** @param {string} key @param {string} text @param {number} [packetIndex] */
         function cue(key,text,packetIndex){
             r.said.push(key);r.wait=28;
@@ -413,10 +414,17 @@
             var ships=radioShips.filter(function(ship){return ship.packet===index;});
             return {damaged:ships.filter(function(ship){return ship.hull>0&&ship.hull<ship.maxHull;}).length,lost:ships.filter(function(ship){return ship.hull<=0;}).length};
         }
-        if(s.evacuation&&!s.complete){
-            if(!r.said.includes('evac-brief'))return cue('evac-brief','Lancer, Control. Cover the evacuation. Bastion is moving with the transports. Follow our marks; get as many ships through the cyan exit as you can.');
-            if(s.evacuation.phase==='withdrawal'&&!r.said.includes('evac-withdrawal'))return cue('evac-withdrawal',s.evacuation.capitals[0].integrity<=0?'Lancer, Control. Bastion is lost. Emergency withdrawal. Cover the transports to the exit; the screens are falling back.':'Lancer, Control. Final withdrawal. Bastion is falling back. Cover the last transports; do not chase retreating bandits.');
-            if(s.evacuation.phase==='pressure'&&!r.said.includes('evac-pressure'))return cue('evac-pressure','Lancer, Control. Harrow is advancing on the crossing. Keep their strike wings off the transports.');
+        if(s.evacuation){
+            var story=DW.convoyAmbush.radio(combat);
+            if(story&&(!busy||story.priority)){
+                var line=story.wing?fighterCue(story.key,story.text,combat.enemies.find(function(c){return c.team==='ally'&&c.hp>0;})||combat.player):cue(story.key,story.text,story.civilian?0:undefined);r.wait=6;return line;
+            }
+            if(busy)return null;
+            if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. You got them out.':'Lancer, Control. Convoy lost. Withdraw.');
+            if(s.elapsed<32||s.complete||r.wait>0)return null;
+            const battle=s.battle;
+            if(battle&&battle.pending&&combat.time-battle.lastCall>=8){battle.pending=false;battle.lastCall=combat.time;const order=battle.order;if(order){r.wait=8;return cue('task-'+order.id+'-'+Math.floor(combat.time),'Lancer, Control. '+(order.kind==='intercept'?'Intercept the marked wing. Keep them off the '+order.label.toLowerCase()+'.':'Cover the transports to the marked rally.'));}}
+            return null;
         }
         if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. Escort complete.':'Lancer, Control. Convoy lost. Withdraw.');
         if(r.phase==='complete')return null;

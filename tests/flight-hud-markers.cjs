@@ -345,10 +345,10 @@ assert(calls.some(c=>c.kind==='text'&&c.text==='600 m'),'Intercept guidance foll
 members[0].hp=0;renderTasks();assert.equal(taskContacts.filter(c=>c.assigned).length,2,'Dead focus transfers highlighting to survivors immediately');assert(calls.some(c=>c.kind==='text'&&c.text.includes('2 TASK')));
 assert.equal(tc.targetId,selectedId);assert(tc.targetLocked,'Assignment cues never steal a manual target lock');
 ts.raids[0].phase='withdraw';renderTasks();assert(!taskContacts.some(c=>c.assigned));assert(!calls.some(c=>c.kind==='text'&&c.text.includes('CONTROL / INTERCEPT')),'No stale intercept marker after the wing breaks off');
-const front=ts.battle.fronts[1],screen=tc.enemies.filter(c=>c.hp>0&&c.team==='enemy'&&c.convoyBattle?.front===front.id);
-ts.battle.order={id:'front-'+front.id,kind:'assist',front:front.id,packet:front.packet,targetId:screen[0].id,position:front.center,label:front.name,priority:100,since:tc.time};
-members=DW.convoyBattle.assignmentTargets(tc);assert.equal(members.length,3);assert(members.every(c=>!assignedIds.has(c.id)),'Reassignment clears the old group and marks only the new screen');
-screen[0].mode='withdraw';assert.equal(DW.convoyBattle.assignmentTargets(tc).length,2);
+const assistFlight=createFlight({mission:'convoy',seed:29}),ac=assistFlight.snapshot().combat,front=ac.convoy.battle.fronts[1],screen=ac.enemies.filter(c=>c.hp>0&&c.team==='enemy'&&c.convoyBattle?.front===front.id);
+ac.convoy.battle.order={id:'front-'+front.id,kind:'assist',front:front.id,packet:front.packet,targetId:screen[0].id,position:front.center,label:front.name,priority:100,since:tc.time};
+members=DW.convoyBattle.assignmentTargets(ac);assert.equal(members.length,3);assert(members.every(c=>!assignedIds.has(c.id)),'Reassignment clears the old group and marks only the new screen');
+screen[0].mode='withdraw';assert.equal(DW.convoyBattle.assignmentTargets(ac).length,2);
 ts.battle.order=null;ts.director.waypoint={kind:'patrol',packet:0,targetId:null,position:[0,0,0]};assert.equal(DW.convoyBattle.assignmentTargets(tc).length,0);
 ts.complete=true;assert.equal(DW.convoyBattle.assignmentTargets(tc).length,0);
 taskFlight.reset();assert.equal(DW.convoyBattle.assignmentTargets(taskFlight.snapshot().combat).length,0);
