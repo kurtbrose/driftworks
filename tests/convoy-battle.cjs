@@ -28,3 +28,16 @@ const arrival=fixture(),arrivalState=arrival.s;arrivalState.elapsed=300;arrivalS
 f.reset();assert.equal(f.snapshot().combat.convoy.battle.fronts.length,4);assert.equal(f.snapshot().combat.convoy.battle.order,null);assert.equal(f.snapshot().combat.enemies.length,26);assert.doesNotThrow(()=>JSON.stringify(f.snapshot().combat.convoy));
 const isolated=createFlight({mission:'convoy',seed:29,convoyBattlefield:false});assert(!isolated.snapshot().combat.convoy.battle);assert.equal(isolated.snapshot().combat.enemies.length,2);
 console.log('PASS convoy battlefield: 24 real background fighters, live fire/losses, quiet local opening, four fronts, dispatch priority/hysteresis, urgent preemption, physical breakthroughs, arrival and reset');
+
+// A moving escort assignment tracks every sub-dispatch step, without changing its identity.
+const escort=createFlight({mission:'fleet-evacuation',seed:29}),ec=escort.snapshot().combat,es=ec.convoy;
+ec.time=es.elapsed=6;escort.DW.convoyBattle.dispatch(ec);
+assert.equal(es.battle.order.id,'crossing-cover');
+const assigned=es.battle.order,anchor=es.ships.find(ship=>ship.id===assigned.targetId),start=es.director.waypoint.position.slice();
+for(let i=1;i<=12;i++){
+  ec.time+=1/60;es.elapsed+=1/60;anchor.position[1]+=25/U/60;
+  escort.DW.convoyBattle.dispatch(ec);
+  assert.equal(es.battle.order,assigned,'No redispatch within the half-second interval');
+  assert(Math.abs(es.director.waypoint.position[1]-start[1]-i*25/U/60)<1e-8,'Marker advances on every simulation step');
+}
+console.log('PASS convoy escort marker follows live cargo between dispatch decisions');

@@ -100,7 +100,17 @@
                 else {if(old)b.pending=true;b.order=null;}
             }
         }
-        if(b.order){const order=b.order;s.director.waypoint={kind:order.kind,front:order.front,label:order.label,packet:order.packet,position:order.position.slice(),targetId:order.targetId};}
+        // Dispatch chooses work at 2 Hz; the active virtual object follows its anchor every step.
+        if(b.order){
+            const order=b.order,e=s.evacuation;
+            if(order.kind==='escort'&&e){
+                const ship=s.ships.find(function(ship){return ship.id===order.targetId&&ship.hull>0&&!ship.arrived;});
+                order.position=s.elapsed>=e.rescueAt?e.exit.position.slice():e.phase==='patrol'||e.phase==='warning'?(ship?ship.position.map(function(v,k){return v+([0,-350,220][k])/U;}):order.position):e.rally.map(function(v){return v/U;});
+            }else if(order.kind==='assist'){
+                const front=b.fronts.find(function(front){return front.id===order.front;});
+                if(front)order.position=front.center.slice();
+            }
+            s.director.waypoint={kind:order.kind,front:order.front,label:order.label,packet:order.packet,position:order.position.slice(),targetId:order.targetId};}
     }
     /** Battle plan uses SI velocities and scene-unit positions, shared by headless and browser.
      * @returns {import('../experiments/types').EvacuationCapital[]} */
