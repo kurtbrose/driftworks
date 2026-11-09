@@ -248,11 +248,11 @@ function bulkTank(g){
   // A continuous 24 m shell: 16 m barrel and two ellipsoidal domed heads.
   const shell=geometry('bulk fluid shell / 24m',()=>{
     const stations=[],radius=5.5,segments=48,positions=[],normals=[],uvs=[],indices=[];
-    for(let i=0;i<=10;i++){const a=-Math.PI/2+i*Math.PI/20;stations.push({x:-8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius});}
-    for(const x of [-4,0,4,8])stations.push({x,r:radius,nx:0,nr:1/radius});
-    for(let i=1;i<=10;i++){const a=i*Math.PI/20;stations.push({x:8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius});}
-    for(const s of stations)for(let j=0;j<=segments;j++){const a=j*Math.PI*2/segments,c=Math.cos(a),z=Math.sin(a),n=new T.Vector3(s.nx,s.nr*c,s.nr*z).normalize();positions.push(s.x,s.r*c,s.r*z);normals.push(n.x,n.y,n.z);uvs.push((3+.008+(s.x+12)/24*.984)/4,(.008+(1-j/segments)*.984)/4);}
-    for(let i=0;i<stations.length-1;i++)for(let j=0;j<segments;j++){const a=i*(segments+1)+j,b=a+segments+1,c=a+1,d=b+1;if(i>0)indices.push(a,c,b);if(i<stations.length-2)indices.push(b,c,d);}
+    for(let i=0;i<=10;i++){const a=-Math.PI/2+i*Math.PI/20;stations.push({x:-8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius,head:true});}
+    for(const x of [-8,-4,0,4,8])stations.push({x,r:radius,nx:0,nr:1/radius});
+    for(let i=0;i<=10;i++){const a=i*Math.PI/20;stations.push({x:8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius,head:true});}
+    for(const s of stations)for(let j=0;j<=segments;j++){const a=j*Math.PI*2/segments,c=Math.cos(a),z=Math.sin(a),n=new T.Vector3(s.nx,s.nr*c,s.nr*z).normalize();positions.push(s.x,s.r*c,s.r*z);normals.push(n.x,n.y,n.z);if(s.head)uvs.push((1536+4.5)/2048,1-(1536+4.5)/2048);else uvs.push((3+.008+(s.x+12)/24*.984)/4,(.008+(1-j/segments)*.984)/4);}
+    for(let i=0;i<stations.length-1;i++)for(let j=0;j<segments;j++){if(Math.abs(stations[i+1].x-stations[i].x)<1e-8)continue;const a=i*(segments+1)+j,b=a+segments+1,c=a+1,d=b+1;if(i>0)indices.push(a,c,b);if(i<stations.length-2)indices.push(b,c,d);}
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.setIndex(indices);return geo;
   });
   mesh(g,shell,'paint',[0,0,0],'domed bulk-fluid vessel');

@@ -2,6 +2,12 @@
 const assert=require('node:assert/strict');
 const {kit,THREE:T}=require('../tools/export-industrial-kit.cjs').loadKit();
 const bounds=o=>new T.Box3().setFromObject(o,true),size=o=>bounds(o).getSize(new T.Vector3());
+// Domed heads use quiet paint, avoiding panel art compressed into the poles.
+const shell=kit.part('bulkTank').getObjectByName('domed bulk-fluid vessel').geometry;
+for(let i=0;i<shell.attributes.position.count;i++)if(Math.abs(shell.attributes.position.getX(i))>8.001){
+ assert(Math.abs(shell.attributes.uv.getX(i)-(1536+4.5)/2048)<1e-6);
+ assert(Math.abs(shell.attributes.uv.getY(i)-(1-(1536+4.5)/2048))<1e-6);
+}
 for(const name of ['container','mixed','fluid']){
  const root=kit.buildFreighter(name),legacy=kit.buildFreighter(name,{packaging:'frame'}),batch=kit.batchStatic(root);
  assert(bounds(root).min.distanceTo(bounds(batch).min)+bounds(root).max.distanceTo(bounds(batch).max)<1e-5);

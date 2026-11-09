@@ -662,3 +662,11 @@ branches, plus manual wheel fittings from the source bulk-tank module. Retained
 the isolation bodies and connected transfer plumbing. The production tanker
 now has 26,638 triangles (1,040 fewer), still six material batches. Regenerated
 geometry and exact collision bakes; reviewed the isolated transfer branch.
+
+## Dome UV correction (2026-11-08)
+
+Bulk-vessel domes now sample quiet paint from the shared atlas swatch instead
+of wrapping rectangular panel borders into rings and pinching pixels at the
+poles. Duplicated tangent vertices separate barrel and head UVs while keeping
+the same positions, smooth normals, triangle count and material batches. Barrel
+seams remain. Reviewed the tanker front view and regenerated production bakes.
