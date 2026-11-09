@@ -11,7 +11,7 @@ for(let i=0;i<shell.attributes.position.count;i++)if(Math.abs(shell.attributes.p
 // Barrel vertices address the padded generated strip beneath the original atlas.
 for(let i=0;i<shell.attributes.position.count;i++)if(Math.abs(shell.attributes.position.getX(i))<7.99){
  assert(shell.attributes.uv.getX(i)>.007&&shell.attributes.uv.getX(i)<.993);
- assert(shell.attributes.uv.getY(i)>=-.491&&shell.attributes.uv.getY(i)<=-.009);
+ assert(shell.attributes.uv.getY(i)>=-.497&&shell.attributes.uv.getY(i)<=-.003);
 }
 for(const name of ['container','mixed','fluid']){
  const root=kit.buildFreighter(name),legacy=kit.buildFreighter(name,{packaging:'frame'}),batch=kit.batchStatic(root);

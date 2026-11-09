@@ -251,7 +251,7 @@ function bulkTank(g){
     for(let i=0;i<=10;i++){const a=-Math.PI/2+i*Math.PI/20;stations.push({x:-8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius,head:true});}
     for(const x of [-8,-4,0,4,8])stations.push({x,r:radius,nx:0,nr:1/radius});
     for(let i=0;i<=10;i++){const a=i*Math.PI/20;stations.push({x:8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius,head:true});}
-    for(const s of stations)for(let j=0;j<=segments;j++){const a=j*Math.PI*2/segments,c=Math.cos(a),z=Math.sin(a),n=new T.Vector3(s.nx,s.nr*c,s.nr*z).normalize();positions.push(s.x,s.r*c,s.r*z);normals.push(n.x,n.y,n.z);if(s.head)uvs.push(1.5-Math.sign(s.x)*s.r*z/radius*.46,.5+s.r*c/radius*.46);else uvs.push(.008+(s.x+8)/16*.984,-.49+(1-j/segments)*.48);}
+    for(const s of stations)for(let j=0;j<=segments;j++){const a=j*Math.PI*2/segments,c=Math.cos(a),z=Math.sin(a),n=new T.Vector3(s.nx,s.nr*c,s.nr*z).normalize();positions.push(s.x,s.r*c,s.r*z);normals.push(n.x,n.y,n.z);if(s.head)uvs.push(1.5-Math.sign(s.x)*s.r*z/radius*.46,.5+s.r*c/radius*.46);else uvs.push(.008+(s.x+8)/16*.984,-.49609375+(1-j/segments)*.4921875);}
     for(let i=0;i<stations.length-1;i++)for(let j=0;j<segments;j++){if(Math.abs(stations[i+1].x-stations[i].x)<1e-8)continue;const a=i*(segments+1)+j,b=a+segments+1,c=a+1,d=b+1;if(i>0)indices.push(a,c,b);if(i<stations.length-2)indices.push(b,c,d);}
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.setIndex(indices);return geo;
   });

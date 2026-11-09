@@ -704,3 +704,12 @@ location. Base RGBA storage is 48 MiB (about 64 MiB with mipmaps), 16 MiB base
 more than the dome-only atlas. Frame time is not benchmarked for this art pass.
 Front/quarter and side surfaces and ordinary flight integration were reviewed;
 focused geometry/export and collision checks cover the rebuilt production bake.
+
+### Barrel wrap coverage correction
+
+Removed generated blank margins around the circumference before packing the
+barrel strip. Its first and last bands now share a weld-bearing row, while only
+the axial ends fade to quiet paint. UVs sample eight pixels inside those bands.
+Top-view inspection confirms continuous weld rings across the former blank gap;
+matched pixel rows preserve line detail at the join. Atlas size, triangles and
+batches are unchanged.
