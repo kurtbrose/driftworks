@@ -646,3 +646,11 @@ bevels and adds no texture or material batch. Each RCS saves 42 triangles
 Production geometry and exact collision bakes were regenerated. Focused freighter,
 industrial-kit and convoy-collision checks passed, and the RCS mounting was
 visually inspected in the review page. Capture: `output/freighter-caution/`.
+
+## Clean tank paint (2026-11-08)
+
+Removed the atlas generator's random dark border chips, which read as loose
+pixel clusters when stretched over vessel shells. Pressure and bulk vessel
+tiles also omit scattered scratch strokes. Seams, identification markings and
+subtle paint grain remain. Texture dimensions, geometry and material batches
+are unchanged. Freighter checks passed; tanker surfaces were visually reviewed.

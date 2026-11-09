@@ -98,15 +98,10 @@ for index, (name, color) in enumerate(PALETTE):
                 yy=y+18+n*5
                 d.line((x+16, yy, x+w-16, yy), fill=seam, width=2)
                 d.line((x+16, yy+2, x+w-16, yy+2), fill=highlight, width=1)
-        for _ in range(70):
+        for _ in ([] if index in [11, 15] else range(70)):
             x, y = rng.randrange(24, 488), rng.randrange(24, 488)
             d.line((x, y, x+rng.randrange(2, 14), y), fill=tuple(int(c*.88) for c in color))
-    for _ in range(240):
-        side = rng.randrange(4)
-        a, b = rng.randrange(18, 495), rng.choice([12, 18, 492, 498]) + rng.randrange(-4, 5)
-        x, y = (a, b) if side < 2 else (b, a)
-        length = rng.randrange(1, 9)
-        d.line((x, y, x+length, y+rng.randrange(-1, 2)), fill=(95, 99, 91), width=rng.choice([1, 1, 2]))
+    # Keep panel edges clean: random dark chips magnify into loose pixel clusters.
     if index == 14:
         # Dedicated hardware regions; 16px gutters prevent mip-edge contamination.
         tile = Image.new("RGB", (SIZE, SIZE), (192, 193, 181))
