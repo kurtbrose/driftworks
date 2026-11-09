@@ -84,7 +84,8 @@
     }
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
     function step(combat,dt){
-        const s=combat.convoy;if(!s||combat.dead||s.complete)return;
+        const s=combat.convoy;if(!s||combat.dead)return;
+        if(s.complete){DW.convoyAmbush.step(combat,dt);return;}
         s.elapsed=s.evacuation?s.elapsed+dt:Math.min(s.destinationY*U/s.speedMps,s.elapsed+dt+1e-12);
         observeAttention(combat,dt);
         var bodies=freighters(combat),navigation=s.navigation;

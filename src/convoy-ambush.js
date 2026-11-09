@@ -26,7 +26,8 @@
         e.route=goal;e.cruise=forward.map(function(v){return v*speed;});return {route:goal,cruise:e.cruise};
     }
     /** @param {Combat} combat @param {number} dt */function step(combat,dt){
-        const s=combat.convoy,e=s&&s.evacuation;if(!s||!e||s.complete)return;
+        const s=combat.convoy,e=s&&s.evacuation;if(!s||!e)return;
+        if(s.complete){stepSalvos(combat,dt);return;}
         var t=s.elapsed,a=s.director.attention,ready=a.phase==='ready'&&!a.radioBusy;
         if(e.warningAt===null&&ready){e.warningAt=t;e.incidentAt=t+6;}
         if(e.incidentAt!==null&&!s.arrivalPortal&&!ready)e.incidentAt+=dt;
@@ -39,7 +40,7 @@
             e.rally=e.entry.map(function(v,k){return v*U+([-1600,800,0][k]);});
         }
         // One encounter at a time. Even a single pursued survivor can postpone a
-        // fresh wave or relief; a clean fight earns cooling plus 10–30 s of rest.
+        // fresh wave or relief; a clean fight earns cooling plus 10-30 s of rest.
         if(s.arrivalPortal&&t>=e.nextWaveAt&&ready&&t<e.rescueAt){
             if(e.waves>=4||e.waves>=2&&e.incidentAt!==null&&t-e.incidentAt>=120){
                 e.rescueAt=t;e.bastionClearAt=t+20;e.exit.opensAt=t;
@@ -78,7 +79,7 @@
             if(hit){DW.convoyMission.damage(combat,hit.shipId,weapon,hit.point);e.capitalHits++;e.guns.hits++;return false;}
             bolt.position=end;return bolt.age<weapon.lifetime;
         });
-        if(!s.arrivalPortal||s.elapsed>=e.bombardUntil||s.elapsed>=e.rescueAt||s.elapsed<e.nextSalvo)return;
+        if(s.complete||!s.arrivalPortal||s.elapsed>=e.bombardUntil||s.elapsed>=e.rescueAt||s.elapsed<e.nextSalvo)return;
         var cargo=s.ships.filter(function(c){return c.hull>0&&!c.arrived;}),target=cargo.filter(function(c){return c.packet===0;})[e.salvos%3]||cargo[0];if(!target)return;
         var origin=e.entry.map(function(v,k){return v+([e.salvos%2?45:-45,-550,60][k])/U;});
         var travel=Math.hypot(...target.position.map(function(v,k){return (v-origin[k])*U;}))/weapon.speed;

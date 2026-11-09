@@ -89,7 +89,7 @@
                 var fresh=plan?plan.capitals:DW.convoyBattle.capitals();
                 states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;state.present=!!source.present;state.remote=!!source.remote;state.mainBatteryClear=source.mainBatteryClear;ships[i].reset();});
                 if(plan){plan.capitals=states;if(combat&&combat.convoy)combat.convoy.arrivalFleet=states;}
-            },step:function(dt,view){if(view.combat.convoy&&!view.combat.convoy.complete&&states[0].present)ships[0].step(dt,view);},
+            },step:function(dt,view){if(view.combat.convoy&&states[0].present)ships[0].step(dt,view);},
             geometry:geometry,
             effects:function(pose,shields){updatePlacements();return states[0].present?ships[0].effects(pose,shields):[];},
             readout:function(){return states.filter(function(s){return s.present;}).map(function(ship){return ship.callsign+' / '+Math.ceil(ship.integrity/200)+'%';}).join(' / ');},

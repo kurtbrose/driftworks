@@ -61,7 +61,9 @@ The encounter owns the following beats:
 - Twenty seconds after relief arrives: transports cross that mouth in the opposite direction.
   Escape requires crossing its plane inside the aperture, not reaching an elapsed
   time or deleting every remaining enemy. Damage, targeting, rendering and reset
-  ownership remain separate from escape bookkeeping.
+  ownership remain separate from escape bookkeeping. After completion, new capital
+  fire stops while already-fired mission and native capital rounds continue to
+  move, hit and expire; completion never freezes visible projectiles.
 
 `combat.convoy.evacuation` is transient, JSON-safe mission state. Positions use
 scene units; routes, rally and cruise intent use SI units. Harrow's outgoing
@@ -82,7 +84,8 @@ dead, withdrawing and departed ships and never changes the player's target lock.
 
 Focused checks: `node tests/fleet-evacuation.cjs`,
 `node tests/evacuation-capitals.cjs`, `node tests/flight-hud-markers.cjs`, and the
-`node tests/convoy-ambush-tactics.cjs` and `node tests/convoy-pacing.cjs` regressions, plus the
+`node tests/convoy-ambush-tactics.cjs`, `node tests/convoy-pacing.cjs` and
+`node tests/convoy-projectile-cleanup.cjs` regressions, plus the
 convoy battle/director/arrival checks. Original prototype measurements are retained
 in `docs/benchmarks/fleet-evacuation.md`; they predate this staged encounter.
 

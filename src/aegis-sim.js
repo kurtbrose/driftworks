@@ -5,6 +5,9 @@
     /** @typedef {import('../experiments/types').FlightView} FlightView */
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks);
     var U=DW.sim.METERS_PER_UNIT;
+    /** Cease new fire at convoy completion; existing rounds still own their lifetime.
+     * @param {import('../experiments/types').Combat} combat */
+    function weaponsEnabled(combat){return combat.enabled&&!(combat.convoy&&combat.convoy.complete);}
     /** @param {Vector} a @param {Vector} b */
     function sub(a,b){return a.map(function(v,i){return v-b[i];});}
     /** @param {Vector} a @param {Vector} b */
@@ -207,7 +210,7 @@
             m.yaw+=clamp(wrap(goalYaw-m.yaw),-.35*dt,.35*dt);m.elevation=approach(m.elevation,goalElevation,.25*dt);
             var cy=Math.cos(m.yaw),sy=Math.sin(m.yaw),ce=Math.cos(m.elevation),se=Math.sin(m.elevation),forward=[-cy*ce,-sy*ce,se];
             var clear=!!aim&&(bridge||d[2]*side>0)&&Math.abs(wrap(goalYaw-m.yaw))<.018&&Math.abs(goalElevation-m.elevation)<.018&&!hullHit(p.map(function(v,i){return v+forward[i]*45.1;}),local(aim));
-            var active=options.state.mainBatteryClear!==false&&view.combat.enabled&&!view.combat.dead&&!view.combat.roundOver&&options.state.integrity>0&&opponent.integrity>0;
+            var active=options.state.mainBatteryClear!==false&&weaponsEnabled(view.combat)&&!view.combat.dead&&!view.combat.roundOver&&options.state.integrity>0&&opponent.integrity>0;
             if(clear)m.rest=Math.max(0,m.rest-dt);m.settled=clear?m.settled+dt:0;
             if(!clear&&m.burst>0){m.burst=0;m.rest=3;}
             if(active&&clear&&m.settled>.25&&m.rest<=0&&m.burst<=0)m.burst=.7;
@@ -261,7 +264,7 @@
             contactEyes.set(pose,local(pose.eye));
             if(responded)DW.flightSim.collisionChanged(combat,craft);
             });
-            if(!unarmed&&(team==='ally'||options&&options.bridge)&&combat.hangarSupport&&hangars.length&&combat.enabled&&!combat.dead&&!combat.roundOver&&(!options||options.state.integrity>0)){
+            if(!unarmed&&(team==='ally'||options&&options.bridge)&&combat.hangarSupport&&hangars.length&&weaponsEnabled(combat)&&!combat.dead&&!combat.roundOver&&(!options||options.state.integrity>0)){
                 launchClock=Math.max(0,launchClock-dt);
                 var allies=combat.enemies.filter(function(e){return e.hp>0&&e.team===team;});
                 if(launchClock<=0&&allies.length<8){
@@ -318,16 +321,16 @@
                 if(ready&&aim){var aimDirection=sub(local(aim),p),distance=Math.hypot.apply(null,aimDirection);if(dot(forward,aimDirection)/distance<.999)ready=false;var muzzle=p.map(function(v,i){return v+forward[i]*10.12;});if(hullHit(muzzle,local(aim)))ready=false;}
                 // Fire only after the mount settles; track through the pauses.
                 var slewRate=Math.hypot(m.yaw-previousYaw,m.elevation-previousElevation)/dt;
-                var stable=combat.enabled&&(!options||options.state.integrity>0)&&ready&&slewRate<=.8;
+                var stable=weaponsEnabled(combat)&&(!options||options.state.integrity>0)&&ready&&slewRate<=.8;
                 m.rest=Math.max(0,m.rest-dt);
                 m.settled=stable?m.settled+dt:0;
                 if(!stable&&m.burst>0){m.burst=0;m.rest=m.burstPause;}
                 if(stable&&m.settled>=.12&&m.burst<=0&&m.rest<=0)m.burst=m.burstLength;
                 // A quiet mount can occasionally loose one twin volley along its barrels.
                 // Never redirect this imperfect shot to the target or sweep a continuous hose.
-                if(combat.enabled&&target)m.specWait=Math.max(0,m.specWait-dt);
+                if(weaponsEnabled(combat)&&target)m.specWait=Math.max(0,m.specWait-dt);
                 var speculative=false;
-                if(combat.enabled&&(!options||options.state.integrity>0)&&target&&!stable&&m.burst<=0&&m.rest<=0&&m.specWait<=0&&m.guns.cooldown<=1e-9){
+                if(weaponsEnabled(combat)&&(!options||options.state.integrity>0)&&target&&!stable&&m.burst<=0&&m.rest<=0&&m.specWait<=0&&m.guns.cooldown<=1e-9){
                     var toward=sub(local(aim||target.pose.eye),p),span=Math.hypot.apply(null,toward);
                     if(span>0&&dot(forward,toward)/span>=.70710678){
                         var launch=p.map(function(v,k){return v+forward[k]*9.9;}),end=p.map(function(v,k){return v+forward[k]*weapon.speed*weapon.lifetime;});
