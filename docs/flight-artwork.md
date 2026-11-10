@@ -263,9 +263,10 @@ for capital simulation/visual ownership and load-order contracts.
 
 Flight lab & diagnostics → Experimental projectile visuals provides independent
 compact heads, short fading wakes, capital muzzle illumination, layered impacts,
-and heavy capital barrel heat/cooling. Current disables all five and restores
-current bolt appearance; Restrained enables the first four; Heavy capital guns
-enables all five. Individual edits select Custom. Preferences are session-only.
+heavy capital barrel heat/cooling, and receiving-hull heavy impact illumination.
+Current disables all six and restores current bolt appearance; Restrained enables
+the first four; Heavy capital guns also enables impact illumination. Barrel heat
+is excluded from presets and remains available as an individual toggle. Individual edits select Custom. Preferences are session-only.
 Compact heads override the selected plasma silhouette while enabled. Wakes are
 currently limited to straight-space fire; curved/optically projected shots retain
 their existing appearance. Impact sparks are camera-facing presentation samples,
@@ -274,7 +275,7 @@ not simulated debris or surface-normal ejecta.
 Gun pulse age and accumulated heat live in a presentation WeakMap keyed by guns,
 advance with gun simulation steps, freeze on pause and disappear with reset guns.
 No serialized state, damage, collision or firing timing depends on these values.
-Capital illumination uses up to four strongest live mount pulses, at the authored
+Capital illumination uses up to four strongest live muzzle/impact pulses, at the authored
 45.09 m heavy / 9.9 m point-defense muzzle distances. It adds local, unshadowed
 warm light to that capital's surfaces; it does not illuminate other ships. Heavy
 barrels add local emission beyond 15–30 m along their negative X axis and cool
@@ -292,3 +293,25 @@ median browser cadence was 13.3 ms throughout. This embedded-browser frozen
 snapshot is a local cost check, not GPU timing or a full fleet combat budget.
 The live flight menu was checked for Heavy, individual Custom edits and Current
 reset. Captures and measurement details are under ignored output/gun-effects/.
+
+
+Heavy impact illumination consumes the receiving simulation's bounded `impactHits`
+journal. Only finalized accepted damage of at least 20 records a local hit point
+and simulation timestamp, including shield contacts; collision/aim probes and
+rejected damage never emit light. The journal retains at most 32 hits and clears
+on reset. The visual adapter carries the point with the receiving hull's current
+position/heading, applies a 0.18 s decay and 0.7 s cutoff, and uses the existing
+four light slots. No new hull buffers, draws or sky effects are introduced. This
+is warm unshadowed local illumination, shared with the muzzle-light treatment.
+
+
+A fixed-pose production-renderer receiving-hull comparison used a real Aegis
+collision contact and finalized damage, with the production capital-strike
+explosion size/layers held constant. At 1898 x 975 backing pixels, DPR 1.5,
+20 warm-up and 55 measured frames per ABBA block, illumination off/on/on/off
+kept 48 draws and 25,538 triangles. Combined preparation/render-submission
+medians were 1.5 ms throughout (p95 2.0 / 2.3 / 1.9 / 2.3 ms), with 13.3 ms
+median browser cadence. This frozen embedded-browser sample is not GPU timing
+or a fleet combat benchmark. Matched captures and measurements are in ignored
+output/impact-light/. The flight menu was checked for the independent toggle
+and Heavy preset with barrel heat disabled.

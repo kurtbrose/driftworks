@@ -278,13 +278,13 @@
         return null;
     }
     var muzzlePulses=new WeakMap();
-    var visualOptions={compactHeads:false,wakes:false,muzzleLight:false,layeredImpacts:false,barrelHeat:false,mode:'current',radius:3,exposure:.8},visualInterval=1/60,visualTime=NaN;
+    var visualOptions={compactHeads:false,wakes:false,muzzleLight:false,layeredImpacts:false,barrelHeat:false,impactLight:false,mode:'current',radius:3,exposure:.8},visualInterval=1/60,visualTime=NaN;
     /** Session-only rendering preferences; never alter gun or weapon state.
      * @param {import('./types').GunVisualOptions} value */
     function setVisualOptions(value){
         if(!['current','multiples','overlap','centered','centered-overlap','leading-edge','orb'].includes(value.mode)||!Number.isFinite(value.radius)||value.radius<.5||value.radius>8||!Number.isFinite(value.exposure)||value.exposure<0||value.exposure>1)throw new Error('Invalid projectile visual options');
         visualOptions=Object.assign({},visualOptions,value);
-        /** @type {('compactHeads'|'wakes'|'muzzleLight'|'layeredImpacts'|'barrelHeat')[]} */(['compactHeads','wakes','muzzleLight','layeredImpacts','barrelHeat']).forEach(function(key){visualOptions[key]=value[key]===true;});
+        /** @type {('compactHeads'|'wakes'|'muzzleLight'|'layeredImpacts'|'barrelHeat'|'impactLight')[]} */(['compactHeads','wakes','muzzleLight','layeredImpacts','barrelHeat','impactLight']).forEach(function(key){visualOptions[key]=value[key]===true;});
     }
     /** @param {number} seconds */
     function visualFrame(seconds){var elapsed=seconds-visualTime;if(elapsed>0&&elapsed<=.25)visualInterval=elapsed;else if(elapsed<0)visualInterval=1/60;visualTime=seconds;}

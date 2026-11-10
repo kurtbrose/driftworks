@@ -144,6 +144,10 @@
                 m.batches.forEach(function(b){b.gunHeat=alive&&preferences.barrelHeat&&m.source.kind==='heavy'?pulse.heat:0;});
                 if(alive&&preferences.muzzleLight&&pulse.age<.16){var b=m.basis,p=m.batches[0].origin;flashes.push({position:p.map(function(v,i){return v-b[i]*(m.source.kind==='heavy'?45.09:9.9)/U;}),power:Math.exp(-pulse.age/.045)*(m.source.kind==='heavy'?1:.25)});}
             });
+            if(preferences.impactLight){
+                var impactView=simulation.visualState();
+                impactView.impactHits.forEach(function(hit){var age=impactView.seconds-hit.time;if(age<0||age>=.7)return;flashes.push({position:world(hit.point),power:1.25*Math.exp(-age/.18)*Math.max(0,1-age/.7)});});
+            }
             flashes.sort(function(a,b){return b.power-a.power;});flashes.length=Math.min(4,flashes.length);
             renderBatches.forEach(function(batch){
                 var lights=batch.gunLights||(batch.gunLights=new Float32Array(16));lights.fill(0);

@@ -64,8 +64,8 @@ assert.deepEqual(guns.geometry(state,pose),baseline,'Current mode exactly preser
 console.log('PASS gameplay projectile visuals: production reference, 3D samples, launch clipping, energy, impacts and physics isolation');
 
 // Independently switch each treatment, then return exactly to the production reference.
-const flags=['compactHeads','wakes','muzzleLight','layeredImpacts','barrelHeat'];
-for(let mask=0;mask<32;mask++){
+const flags=['compactHeads','wakes','muzzleLight','layeredImpacts','barrelHeat','impactLight'];
+for(let mask=0;mask<64;mask++){
     const options={mode:'current',radius:3,exposure:.8};
     flags.forEach((key,i)=>options[key]=!!(mask&(1<<i)));
     guns.setVisualOptions(options);
@@ -88,4 +88,4 @@ assert.equal(guns.muzzlePulse(live).age,0,'Pause preserves flash age');
 guns.step(live,pose,DW.retailWeapons[0],false,1.8);
 assert(Math.abs(guns.muzzlePulse(live).heat-.24/Math.E)<1e-9,'Heat cools by elapsed simulation seconds');
 assert.equal(guns.muzzlePulse(guns.create()).heat,0,'Reset guns have no stale glow');
-console.log('PASS independent gun effects: 32 combinations, baseline reset, bounded layers, pause and cooling');
+console.log('PASS independent gun effects: 64 combinations, baseline reset, bounded layers, pause and cooling');
