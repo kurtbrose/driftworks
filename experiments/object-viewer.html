@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Object viewer · Driftworks</title>
+<link rel="stylesheet" href="../studies/object-viewer.css?v=6fd70b4ff185">
+</head><body>
+<aside><a class="home" href="../">← Driftworks</a><p class="eyebrow">FLIGHT / OBJECT LIBRARY</p><h1>Inspection bay</h1>
+<label for="category">Object family</label><select id="category"><option value="fighters">Fighters & bombers</option><option value="capitals">Capital ships</option><option value="freighters">Freighters</option><option value="wormholes">Wormholes</option></select>
+<label for="object">Object</label><select id="object"></select>
+<p id="description"></p><p id="dimensions"></p>
+<section id="cargo-controls" hidden><label for="cargo-seed">Cargo / operator seed</label><div class="row"><input id="cargo-seed" type="number" min="0" max="4092" value="17"><button id="shuffle">Shuffle</button></div></section>
+<label for="environment">Surrounding sky</label><select id="environment"></select>
+<label for="lighting">Ship lighting</label><select id="lighting"><option value="inspection">Inspection fill</option><option value="sky">Sky lighting</option></select>
+<section id="destination-controls" hidden><label for="destination">Sky through throat</label><select id="destination"></select><label for="side">Inspect from</label><select id="side"><option value="0">Local side</option><option value="1">Destination side</option></select><p>Orbit the 600 m throat. Each side samples a complete sky through the production Ellis optics.</p></section>
+<label for="view">Camera</label><select id="view"><option value="quarter">Three-quarter</option><option value="front">Front</option><option value="rear">Rear</option><option value="side">Side</option><option value="top">Above</option><option value="below">Below</option></select>
+<div class="row actions"><button id="fit">Fit object</button><button id="spin" aria-pressed="false">Turntable</button></div>
+<label class="check"><input id="engines" type="checkbox" checked> Engine effects</label>
+<p><a id="fly" href="../experiments/flight.html">Open flight lab</a> · <button class="text" id="share">Copy view link</button></p>
+
+</aside>
+<main id="viewer" aria-label="3D object inspection"><div class="caption"><span id="family-label">FLIGHT OBJECT</span><h2 id="title">Loading…</h2></div><output id="status" role="status">Loading engine…</output><footer>Drag to orbit · Wheel to zoom · Right-drag to pan · Double-click a surface to focus</footer></main>
+<script src="../src/asset-versions.js?v=dc00196c10e1"></script>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<!-- script-manifest:objectViewer -->
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=754fbebc4cb6"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=254909ab34f8"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
+<script src="../src/wormholes.js?v=3fcf27c2c28c"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script>
+<script src="../src/mining-rig.js?v=ebc32e1f4b09"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../src/asteroid-terrain.js?v=added36e3407"></script>
+<script src="../src/ship-models.js?v=48f669716916"></script>
+<script src="retail-profiles.js?v=99526ebcd858"></script>
+<script src="flight-missions.js?v=ae583bedbde4"></script>
+<script src="mission-ohio.js?v=bb431a7a3bde"></script>
+<script src="retail-weapons.js?v=642a0025bb1b"></script>
+<script src="ellis-optics.js?v=72b518e99e0b"></script>
+<script src="thin-shell-optics.js?v=5ede5a507632"></script>
+<script src="flight-hyperbolic.js?v=3d31cd76303a"></script>
+<script src="guns.js?v=9b4be2487eb8"></script>
+<script src="../src/fleet-guidance.js?v=aeca40203914"></script>
+<script src="../src/convoy-battle.js?v=244e9d977d0d"></script>
+<script src="../src/convoy-ambush.js?v=5a308e0ad3ed"></script>
+<script src="../src/convoy-mission.js?v=466597c36155"></script>
+<script src="../src/roadside-layout.js?v=a64b5dd480ed"></script>
+<script src="../src/flight-collision.js?v=b9e653108f6e"></script>
+<script src="../src/flight-combat.js?v=ca1dd9090f4a"></script>
+<script src="../src/flight-mission-runtime.js?v=d37639dba5bc"></script>
+<script src="../src/flight-opponent.js?v=36792b7b6f9c"></script>
+<script src="../src/flight-blockout.js?v=d6f16d169ff8"></script>
+<script src="../src/flight-sim.js?v=64d59114d151"></script>
+<script src="../src/flight-prediction.js?v=46643f423546"></script>
+<script src="flight-model.js?v=86c92caac3e9"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
+<script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
+<script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
+<script src="../src/ship-catalog.js?v=b0863eab6fca"></script>
+<script src="../src/ship-hulls.js?v=23de2720981a"></script>
+<script src="../src/ship-assets.js?v=c4ac8b8a2539"></script>
+<script src="../src/ship-render.js?v=f8b7bce5ff38"></script>
+<script src="ship-packs.js?v=47b193cc205a"></script>
+<script src="mumble.js?v=96c5b42f6cc2"></script>
+<script src="flight-dialogue.js?v=4a86ef22535a"></script>
+<script src="evacuation-mission.js?v=2611bc3f57d1"></script>
+<script src="flight-comms.js?v=d091a3deb851"></script>
+<script src="flight-session.js?v=14ff657b2e0d"></script>
+<script src="flight-ai.js?v=9b70ad92df99"></script>
+<script src="flight-duel.js?v=a5144c3467aa"></script>
+<script src="flight-study.js?v=f4de6faa4f84"></script>
+<script src="../src/engine-audio.js?v=061d71eda9b0"></script>
+<script src="../src/audio-mixer.js?v=34c90880514e"></script>
+<script src="../src/ohio-soundtrack.js?v=8cfde4ec86fc"></script>
+<script src="../src/audio.js?v=5d04dd00dc81"></script>
+<script src="../src/hud.js?v=be6ea0bd1bf2"></script>
+<script src="../src/model-viewer.js?v=02d9b3545d85"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script src="../src/station-models.js?v=83eca9d90de0"></script>
+<script src="../src/tactical/picking.js?v=df9c50cb476a"></script>
+<script src="../src/tactical/input3d.js?v=33734a02311e"></script>
+<script src="../src/scene3d.js?v=eb3b2deec110"></script>
+<script src="../src/ship-art.js?v=394ca4b43117"></script>
+<script src="../src/game.js?v=c5f16cbfa061"></script>
+<script src="../src/sky-effects.js?v=136fdb626647"></script>
+<script src="../src/sky-lighting.js?v=0319f655c5a3"></script>
+<script src="../src/sky-system.js?v=8ae2414ca277"></script>
+<script src="../src/impact-cues.js?v=362a90b8e897"></script>
+<script src="skybox.js?v=8bff183bea95"></script>
+<script src="../src/aegis-sim.js?v=04d2f9da2c74"></script>
+<script src="../src/aegis-visual.js?v=13a6cc17aa7e"></script>
+<script src="../src/aegis-battle.js?v=e681a31dbd58"></script>
+<script src="aegis-flight.js?v=40fb0b8e7444"></script>
+<script src="convoy-scenery.js?v=688aa5724366"></script>
+<script type="module" src="../studies/object-viewer.js?v=b0aa0755649c"></script>
+<!-- /script-manifest -->
+</body></html>

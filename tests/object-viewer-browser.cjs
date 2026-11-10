@@ -12,7 +12,8 @@ const output=path.resolve(__dirname,'../output/object-viewer');fs.mkdirSync(outp
  const state=()=>page.evaluate(()=>{const s=objectViewer.state;return {id:s.entry.id,kind:s.entry.kind,seed:s.seed,center:s.center,distance:s.distance,radius:s.radius,eye:s.pose.eye,stats:s.stats};});
  async function family(value){await page.selectOption('#category',value);await ready();}
  try{
-  await page.goto('http://localhost:8000/studies/object-viewer.html');await ready();await capture('fighter');
+  for(const [url,kind,id] of [['studies/object-viewer.html?family=freighters&object=fluid&seed=0','freighter','fluid'],['experiments/ship-packs.html?model=quaternius-ultimate-spaceships:Striker','fighter','quaternius-ultimate-spaceships:Striker'],['experiments/concept-ships.html?model=raptor','fighter','concept-trio:raptor'],['experiments/dreadnaught-kit.html','capital','aegis']]){await page.goto('http://localhost:8000/'+url);await page.waitForURL('**/experiments/object-viewer.html?**');await ready();assert.equal((await state()).kind,kind);assert.equal((await state()).id,id);}
+  await page.goto('http://localhost:8000/experiments/object-viewer.html');await ready();await capture('fighter');
   const all=await page.locator('#object option').evaluateAll(options=>options.map(o=>o.value));
   for(const id of all){await page.selectOption('#object',id);await ready();assert.equal((await state()).id,id);assert.ok((await state()).stats.triangles>0);}
   await family('freighters');

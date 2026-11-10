@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 function generated(){
- const html=fs.readFileSync(path.join(root,'experiments/dreadnaught-kit.html'),'utf8').replace(/\r\n/g,'\n');
+ const html=fs.readFileSync(path.join(root,'studies/legacy-dreadnaught-kit.html'),'utf8').replace(/\r\n/g,'\n');
  const start=html.indexOf('const mat = '),end=html.indexOf('let segmentOverrides=');
  const attachment=html.slice(html.indexOf('function attach('),html.indexOf('// Shared Spitfire'));
  if(start<0||end<start||!attachment.startsWith('function attach('))throw new Error('Aegis authoring boundaries changed');

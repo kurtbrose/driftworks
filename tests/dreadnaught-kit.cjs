@@ -17,7 +17,7 @@ const {pathToFileURL} = require('node:url');
   const context=vm.createContext({THREE:{...real,WebGLRenderer:Renderer},OrbitControls:Controls,devicePixelRatio:1,window:{},
     document:{getElementById:element,createElement:()=>({click(){}})},
     ResizeObserver:class{observe(){}},Blob,URL:{createObjectURL(blob){exported=blob;return 'blob:test';},revokeObjectURL(){}},setTimeout:fn=>fn()});
-  const html=fs.readFileSync(path.join(root,'experiments/dreadnaught-kit.html'),'utf8');
+  const html=fs.readFileSync(path.join(root,'studies/legacy-dreadnaught-kit.html'),'utf8');
   vm.runInContext(fs.readFileSync(path.join(root,'assets/ships/aegis-kit/reference-fighter.js'),'utf8'),context);
   const source=html.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/^import .*;$/gm,'');
   vm.runInContext(source,context);

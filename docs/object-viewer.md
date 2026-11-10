@@ -1,8 +1,9 @@
 # Flight object viewer
 
-Open `studies/object-viewer.html` from **Object viewer** in the homepage quick
-launch. This is the main inspection entry point. Earlier kit builders and
-specialist comparisons remain under **Development studies**.
+Open `experiments/object-viewer.html` from **Object viewer** in the homepage quick
+launch. This is the only general ship/object viewer exposed in Experiments.
+Earlier import and capital kit tools are archived as `studies/legacy-*.html`; old viewer
+bookmarks redirect here and retain compatible selections and camera links.
 
 Choose fighters/bombers, the production Aegis capital hull, the three production
 freighters, or an Ellis wormhole. Choose the surrounding sky independently.

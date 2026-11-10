@@ -9,7 +9,7 @@ const {pathToFileURL}=require('node:url');
  class Controls{constructor(){this.target=new T.Vector3();}update(){}}
  const ctx=vm.createContext({THREE:{...T,WebGLRenderer:Renderer},OrbitControls:Controls,window:{},devicePixelRatio:1,document:{getElementById:el},ResizeObserver:class{observe(){}}});
  vm.runInContext(fs.readFileSync(path.join(root,'assets/ships/aegis-kit/reference-fighter.js'),'utf8'),ctx);
- const html=fs.readFileSync(path.join(root,'experiments/dreadnaught-kit.html'),'utf8');
+ const html=fs.readFileSync(path.join(root,'studies/legacy-dreadnaught-kit.html'),'utf8');
  vm.runInContext(html.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/^import .*;$/gm,''),ctx);
  vm.runInContext("el('preset').value='battleship';el('preset').change()",ctx);
  const ship=vm.runInContext('ship',ctx);ship.updateMatrixWorld(true);
