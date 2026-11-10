@@ -784,7 +784,7 @@ export type ExperimentModules = {
         groups:{separations:number;progressEscapes:number;style:OpponentStyle;meanRange:number;attackFraction:number;extendFraction:number;rearThreatFraction:number;opportunityFraction:number;label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
         shieldPairs:number;pairsCensored:number;observedShieldDelta:number|null;
     };watchUrl:(options:DuelOptions)=>string};
-    flightWatch:{tactical:()=> (view:FlightView,held:boolean,dt:number)=>void;cinema:(rig:AegisFlightRig)=>{reset:()=>void;advance:(elapsed:number)=>void;next:()=>void;camera:(view:Snapshot)=>Pose;label:()=>string};create:(scenery:Pick<ReturnType<ExperimentModules['flightSession']['create']>, 'snapshot' | 'advanceScenery'>, options:DuelOptions)=>{
+    flightWatch:{battleOverview:(rig:AegisFlightRig)=>Pose;tactical:()=> (view:FlightView,held:boolean,dt:number)=>void;cinema:(rig:AegisFlightRig)=>{reset:()=>void;advance:(elapsed:number)=>void;next:()=>void;camera:(view:Snapshot)=>Pose;label:()=>string};create:(scenery:Pick<ReturnType<ExperimentModules['flightSession']['create']>, 'snapshot' | 'advanceScenery'>, options:DuelOptions)=>{
         advance:(elapsed:number,speed:number)=>DuelSummary;
         snapshot:(chase:boolean)=>Snapshot;
         summary:()=>DuelSummary;replay:DuelReplay;

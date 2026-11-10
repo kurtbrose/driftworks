@@ -87,6 +87,14 @@
         }
         return {reset:reset,advance:advance,next:next,camera:camera,label:function(){return names[index];}};
     }
+    /** Fixed production battle overview, framed once from the initial capitals.
+     * @param {import('./types').AegisFlightRig} rig @returns {import('./types').Pose} */
+    function battleOverview(rig){
+        var capitals=rig.telemetry().capitals||[],U=DW.sim.METERS_PER_UNIT;
+        var center=capitals.length?capitals[0].position.map(function(_,i){return capitals.reduce(function(sum,c){return sum+c.position[i];},0)/capitals.length;}):[0,750/U,1200];
+        var offset=[0,-1900,5500],length=Math.hypot.apply(null,offset),back=offset.map(function(v){return v/length;}),right=[1,0,0],up=[0,back[2],-back[1]];
+        return {eye:center.map(function(v,i){return v+(offset[i]+(i===0?250:0))/U;}),right:right,up:up,back:back,region:0};
+    }
     /** Hold-to-survey camera; all distances are converted from metres.
      * @returns {(view:import('./types').FlightView,held:boolean,dt:number)=>void} */
     function tactical() {
@@ -104,5 +112,5 @@
             if(Math.hypot.apply(null,eye.map(function(v,i){return v-own.eye[i];}))>25/units)view.observerCraft=Object.assign({},view.combat.player,{pose:own});
         };
     }
-    DW.flightWatch = {create:create,cinema:cinema,tactical:tactical};
+    DW.flightWatch = {battleOverview:battleOverview,create:create,cinema:cinema,tactical:tactical};
 }());

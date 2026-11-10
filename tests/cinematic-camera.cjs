@@ -35,3 +35,17 @@ const orbit=[];for(let i=0;i<4;i++){
 }
 assert.ok(orbit.some(p=>p[0]>1000)&&orbit.some(p=>p[0]<-1000)&&orbit.some(p=>p[1]>1000)&&orbit.some(p=>p[1]<-1000),'camera translates around all four sides of the sphere');
 console.log('PASS wormhole orbit: physical 3D eye positions, four-sided parallax, gentle height change and center framing');
+
+const capitals=[{position:[0,0,1200]},{position:[120/U,1500/U,1200+180/U]}];
+const overviewBefore=JSON.stringify(capitals),overview=DW.flightWatch.battleOverview({telemetry:()=>({capitals})});
+for(const basis of [overview.right,overview.up,overview.back])assert(Math.abs(Math.hypot(...basis)-1)<1e-10);
+for(const [a,b] of [[overview.right,overview.up],[overview.right,overview.back],[overview.up,overview.back]])assert(Math.abs(a.reduce((sum,v,i)=>sum+v*b[i],0))<1e-10);
+assert(overview.back[2]>.9,'Steep birds-eye angle retains depth');
+for(const capital of capitals){
+ const relative=capital.position.map((v,i)=>v-overview.eye[i]),depth=-relative.reduce((sum,v,i)=>sum+v*overview.back[i],0);
+ assert(depth>0,'Both capitals are ahead of the camera');
+ assert(Math.abs(relative.reduce((sum,v,i)=>sum+v*overview.up[i],0))/depth<.5,'Both capital centers fit the same fixed view');
+}
+assert.equal(JSON.stringify(capitals),overviewBefore,'Overview leaves battle poses unchanged');
+const fixed=JSON.stringify(overview);capitals[0].position[0]+=100;assert.equal(JSON.stringify(overview),fixed,'Camera does not drift as capitals maneuver');
+console.log('PASS fixed battle overview: both capitals framed, orthonormal steep camera and unchanged simulation poses');

@@ -491,3 +491,20 @@ contact shapes and off-screen arrows remain during the excursion, projected
 through the moving camera. Cockpit panels return inside. VR and AI observer
 cameras retain camera ownership. Focus loss and pause clear the held input;
 pause restores the cockpit immediately.
+
+
+### Fixed overhead battle review
+
+Open `experiments/flight.html?mission=battle&view=overhead`, or select
+Watch battle from above on the battle mission's launch menu. This runs the same
+production battle, ships, weapons, scenery and effect paths. `flightWatch.battleOverview`
+frames the capitals after the mission resets their positions; its camera stays
+fixed while ships maneuver. The observer is placed at the camera with zero
+flight demand. This is a presentation mode, not a separate combat simulation.
+
+The persistent panel offers Play/Pause, Restart battle, elapsed time, capital-hit
+count and the existing effect presets/individual toggles. Presets change live
+without pausing or resetting combat. Restart restores the mission and fixed
+camera while retaining visual selections. Return to flight leaves this mode.
+The overhead mode does not capture the pointer or draw the pilot HUD; Escape
+still pauses. Normal flight and the existing hold-Shift camera are unchanged.

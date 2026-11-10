@@ -15,6 +15,7 @@
     if(multiplayerMode&&!DW.multiplayerFlight)await new Promise(/** @param {(value:void)=>void} resolve */function(resolve){window.addEventListener('multiplayer-flight-ready',function(){resolve();},{once:true});});
     if(['convoy','fleet-evacuation'].includes(activeMission.id))host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
     var cinematic=activeMission.id==='cinematic';
+    var overviewMode=activeMission.id==='battle'&&new URLSearchParams(location.search).get('view')==='overhead';
     var impactWatch=!!activeMission.emptySpace&&!cinematic&&!activeMission.sky.hyperbolic;
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
@@ -154,10 +155,12 @@
     var select = get('profile'), stats = get('stats'), status = get('status');
     var watch = /** @type {ReturnType<Required<DriftworksNamespace>['flightWatch']['create']> | null} */ (null);
     var director=cinematic&&aegis?DW.flightWatch.cinema(aegis):null;
+    var overviewCamera=overviewMode&&aegis?DW.flightWatch.battleOverview(aegis):null;
     var demoSeconds=0;
     var watchDuration=120,watchOpponentWeapon=-2;
     function view() {
         var snapshot=watch ? watch.snapshot(get('watch-camera').value === 'chase') : session.snapshot();
+        if(overviewCamera)return Object.assign({},snapshot,{camera:overviewCamera});
         return director?Object.assign({},snapshot,{camera:director.camera(snapshot)}):snapshot;
     }
     // The initial reset below creates the sortie before any frame or input runs.
@@ -303,6 +306,7 @@
         if(multiplayerMode)session.prepareMultiplayer(multiplayer?multiplayer.isGuest():false);
         if(aegis&&!aegisMode)aegis.reset(activeMission.id==='fleet-evacuation'||activeMission.id==='battle'||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
         if(aegis&&aegis.spawnPlayer)session.respawn(aegis.spawnPlayer(session.snapshot().state));
+        if(overviewMode&&aegis){overviewCamera=DW.flightWatch.battleOverview(aegis);session.setStartPosition(overviewCamera.eye);}
         if(cinematic){session.prepareCinematicObserver();get('watch-panel').hidden=true;}
         if(aegis&&aegisMode){aegis.reset(session.snapshot().combat);session.prepareAegisStudy();}
         if(tetherStudy) {
@@ -421,7 +425,7 @@
     }
     get('fly').onclick = function () {
         if(!texturesReady){updateStatus();return;}
-        if (cinematic){resume();return;}
+        if (cinematic||overviewMode){resume();return;}
         if (watch) { if (watch.summary().done) reset(); resume(); return; }
         if (session.snapshot().combat.dead)
             reset();
@@ -431,6 +435,23 @@
         }
         controls.capture();
     };
+    if(activeMission.id==='battle'){
+        var overviewLink=document.createElement('a');overviewLink.textContent=overviewMode?'Return to flight':'Watch battle from above';
+        var overviewParams=new URLSearchParams(location.search);if(overviewMode)overviewParams.delete('view');else overviewParams.set('view','overhead');overviewLink.href='?'+overviewParams.toString();
+        get('fly').after(overviewLink);
+        if(overviewMode){
+            document.body.classList.add('battle-overview');get('watch-panel').hidden=true;
+            var overviewStyle=document.createElement('style');overviewStyle.textContent='body.battle-overview #launch,body.battle-overview #integrity,body.battle-overview #instruments,body.battle-overview #weapons,body.battle-overview #target-info,body.battle-overview header,body.battle-overview footer{display:none!important}#battle-overview-controls{position:fixed;right:12px;top:12px;z-index:30;width:265px;max-height:calc(100vh - 24px);overflow:auto;background:#07151ded;color:#d8e6ee;border:1px solid #547078;padding:12px;font:12px/1.5 monospace}#battle-overview-controls label,#battle-overview-controls small{display:block;margin-top:7px}#battle-overview-controls select{width:100%}#battle-overview-controls label:has(input[type=checkbox]){display:flex;align-items:center}#battle-overview-controls input[type=checkbox]{width:auto;margin:0 8px 0 0}#battle-overview-controls button{margin:5px 5px 8px 0}#battle-overview-controls a{color:#aadddf}';document.head.appendChild(overviewStyle);
+            var overviewPanel=document.createElement('section');overviewPanel.id='battle-overview-controls';overviewPanel.setAttribute('aria-label','Overhead battle review');
+            var overviewTitle=document.createElement('strong');overviewTitle.textContent='BATTLE / FIXED OVERHEAD VIEW';
+            var overviewPlay=document.createElement('button');overviewPlay.textContent='Start battle';overviewPlay.onclick=function(){if(paused)resume();else pause();};
+            var overviewRestart=document.createElement('button');overviewRestart.textContent='Restart battle';overviewRestart.onclick=function(){pause();reset();resume();};
+            var overviewReadout=document.createElement('div');overviewReadout.id='battle-overview-readout';
+            overviewPanel.append(overviewTitle,document.createElement('br'),overviewPlay,overviewRestart,overviewReadout,overviewLink);
+            var effectMenu=document.getElementById('projectile-visual-style')?.closest('details');if(effectMenu){effectMenu.open=true;var presetControl=document.getElementById('gun-effect-preset'),effectSummary=effectMenu.querySelector('summary');if(presetControl&&presetControl.previousElementSibling&&effectSummary)effectSummary.after(presetControl.previousElementSibling,presetControl,...Array.from(effectMenu.querySelectorAll('label')).filter(function(label){return !!label.querySelector('input[type=checkbox]');}));overviewPanel.append(effectMenu);}
+            document.body.append(overviewPanel);
+        }
+    }
     function nextWeapon() {
         if (watch) return;
         gunSelect.selectedIndex = (gunSelect.selectedIndex + 1) % gunSelect.options.length;
@@ -477,7 +498,7 @@
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
         var pilotDemand=controls.sample(view().state.throttle);
-        var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:pilotDemand;
+        var demand = cinematic||overviewMode?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:pilotDemand;
         if(multiplayer)multiplayer.update(demand,paused);
         if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
@@ -510,7 +531,7 @@
         }
         if(cinematic&&director){var captionNode=document.querySelector('.cinema-caption');if(captionNode)captionNode.textContent='DRIFTWORKS / '+director.label().toUpperCase()+' / C NEXT / ESC PAUSE';}
         var currentView = view();
-        if (!watch && !cinematic && !(DW.flightVr&&DW.flightVr.forHost(host)?.active())) {
+        if (!watch && !cinematic && !overviewMode && !(DW.flightVr&&DW.flightVr.forHost(host)?.active())) {
             tacticalCamera(currentView, controls.view().tactical, paused ? 1 : timing.elapsed);
             presentation.pose(currentView.camera || currentView.state);
             currentView.world = view().world;
@@ -533,9 +554,10 @@
         var presentationMs=performance.now()-phaseStart;phaseStart=performance.now();
         drawSubsystem(currentView.state);
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
+        if(overviewMode&&overviewPlay&&overviewReadout){overviewPlay.textContent=texturesReady?(paused?'Play battle':'Pause battle'):'Loading ships...';overviewPlay.disabled=!texturesReady;overviewReadout.textContent=(paused?'PAUSED / ':'')+currentView.combat.time.toFixed(1)+' s / '+(aegis?aegis.telemetry().hits:0)+' capital hits';}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
-        if(!cinematic)flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!studies.enabled, speakerId: comms.speakerId(), bridgeCue:bridgeCue, flightDemand:watch?undefined:demand, weapon: weapon() }, inputView, appearance));
+        if(!cinematic&&!overviewMode)flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!studies.enabled, speakerId: comms.speakerId(), bridgeCue:bridgeCue, flightDemand:watch?undefined:demand, weapon: weapon() }, inputView, appearance));
         presentation.vrOverlay(currentView.combat.hitFlash);
         captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
