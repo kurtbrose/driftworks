@@ -48,6 +48,7 @@ def write_depot_glb(data, output):
         pbr = dict(baseColorFactor=color+[1], metallicFactor=.12 if paint else .1 if name == 'dark' else .65,
                    roughnessFactor=.78 if paint else .46)
         material = dict(name=name, pbrMetallicRoughness=pbr)
+        if name=='glazing':pbr.update(metallicFactor=.6,roughnessFactor=.23)
         if name in texture_ids:
             pbr.update(baseColorTexture=dict(index=texture_ids[name]), metallicFactor=.1 if name=='caution-paint' else .22, roughnessFactor=.8)
         if name == 'lamp' or name.endswith('-light'):

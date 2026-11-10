@@ -35,6 +35,34 @@ assert(data.batches.some(batch=>batch.group==='hub-112'&&batch.material==='shell
 assert(!data.batches.some(batch=>batch.group==='hub-112'&&['wear','caution-paint','safety-orange'].includes(batch.material)),'Inactivity uses dark lights without gray paint or a caution collar');
 assert(!data.sourceParts.some(name=>/^hub-112\/(isolation-valve|locked-valve-handle)/.test(name)));
 assert(data.batches.some(batch=>batch.group==='hub-0'&&batch.material==='lamp'));
+for(const x of [-112,0,112]){
+  const prefix='hub-'+x+'/',parts=data.sourceParts.filter(name=>name.startsWith(prefix)).map(name=>name.slice(prefix.length).replace(/\.\d+$/,''));
+  for(const name of ['pressure-trunk','observation-skirt','window-sill','roof-cap','spine-bulkhead','spine-interface-shoe','arm-load-saddle','shoulder-clevis-cheek','lower-service-shoulder'])assert(parts.includes(name),'Manufactured hub contains '+name);
+  assert.equal(parts.filter(name=>name==='window').length,8,'Eight recessed observation bays');
+  for(const name of ['pressure-access-cover','sump-service-cover','roof-access-hatch','trunk-panel-seam','roof-facet-panel'])assert(!parts.includes(name),'Flush skin details do not require raised '+name+' geometry');
+  assert(!parts.includes('collar'),'Remove the stacked oversized cylindrical collars');
+  assert(data.batches.some(b=>b.group==='hub-'+x&&b.material==='hub-paint'&&b.uvs),'Pressure hulls retain surface-specific painted UVs');
+  const hull=data.batches.find(b=>b.group==='hub-'+x&&b.material==='station-paint'),n=Math.SQRT1_2;
+  let outwardSkin=0,roofVertices=0;
+  for(let i=0;i<hull.positions.length/3;i++){
+    const p=hull.positions.subarray(i*3,i*3+3),normal=hull.normals.subarray(i*3,i*3+3);
+    const radial=((p[0]-x)-p[1])*n;
+    const px=hull.uvs[i*2]*2048,py=(1-hull.uvs[i*2+1])*2048;
+    if(Math.abs(radial-8.2)<.001&&p[2]>=-10&&p[2]<=9.5&&normal[0]*n-normal[1]*n>.999){
+      assert(px>=1543.9&&px<=1784.1,'Each facet samples its own strip');
+      assert(Math.abs(py-(40+(9.5-p[2])/19.5*690))<.003,'Body UVs continue across geometry sections without restarting a motif');outwardSkin++;
+    }
+    if(Math.abs(p[2]-22.25)<.001&&normal[2]>.999){
+      assert(Math.abs(px-(384+(p[0]-x)*42))<.003);
+      assert(Math.abs(py-(1664-p[1]*42))<.003,'Roof UVs use one affine XY projection, without trapezoid distortion');roofVertices++;
+    }
+  }
+  assert(outwardSkin>=6&&roofVertices>=6,'Outward skin and planar roof UVs survive the bake');
+}
+// Geometric clearance, not just a parts-name check: even the bevelled corners
+// of the clipped spine must stop outside each hub's pressure trunk.
+const spineFrame=data.batches.find(b=>b.group==='spine'&&b.material==='frame');
+for(let i=0;i<spineFrame.positions.length;i+=3)for(const x of [-112,0,112])assert(Math.abs(spineFrame.positions[i]-x)>=9.4,'Truss members terminate at the structural interface instead of penetrating the pressure trunk');
 assert(data.sourceParts.some(name=>name.includes('/truss-splice-plate')));
 assert(!data.sourceParts.some(name=>/offline-placard|offline-stencil|chevron|hazard-panel|empty-bay-warning|arm-high-visibility/.test(name)));
 assert.equal(data.sourceParts.filter(name=>/\/tank-[-\d]/.test(name)).length,28);
@@ -70,7 +98,7 @@ for (const batch of data.batches) {
   if(data.textures[batch.material]){
     assert.equal(batch.uvs.length,batch.positions.length/3*2);
     assert(batch.uvs.every(Number.isFinite));
-    assert(['caution-paint.png','../../ships/industrial-kit/panels.png'].includes(data.textures[batch.material]));
+    assert(['caution-paint.png','../../ships/industrial-kit/panels.png','hub-surfaces.png'].includes(data.textures[batch.material]));
   }
   for (let i=0;i<batch.normals.length;i+=9) {
     if (Math.hypot(...batch.normals.slice(i,i+3).map((v,k)=>v-batch.normals[i+3+k]))>.001) smoothTriangles++;

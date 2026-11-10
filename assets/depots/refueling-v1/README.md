@@ -1,5 +1,57 @@
 # Refueling depot prototype
 
+## Constructed service hubs (2026-11-09)
+
+The three service hubs now follow the freighters' manufactured housing and
+surface language. An octagonal pressure trunk has tapered shoulders, fitted
+seams and sparse coating wear. Eight recessed observation bays have dark glazing,
+physical sills/mullions and small interior light strips. A tapered lower service
+pod replaces the long plain stem. The sealed roof has a flush hatch, attached
+EVA grips and supported edge fixtures.
+
+The hub skin uses `hub-surfaces.png`, generated offline by
+`tools/build-depot-surfaces.py` (Python with Pillow). It provides eight distinct
+facet strips, with continuous vertical UVs across mesh subdivisions, and one
+planar XY projection for the entire roof. Paint variation and construction seams
+carry the surface at close range without a repeating equipment motif at gameplay
+distance. One trunk access cover, one lower-pod cover, the roof hatch and two
+ventilation fields are fitted texture details, not raised slabs. Labels, vents,
+barcodes and access graphics must never be tiled across the pressure skin or
+distorted onto trapezoids. The shared freighter atlas remains on the actual pump
+packages and quiet structural housings. Neither texture is generated at runtime.
+
+Each side of a hub now has a load-spreading spine bulkhead with four attachment
+shoes. Truss members are clipped at those interfaces instead of continuing
+through the pressure trunk. A fixed saddle and two clevis cheeks carry each
+arm's shoulder bearing. Moving links have chamfered service housings,
+protected feeds and transverse bearing caps; their hinge axes
+match the existing Y/Z-plane articulation. Link lengths, nine local pivots,
+berth positions and inactive hub C behavior are retained. The hubs' exterior
+shape changes intentionally; all coordinates remain authored metres.
+
+The repeated cuboid helper also has corrected outward face winding. A geometric
+regression checks continuous facet UVs, undistorted planar roof UVs, the absence
+of raised access-cover geometry, and truss clearance outside the pressure trunk. Texture routing,
+GLB integrity, fixed-link reach and real-liner contact/cycle checks remain in use.
+
+Temporary fixed-camera production comparisons, inspection views, freighter
+command-module references and both live liner cycles are under ignored
+`output/depot-hubs/`. Inspection covers the roof, recessed glazing, spine
+interfaces, shoulder bearing, lower pod and inactive hub, as well as the actual
+evacuation-mission overview and berth views.
+
+Final export: 386,761 triangles, 479,067 shared vertex tuples, 153 module/material
+batches and 14,942,960 bytes, plus a 370,077-byte 2048-square fitted skin. The
+previous tank-finish revision had 390,625 triangles and 146 batches. A matched
+frozen production overview at 1500 x 1000, DPR 1, both liners and mission fighters
+retained, submitted 167 -> 174 draws and 985,730 -> 981,866 triangles. The corrected
+sample measured 8.2 ms median CPU submission and 13.3 / 13.4 ms frame median/p95
+(25 warm-up plus 60 measured frames per off/on/on/off leg). Adjacent baseline
+samples ranged 7.4-8.4 ms CPU submission; one paired run also slowed with the entire
+scenery hidden, so these timings do not establish a speedup or isolated GPU cost.
+The without-scenery reference submits 3 draws / 5,288 triangles. Simulation was
+frozen for the cost comparison; live cycles were inspected separately.
+
 ## Freighter-family finish and transfer equipment (2026-11-09)
 
 The storage tanks now reuse the current industrial freighters' neutral barrel
@@ -70,6 +122,7 @@ The reference image is not embedded in the asset or used as a texture.
 
 Rebuild from the repository root:
 
+    python tools/build-depot-surfaces.py  # offline Pillow dependency
     blender --background --python tools/build-refueling-depot.py
 
 `depot.blend` is the editable authoring source. `depot.glb` contains evaluated,

@@ -24,9 +24,9 @@ const paint=doc.materials.find(m=>m.name==='caution-paint');
 assert.equal(paint.pbrMetallicRoughness.baseColorTexture.index,0);
 assert.deepEqual(doc.samplers,[{wrapS:10497,wrapT:10497}]);
 assert.equal(doc.images[0].uri,'caution-paint.png');
-assert.equal(doc.images.length,2,'Tank and machinery finishes reuse one freighter atlas');
+assert.equal(doc.images.length,3,'Shared freighter atlas plus the fitted station skin');
 assert.equal(doc.images[1].uri,'../../ships/industrial-kit/panels.png');
-for(const name of ['tank-paint','hardware-paint']){
+for(const name of ['tank-paint','hardware-paint','hub-paint']){
     const id=doc.materials.findIndex(m=>m.name===name),material=doc.materials[id];
     assert.equal(material.pbrMetallicRoughness.baseColorTexture.index,1);
     for(const mesh of doc.meshes)for(const primitive of mesh.primitives)if(primitive.material===id){
@@ -34,6 +34,8 @@ for(const name of ['tank-paint','hardware-paint']){
         assert(uv&&uv.count===doc.accessors[primitive.attributes.POSITION].count,'Every textured vertex retains its UV');
     }
 }
+assert.equal(doc.images[2].uri,'hub-surfaces.png');
+assert.equal(doc.materials.find(m=>m.name==='station-paint').pbrMetallicRoughness.baseColorTexture.index,2);
 const light=doc.materials.find(m=>m.name==='red-light');
 assert.equal(light.extensions.KHR_materials_emissive_strength.emissiveStrength,2);
 assert.throws(()=>context.decodeDepot(new ArrayBuffer(12)),/Invalid depot GLB/);

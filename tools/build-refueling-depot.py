@@ -20,7 +20,8 @@ for name, color, metal in [('shell', (.58,.63,.65), .65), ('frame',(.19,.24,.27)
                           ('lamp',(.8,.72,.5),.1), ('red-light',(1,.035,.012),.1),
                           ('green-light',(.025,.85,.32),.1), ('white-light',(.8,.9,1),.1),
                           ('safety-yellow',(.95,.65,.025),.1), ('safety-orange',(.95,.17,.025),.1),
-                          ('replacement',(.76,.78,.72),.35), ('wear',(.22,.26,.27),.4)]:
+                          ('replacement',(.76,.78,.72),.35), ('wear',(.22,.26,.27),.4),
+                          ('glazing',(.018,.055,.072),.6)]:
     mat = bpy.data.materials.new(name)
     mat.diffuse_color = (*color,1)
     mat.use_nodes = True
@@ -48,13 +49,13 @@ materials['caution-paint']=paint
 # Reuse the freighters' actual barrel/head artwork and service-cassette sheet.
 # UVs address the original 4096 x 3072 atlas directly (no runtime canvas bake).
 atlas_path=ROOT/'assets/ships/industrial-kit/panels.png'
-for name in ['tank-paint','hardware-paint']:
+for name in ['tank-paint','hardware-paint','hub-paint','station-paint']:
     mat=bpy.data.materials.new(name)
     mat.diffuse_color=(1,1,1,1)
     mat.use_nodes=True
     bsdf=mat.node_tree.nodes.get('Principled BSDF')
     tex=mat.node_tree.nodes.new('ShaderNodeTexImage')
-    tex.image=bpy.data.images.load(str(atlas_path),check_existing=True)
+    tex.image=bpy.data.images.load(str(OUT/'hub-surfaces.png' if name=='station-paint' else atlas_path),check_existing=True)
     mat.node_tree.links.new(tex.outputs['Color'],bsdf.inputs['Base Color'])
     bsdf.inputs['Metallic'].default_value=.22
     bsdf.inputs['Roughness'].default_value=.8
@@ -82,7 +83,7 @@ def box(name, p, size, material='frame', bevel=.12):
     mesh=bpy.data.meshes.new(name)
     mesh.from_pydata([(a*size[0]/2,b*size[1]/2,c*size[2]/2) for a,b,c in
                      [(-1,-1,-1),(-1,-1,1),(-1,1,-1),(-1,1,1),(1,-1,-1),(1,-1,1),(1,1,-1),(1,1,1)]],[],
-                    [(0,4,6,2),(1,3,7,5),(0,1,5,4),(2,6,7,3),(0,2,3,1),(4,5,7,6)])
+                    [(2,6,4,0),(5,7,3,1),(4,5,1,0),(3,7,6,2),(1,3,2,0),(6,7,5,4)])
     mesh.update();mesh.uv_layers.new()
     obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj);obj.location=p
     return finish(obj,name,material,bevel)
@@ -206,6 +207,86 @@ def equipment(name,p,size):
             uv.data[loop].uv=((1032+u*496)/4096,1-(520+(1-v)*496)/3072)
     return obj
 
+# The freighters keep quiet painted housings separate from actual access/vent
+# faces. Use the same padded hardware regions, without tiling machinery graphics
+# across the complete pressure shell.
+HUB_REGIONS={'shell':(1040,1552,1296,1776),
+             'access':(1040,1808,1296,2032),
+             'vent':(1312,1808,1520,2032),
+             'registry':(1312,1664,1520,1776)}
+
+def hub_panel(name,p,size,region='shell',axis=1,sign=-1):
+    obj=box(name,p,size,'hub-paint',min(.16,min(size)*.22))
+    uv=obj.data.uv_layers.active
+    for face in obj.data.polygons:
+        major=max(range(3),key=lambda k:abs(face.normal[k]))
+        axes=[k for k in range(3) if k!=major]
+        rect=HUB_REGIONS[region if major==axis and face.normal[axis]*sign>.5 else 'shell']
+        for loop in face.loop_indices:
+            co=obj.data.vertices[obj.data.loops[loop].vertex_index].co
+            u=.5+co[axes[0]]/size[axes[0]];v=.5+co[axes[1]]/size[axes[1]]
+            uv.data[loop].uv=((rect[0]+u*(rect[2]-rect[0]))/4096,
+                                  1-(rect[1]+(1-v)*(rect[3]-rect[1]))/3072)
+    return obj
+
+def radial_panel(name,x,a,r,z,size,region='shell',offset=0,material=None):
+    p=(x+r*math.cos(a)-offset*math.sin(a),r*math.sin(a)+offset*math.cos(a),z)
+    obj=box(name,p,size,material,.04) if material else hub_panel(name,p,size,region)
+    obj.rotation_euler.z=a+math.pi/2
+    return obj
+
+def hub_profile(name,x,stations,material='station-paint',sides=8):
+    # Apothem-based sections give flat attachment faces at the cardinal axes.
+    vertices=[];faces=[]
+    for z,apothem in stations:
+        radius=apothem/math.cos(math.pi/sides)
+        vertices.extend((x+radius*math.cos((j+.5)*math.tau/sides),
+                          radius*math.sin((j+.5)*math.tau/sides),z) for j in range(sides))
+    for i in range(len(stations)-1):
+        for j in range(sides):
+            a=i*sides+j;b=i*sides+(j+1)%sides
+            faces.append((a,b,b+sides,a+sides))
+    faces.extend([tuple(reversed(range(sides))),tuple((len(stations)-1)*sides+j for j in range(sides))])
+    mesh=bpy.data.meshes.new(name);mesh.from_pydata(vertices,[],faces);mesh.update()
+    uv=mesh.uv_layers.new()
+    for face in mesh.polygons:
+        section=face.index//sides
+        facet=face.index%sides
+        body=name=='pressure-trunk' and section<len(stations)-1 and stations[section][1]==stations[section+1][1]
+        pod=name=='lower-service-shoulder' and section<len(stations)-1 and stations[section][1]==stations[section+1][1]
+        roof=name=='roof-cap' and face.index==len(mesh.polygons)-1
+        for k,loop in enumerate(face.loop_indices):
+            co=mesh.vertices[mesh.loops[loop].vertex_index].co
+            if roof:
+                px=384+(co.x-x)*42;py=1664-co.y*42
+            elif body or pod:
+                px=facet*256+(8 if k in [0,3] else 248)
+                top,bottom,zmax,zmin=(40,730,9.5,-10) if body else (792,1184,-15,-22.7)
+                py=top+(zmax-co.z)/(zmax-zmin)*(bottom-top)
+            else:
+                # Quiet nonfunctional coating on shoulders and caps. Each facet
+                # samples its own patch; no labels or equipment get stretched.
+                u,v=[(0,0),(1,0),(1,1),(0,1)][k%4]
+                px=800+(facet%4)*300+u*280;py=1320+(facet//4)*300+v*280
+            uv.data[loop].uv=(px/2048,1-py/2048)
+    obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj)
+    return finish(obj,name,material)
+
+def spine_member(name,a,b,r,material='frame'):
+    # Terminate every truss member at the node's structural bulkhead instead of
+    # running arbitrary diagonals through the pressure hull.
+    spans=[(0.,1.)]
+    for center in [-112,0,112]:
+        if abs(b[0]-a[0])<1e-8:
+            if abs(a[0]-center)<10.2:return
+            continue
+        lo=(center-10.2-a[0])/(b[0]-a[0]);hi=(center+10.2-a[0])/(b[0]-a[0])
+        lo,hi=min(lo,hi),max(lo,hi)
+        spans=[piece for s,e in spans for piece in [(s,min(e,lo)),(max(s,hi),e)] if piece[1]-piece[0]>1e-6]
+    for s,e in spans:
+        beam(name,[a[k]+(b[k]-a[k])*s for k in range(3)],
+                  [a[k]+(b[k]-a[k])*e for k in range(3)],r,material)
+
 def tank(x,y,index,serial,missing=False):
     # An absent tank leaves an open structural cell, not free-standing cage rods.
     if missing:
@@ -246,34 +327,65 @@ def tank(x,y,index,serial,missing=False):
         for dx in [-.65,.65]:beam('EVA-grip-foot',(x+dx,y-side*6.12,h),(x+dx,y-side*6.5,h),.08,'frame',0)
         beam('EVA-grip',(x-.65,y-side*6.5,h),(x+.65,y-side*6.5,h),.10,'gold',0,12)
 
-# Three service towers along a generous open spine.
+# Three manufactured service nodes: pressure trunk, structural crosshead,
+# recessed observation deck, roof cap and fixed shoulder clevis.
 for x in [-112,0,112]:
     module='hub-%s'%x
-    cylinder('pressure-core',(x,0,0),8,37)
-    cylinder('control-deck',(x,0,17),11,8)
-    for z in [-20,-12,12,22]:
-        cylinder('collar',(x,0,z),10,1.2,'caution-paint' if z==-12 and x!=112 else 'frame')
-        ring('safety-stripe',(x,0,z+.8),10,.24)
-    for i in range(12):
-        a=i*math.tau/12
-        obj=box('window',(x+11.05*math.cos(a),11.05*math.sin(a),18),(1.7,.22,1),'lamp',.05)
-        obj.rotation_euler.z=a-math.pi/2
-    cylinder('service-stem',(x,0,-27),4,13)
+    hub_profile('pressure-trunk',x,[(-13,6.8),(-10,8.2),(-4,8.2),(2,8.2),(9.5,8.2),(12.6,9.3)])
+    hub_profile('observation-skirt',x,[(12.3,9.3),(14,10.5),(16.25,10.5)])
+    hub_profile('window-sill',x,[(16.15,10.6),(16.5,10.6)],'frame')
+    hub_profile('roof-cap',x,[(18.8,10.6),(20.3,10.6),(21.8,9.7),(22.25,7.9)])
+    hub_profile('roof-seal',x,[(21.7,9.78),(21.95,9.78)],'frame')
+    # Individual side panels leave real recessed window apertures between them.
+    side_width=2*10.5*math.tan(math.pi/8)
+    for i in range(8):
+        a=i*math.tau/8
+        column=(side_width-5.8)/2
+        for offset in [-2.9-column/2,2.9+column/2]:
+            radial_panel('observation-mullion',x,a,10.35,17.65,(column+.06,.5,2.5),offset=offset)
+        radial_panel('window-reveal',x,a,10.12,17.65,(5.8,.3,2.25),material='dark')
+        # Dark glazing sits behind the sill, header and mullion faces.
+        radial_panel('window',x,a,10.30,17.65,(5.55,.06,1.92),material='glazing')
+        for offset in [-1.65,1.65]:
+            radial_panel('window-interior-strip',x,a,10.35,16.88,(1.1,.04,.10),offset=offset,material='lamp')
+        radial_panel('skirt-panel',x,a,10.57,15.25,(side_width-.35,.12,1.2))
+    # Flush access covers, vents and roof hatch are fitted texture details.
+    for y in [-2.0,2.0]:
+        beam('roof-hatch-grip',(x+.9,y,22.6),(x+2.9,y,22.6),.09,'gold',0,12)
+        for dx in [.9,2.9]:beam('hatch-grip-foot',(x+dx,y,22.23),(x+dx,y,22.6),.07,'frame',0,12)
+    # The spine ends in four shoes and a load-spreading bulkhead on each side.
+    for side in [-1,1]:
+        hub_panel('spine-bulkhead',(x+side*8.8,0,0),(2.8,12.4,12.4))
+        for y in [-5,5]:
+            for z in [-5,5]:
+                box('spine-interface-shoe',(x+side*10.1,y,z),(1.8,1.6,1.6),'frame',.12)
+                for oy in [-.43,.43]:
+                    beam('interface-bolt',(x+side*10.95,y+oy,z-.10),(x+side*11.12,y+oy,z-.10),.15,'dark',0)
+        # The white edge plate remains part of the original station palette.
+        box('bulkhead-edge',(x+side*9.9,0,6.0),(.8,12.2,.5),'shell',.08)
+    hub_profile('lower-service-shoulder',x,[(-24,4.7),(-22.7,5.7),(-15,5.7),(-12.8,6.8)])
+    hub_profile('sump-end-seal',x,[(-24.6,4.2),(-24,4.7)],'frame')
+    side=1 if x==112 else -1
+    hub_panel('arm-load-saddle',(x,side*8.0,-9),(7.4,3.9,6.6))
+    for dx in [-2.4,2.4]:
+        hub_panel('shoulder-clevis-cheek',(x+dx,side*9.7,-9),(1.0,4.8,5.8))
+        beam('shoulder-bearing-seat',(x+dx-.65,side*10,-9),(x+dx+.65,side*10,-9),1.75,'frame',0,24)
     # Low protected fixtures at the roof edge, rather than decorative masts.
-    light('port', (x-8,-6,23),'red-light')
-    light('starboard', (x+8,6,23),'green-light')
+    for dx,y in [(-8,-6),(8,6)]:hub_panel('clearance-fixture-foot',(x+dx,y,21.65),(1.8,1.8,.5))
+    light('port', (x-8,-6,22),'red-light')
+    light('starboard', (x+8,6,22),'green-light')
 
 module='spine'
 for i in range(28):
     a=-168+i*12
     for y in [-5,5]:
-        for z in [-5,5]:beam('longeron',(a,y,z),(a+12,y,z),.4)
-        beam('diagonal',(a,y,-5),(a+12,y,5),.24)
-        beam('diagonal',(a,y,5),(a+12,y,-5),.24)
+        for z in [-5,5]:spine_member('longeron',(a,y,z),(a+12,y,z),.4)
+        spine_member('diagonal',(a,y,-5),(a+12,y,5),.24)
+        spine_member('diagonal',(a,y,5),(a+12,y,-5),.24)
     for z in [-5,5]:
-        beam('deck-brace',(a,-5,z),(a+12,5,z),.24)
-    for y in [-5,5]:beam('rib',(a,y,-5),(a,y,5),.3)
-    if i%2==0:
+        spine_member('deck-brace',(a,-5,z),(a+12,5,z),.24)
+    for y in [-5,5]:spine_member('rib',(a,y,-5),(a,y,5),.3)
+    if i%2==0 and all(abs(a-center)>11.2 for center in [-112,0,112]):
         for y in [-5,5]:
             for z in [-5,5]:
                 box('truss-splice-plate',(a,y,z),(1.5,1.3,1.3),'shell',.08)
@@ -323,12 +435,18 @@ for x,side in [(-112,-1),(0,-1),(112,1)]:
         module='arm-%s-%s'%(x,section)
         pivots[module]=[0,0,0]
         # Independently posed rigid links, authored along local +Y.
-        beam('sealed-fuel-boom',(0,0,0),(0,length,0),1.15,'shell')
+        hub_panel('sealed-fuel-boom',(0,length/2,0),(2.8,length-3,2.2))
         for dx in [-1.3,1.3]:
             beam('protected-feed',(dx,2,0),(dx,length-2,0),.22,'gold')
-        cylinder('joint',(0,0,0),2.4,3,'frame')
-        ring('joint-ring',(0,0,0),2.4,.3,'caution-paint')
+        joint=cylinder('joint',(0,0,0),2.15,4.4,'frame',24)
+        joint.rotation_euler.y=math.pi/2
+        for dx in [-2.25,2.25]:
+            cap=cylinder('bearing-end-cap',(dx,0,0),1.65,.18,'gold',24,0)
+            cap.rotation_euler.y=math.pi/2
+        rim=ring('joint-ring',(0,0,0),2.15,.16,'caution-paint')
+        rim.rotation_euler.y=math.pi/2
         if section=='wrist':
+            beam('coupler-neck',(0,3.8,0),(0,length,0),1.15,'frame',0,16)
             obj=cylinder('coupler',(0,length,0),2.4,2,'gold')
             obj.rotation_euler.x=math.pi/2
             for dx in [-2.5,2.5]:light('coupler-clearance',(dx,length,0),'white-light')
@@ -347,7 +465,7 @@ for obj in parts:
     material=obj.data.materials[0].name
     key=(group,material)
     batch=batches.setdefault(key,dict(group=group,material=material,positions=[],normals=[]))
-    if material in ['caution-paint','tank-paint','hardware-paint'] and 'uvs' not in batch:batch['uvs']=[]
+    if material in ['caution-paint','tank-paint','hardware-paint','hub-paint','station-paint'] and 'uvs' not in batch:batch['uvs']=[]
     matrix=obj.matrix_world
     normal_matrix=matrix.to_3x3().inverted().transposed()
     for tri in mesh.loop_triangles:
@@ -361,7 +479,7 @@ for obj in parts:
     evaluated.to_mesh_clear()
 data=dict(version=1,units='metres',up='Z',pivots=pivots,
           inactiveModules=['hub-112'],parkedArms=[112],
-          textures={'caution-paint':'caution-paint.png','tank-paint':'../../ships/industrial-kit/panels.png','hardware-paint':'../../ships/industrial-kit/panels.png'},
+          textures={'caution-paint':'caution-paint.png','tank-paint':'../../ships/industrial-kit/panels.png','hardware-paint':'../../ships/industrial-kit/panels.png','hub-paint':'../../ships/industrial-kit/panels.png','station-paint':'hub-surfaces.png'},
           sourceParts=[obj.name for obj in parts],tankSlots=32,installedTanks=28,
           materials={name:list(mat.diffuse_color[:3]) for name,mat in materials.items()},batches=list(batches.values()))
 runpy.run_path(str(ROOT/'tools/depot-glb.py'))['write_depot_glb'](data, OUT/'depot.glb')

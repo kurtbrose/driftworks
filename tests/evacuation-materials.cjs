@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('experiments/evacuation-scenery.js','utf8');
-const context={U:16.666666666666668,paint:{kind:'caution'},machineryPaint:{kind:'industrial'}};
+const context={U:16.666666666666668,paint:{kind:'caution'},machineryPaint:{kind:'industrial'},stationPaint:{kind:'station'}};
 vm.createContext(context);
 vm.runInContext(source.match(/var depotTextures=([^;]+);/)[0],context);
 vm.runInContext(source.slice(source.indexOf('    function buildDepot('),source.indexOf('    /** @type {ReturnType<typeof buildDepot>}'))+'\nthis.build=buildDepot;',context);
@@ -19,7 +19,7 @@ for(let i=0;i<batches.length;i++){
     assert(out.color.every(Number.isFinite));
     if(input.uvs){
         assert.equal(out.stride,8);
-        assert.equal(out.texture,input.material==='caution-paint'?context.paint:context.machineryPaint,'Freighter finishes must not sample the caution stripe image');
+        assert.equal(out.texture,input.material==='caution-paint'?context.paint:input.material==='station-paint'?context.stationPaint:context.machineryPaint,'Each fitted surface samples its own image');
         for(let v=0;v<input.uvs.length/2;v++){
             assert.equal(out.vertices[v*8+6],input.uvs[v*2]);
             assert.equal(out.vertices[v*8+7],Math.fround(1-input.uvs[v*2+1]),'Flight flipY=false textures address image rows from the top');

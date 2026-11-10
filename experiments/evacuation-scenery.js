@@ -13,7 +13,8 @@ import * as arms from './depot-arm.js';
     var status='Loading depot and civilian liners';
     var paint=new Image();paint.src=assetUrl('../assets/depots/refueling-v1/caution-paint.png');
     var machineryPaint=new Image();machineryPaint.src=assetUrl('../assets/ships/industrial-kit/panels.png');
-    /** @type {Record<string,HTMLImageElement>} */var depotTextures={'caution-paint':paint,'tank-paint':machineryPaint,'hardware-paint':machineryPaint};
+    var stationPaint=new Image();stationPaint.src=assetUrl('../assets/depots/refueling-v1/hub-surfaces.png');
+    /** @type {Record<string,HTMLImageElement>} */var depotTextures={'caution-paint':paint,'tank-paint':machineryPaint,'hardware-paint':machineryPaint,'hub-paint':machineryPaint,'station-paint':stationPaint};
     /** @typedef {{refuel:number[];batches:{offset:number;count:number;color:[number,number,number];opacity:number;emissive:number[]}[]}} Transport */
     /** @param {string} name */
     async function loadTransport(name){
