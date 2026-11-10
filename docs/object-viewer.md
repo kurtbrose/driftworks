@@ -6,7 +6,11 @@ Earlier import and capital kit tools are archived as `studies/legacy-*.html`; ol
 bookmarks redirect here and retain compatible selections and camera links.
 
 Choose fighters/bombers, the production Aegis capital hull, the three production
-freighters, or an Ellis wormhole. Choose the surrounding sky independently.
+freighters, the commuter and double-decker passenger liners, or an Ellis wormhole.
+Choose the surrounding sky independently. Liners retain their authored metre
+scale, glazing opacity and emissive material groups through the same batched
+flight exports used by the evacuation mission. These are exterior models;
+passenger accommodation is suggested rather than a complete interior.
 Freighters have a cargo/operator seed and Shuffle button; changing the seed
 preserves the camera. The wormhole is a 600 m throat at the scene origin, with
 independent local/destination skies and a side selector. It uses the shared
@@ -33,7 +37,8 @@ Wormhole inspection covers orbit, rim and near-throat views from either side;
 it does not establish acceptance for gameplay crossings or foreground lensing.
 
 Focused browser regression: serve the repository, then run
-`node tests/object-viewer-browser.cjs --visible`. Supply Playwright through the
+`node tests/object-viewer-browser.cjs`. Use the in-app browser for visual review;
+automated checks run headlessly by default. Supply Playwright through the
 existing `DRIFTWORKS_BROWSER_MODULES` development-only setting if it is outside
 the repository. `--measure` records matched asset-on/off CPU submission and
 browser cadence in the actual viewer. Captures and measurements go under

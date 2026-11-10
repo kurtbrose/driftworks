@@ -14,7 +14,12 @@ const families={fighters,capitals:[{id:'aegis',name:'Aegis dreadnaught',kind:'ca
  {id:'container',name:'Container carrier',kind:'freighter',description:'Compact carrier with individually varied cargo boxes. Uses the baked flight mesh and per-vessel cargo seed.'},
  {id:'mixed',name:'Container feeder',kind:'freighter',description:'Mixed freight configuration. Shuffle the seed to change its cargo and operator.'},
  {id:'fluid',name:'Bulk tanker',kind:'freighter',description:'Dedicated fluid carrier with production operator liveries.'}
-],wormholes:[{id:'ellis',name:'Ellis wormhole',kind:'wormhole',description:'A spherical throat, inspected as an object from either side. Background lensing uses the shared production Ellis calculation.'}]};
+],liners:[{id:'commuter',name:'Commuter passenger liner',kind:'liner',description:'72 m passenger hull with a single cabin deck, human-scale windows and ventral service equipment.'},{id:'double-decker',name:'Double-decker passenger liner',kind:'liner',description:'180 m passenger hull with two cabin decks, warm cabin glazing and three main drives.'}],wormholes:[{id:'ellis',name:'Ellis wormhole',kind:'wormhole',description:'A spherical throat, inspected as an object from either side. Background lensing uses the shared production Ellis calculation.'}]};
+// The same material-batched flight copies used by evacuationScenery. Convert
+// metre positions once; keep normals, glazing opacity and emissive groups.
+const linerAssets=new Map();
+function liner(id){if(!linerAssets.has(id))linerAssets.set(id,(async()=>{const base='../assets/ships/civilian-airliners/'+id+'-flight',request=async suffix=>{const response=await fetch(DW.assetUrl(base+suffix));if(!response.ok)throw Error('Passenger liner unavailable: '+id+suffix);return response;};const [manifest,binary]=await Promise.all([request('.json').then(r=>r.json()),request('.bin').then(r=>r.arrayBuffer())]);const vertices=new Float32Array(binary);for(let i=0;i<vertices.length;i+=6)for(let axis=0;axis<3;axis++)vertices[i+axis]/=U;return manifest.batches.map(b=>({vertices:new Float32Array(binary,b.offset,b.count),color:b.color,opacity:b.opacity,finish:b.emissive.some(v=>v>0)?7:0,staticGeometry:true}));})().catch(e=>{linerAssets.delete(id);throw e;}));return linerAssets.get(id);}
+function linerEngines(id){const large=id==='double-decker',w=large?30:18,l=large?180:72,h=large?16.5:11;return (large?[-.3,0,.3]:[-.28,.28]).map((x,i)=>[x*w,-l*.532-.16,-h*.03+(large&&i===1?h*.15:0),w*(large?.14:.145)*.85]);}
 const norm=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 function camera(){const back=[Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)],right=norm(cross([0,0,1],back));pose={eye:center.map((x,i)=>x+back[i]*distance),right,up:cross(back,right),back};scene.setSurfaceCamera(pose);}
@@ -41,12 +46,13 @@ async function selectObject(restore=false,preserve=false){
   if(entry.kind==='fighter'){const model=DW.shipPackModels.find(entry.id).model,textures=await DW.shipPackModels.loadTextures([entry.id]);result=[DW.shipPackModels.sourceGeometry(model,[identity],U,textures.get(model.id))];result.forEach(b=>b.staticGeometry=true);}
   else if(entry.kind==='capital'){if(!capitalReady)capitalReady=DW.aegisFlight.load().catch(e=>{capitalReady=null;throw e;});await capitalReady;if(ticket!==revision)return;nextRig=DW.aegisFlight.create();result=nextRig.geometry();}
   else if(entry.kind==='freighter'){const {meta}=await freight();if(ticket!==revision)return;cargoAsset=meta;if(!meta.variants[entry.id])throw Error('Unknown flight freighter variant: '+entry.id);result=DW.convoyScenery.preview(entry.id).map(b=>({...b,cargoSeed:seed}));}
+  else if(entry.kind==='liner')result=await liner(entry.id);
   if(ticket!==revision)return;batches=result;rig=nextRig;
   if(entry.kind==='wormhole'){center=[0,0,0];homeCenter=center.slice();radius=300/U;el('dimensions').textContent='600 m throat diameter';}else bounds();
   preset();fit();
   if(preserve){({center,distance,yaw,pitch}=savedCamera);camera();}
   if(restore&&query.has('camera')){const values=query.get('camera').split(',').map(Number);if(values.length===6&&values.every(Number.isFinite)&&values[3]>0&&Math.abs(values[5])<Math.PI/2){center=values.slice(0,3);[distance,yaw,pitch]=values.slice(3);camera();}}
-  el('fly').href='../experiments/flight.html'+(entry.kind==='capital'?'?aegis=1':entry.kind==='freighter'?'?mission=convoy':entry.kind==='wormhole'?'?mission=ellis':'');
+  el('fly').href='../experiments/flight.html'+(entry.kind==='capital'?'?aegis=1':entry.kind==='freighter'?'?mission=convoy':entry.kind==='liner'?'?mission=evacuation':entry.kind==='wormhole'?'?mission=ellis':'');
   scene.setStudyActors(batches);preparationMs=performance.now()-preparationStart;loading=false;updateURL();
  }catch(e){if(ticket!==revision)return;loading=false;error=String(e);el('status').textContent=error;console.error(e);}
 }
@@ -75,6 +81,7 @@ function frame(now){requestAnimationFrame(frame);if(document.hidden||window.obje
  sky.render(pose,1,false,dt,0,{position:[0,0,0],radius:worm?300:0,sky:destination,localSky:local});
  let effects=[];
  if(!loading&&el('engines').checked){if(rig)effects=rig.effects(pose,false);else if(entry?.kind==='fighter')effects=[DW.shipPackModels.engineGeometry([{index:0,hp:1,pose:identity}],entry.id,1,U,pose,now/1000)];else if(entry?.kind==='freighter'&&cargoAsset)effects=[DW.shipRender.engineGeometry([{index:0,hp:1,pose:identity}],'',1,U,pose,now/1000,cargoAsset.variants[entry.id].engineMouths)];}
+ if(!loading&&el('engines').checked&&entry?.kind==='liner')effects=[DW.shipRender.engineGeometry([{index:0,hp:1,pose:identity}],'',1,U,pose,now/1000,linerEngines(entry.id))];
  scene.setStudyEffects(effects);
  scene.sync(world);scene.render(world,1,0,dt);samples.push(performance.now()-start);if(samples.length>120)samples.shift();
  if(!error){const stats=scene.getRenderStats();el('status').textContent=loading?'Loading object…':`${stats.drawCalls} draws · ${stats.triangles.toLocaleString()} triangles · ${host.clientWidth} × ${host.clientHeight} CSS px\n${worm?'Production Ellis sky optics · orbit / zoom around throat':'Production flight renderer · authored scale'}`;}
