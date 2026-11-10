@@ -1,7 +1,7 @@
 // Adapter for our offline depot GLB profile, not a general glTF loader.
 // Flight consumes unindexed Z-up batches; Three's study uses GLTFLoader directly.
 /** @typedef {{group:string;material:string;positions:Float32Array;normals:Float32Array;uvs?:Float32Array}} DepotBatch */
-/** @typedef {{materials:Record<string,[number,number,number]>;batches:DepotBatch[]}} DepotAsset */
+/** @typedef {{materials:Record<string,[number,number,number]>;textures:Record<string,string>;batches:DepotBatch[]}} DepotAsset */
 /** @param {ArrayBuffer} bytes @returns {DepotAsset} */
 export function decodeDepot(bytes) {
     const view=new DataView(bytes);

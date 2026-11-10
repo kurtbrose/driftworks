@@ -46,6 +46,9 @@ assert.equal(data.sourceParts.filter(name=>name.includes('/rack-corner-clearance
 assert(!data.sourceParts.some(name=>/rack-upper-corner|corner-marker-support|\/cradle/.test(name)));
 assert.equal(data.sourceParts.filter(name=>name.includes('/isolated-branch')).length,4);
 assert.equal(data.sourceParts.filter(name=>name.includes('/tank-foot')).length,56);
+for(const [part,count] of [['transfer-isolation-valve',28],['bank-transfer-manifold',8],['bank-main-junction',8],['tank-row-collector',16],['transfer-pump-cassette',16],['pump-impact-shield',8],['pump-inlet',16]]){
+  assert.equal(data.sourceParts.filter(name=>name.split('/')[1].replace(/\.\d+$/,'')===part).length,count,part+' is present in every bank');
+}
 assert(data.sourceParts.some(name=>name.includes('/coating-loss')));
 assert(data.sourceParts.some(name=>name.includes('/replacement-panel')));
 for(const name of ['red-light','green-light','white-light','safety-yellow','safety-orange'])assert(data.materials[name]);
@@ -64,10 +67,10 @@ for (const batch of data.batches) {
   assert(batch.positions.every(Number.isFinite));
   assert(batch.normals.every(Number.isFinite));
   assert(data.materials[batch.material]);
-  if(batch.material==='caution-paint'){
+  if(data.textures[batch.material]){
     assert.equal(batch.uvs.length,batch.positions.length/3*2);
     assert(batch.uvs.every(Number.isFinite));
-    assert.equal(data.textures[batch.material],'caution-paint.png');
+    assert(['caution-paint.png','../../ships/industrial-kit/panels.png'].includes(data.textures[batch.material]));
   }
   for (let i=0;i<batch.normals.length;i+=9) {
     if (Math.hypot(...batch.normals.slice(i,i+3).map((v,k)=>v-batch.normals[i+3+k]))>.001) smoothTriangles++;

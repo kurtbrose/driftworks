@@ -1312,7 +1312,7 @@
   "assets/characters/quaternius-universal-base-characters/runtime/packed/male-head.json": "20111d3d2bd6",
   "assets/characters/quaternius-universal-base-characters/runtime/packed/male-skin.webp": "9c4a1a27c2af",
   "assets/depots/refueling-v1/caution-paint.png": "a8b17b3d7215",
-  "assets/depots/refueling-v1/depot.glb": "ea765a5c8d84",
+  "assets/depots/refueling-v1/depot.glb": "2688d82620f2",
   "assets/environments/kenney-car-kit/provenance.json": "62a08bfbbc15",
   "assets/environments/kenney-car-kit/tractor.glb": "b9debcc342cd",
   "assets/environments/kenney-car-kit/truck-flat.glb": "eb93ab8336d9",

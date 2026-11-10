@@ -16,9 +16,17 @@ def write_depot_glb(data, output):
                nodes=[dict(name='depot', rotation=[-math.sqrt(.5), 0, 0, math.sqrt(.5)], children=[])],
                meshes=[], materials=[], accessors=[], bufferViews=[],
                extras={k: v for k, v in data.items() if k != 'batches'},
-               images=[dict(uri='caution-paint.png')],
+               images=[],
                samplers=[dict(wrapS=10497, wrapT=10497)],
-               textures=[dict(source=0, sampler=0)])
+               textures=[])
+    texture_ids={}
+    for name,uri in data.get('textures',{}).items():
+        existing=next((i for i,image in enumerate(doc['images']) if image['uri']==uri),None)
+        if existing is None:
+            existing=len(doc['images'])
+            doc['images'].append(dict(uri=uri))
+            doc['textures'].append(dict(source=existing,sampler=0))
+        texture_ids[name]=existing
 
     def accessor(values, width, kind=5126):
         while len(binary) % 4:
@@ -40,8 +48,8 @@ def write_depot_glb(data, output):
         pbr = dict(baseColorFactor=color+[1], metallicFactor=.12 if paint else .1 if name == 'dark' else .65,
                    roughnessFactor=.78 if paint else .46)
         material = dict(name=name, pbrMetallicRoughness=pbr)
-        if name == 'caution-paint':
-            pbr.update(baseColorTexture=dict(index=0), metallicFactor=.1, roughnessFactor=.8)
+        if name in texture_ids:
+            pbr.update(baseColorTexture=dict(index=texture_ids[name]), metallicFactor=.1 if name=='caution-paint' else .22, roughnessFactor=.8)
         if name == 'lamp' or name.endswith('-light'):
             material['emissiveFactor'] = color
             material['extensions'] = {'KHR_materials_emissive_strength': dict(emissiveStrength=1 if name == 'lamp' else 2)}

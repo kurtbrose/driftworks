@@ -7,11 +7,13 @@ import * as arms from './depot-arm.js';
     var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
     /** @typedef {import('./types').Batch} Batch */
     /** @typedef {import('./depot-asset').DepotBatch} SourceBatch */
-    /** @typedef {{materials:Record<string,[number,number,number]>;batches:SourceBatch[]}} Asset */
+    /** @typedef {{materials:Record<string,[number,number,number]>;textures:Record<string,string>;batches:SourceBatch[]}} Asset */
     /** @type {{batches:Batch[];port:number[]}[]} */var transports=[];
     /** @type {import('./types').ArtCraft[]} */var exhaust=[];
     var status='Loading depot and civilian liners';
     var paint=new Image();paint.src=assetUrl('../assets/depots/refueling-v1/caution-paint.png');
+    var machineryPaint=new Image();machineryPaint.src=assetUrl('../assets/ships/industrial-kit/panels.png');
+    /** @type {Record<string,HTMLImageElement>} */var depotTextures={'caution-paint':paint,'tank-paint':machineryPaint,'hardware-paint':machineryPaint};
     /** @typedef {{refuel:number[];batches:{offset:number;count:number;color:[number,number,number];opacity:number;emissive:number[]}[]}} Transport */
     /** @param {string} name */
     async function loadTransport(name){
@@ -24,10 +26,13 @@ import * as arms from './depot-arm.js';
     /** @param {Asset} asset */
     function buildDepot(asset){return asset.batches.map(function(b){
         var stride=b.uvs?8:6,vertices=new Float32Array(b.positions.length/3*stride);
-        for(var i=0;i<b.positions.length/3;i++){var j=i*3,k=i*stride;for(var a=0;a<3;a++){vertices[k+a]=b.positions[j+a]/U;vertices[k+3+a]=b.normals[j+a];}if(b.uvs){vertices[k+6]=b.uvs[i*2];vertices[k+7]=b.uvs[i*2+1];}}
+        // decodeDepot restores Blender's bottom-origin UVs; flight textures use
+        // flipY=false, so image rows need the top-origin convention here.
+        for(var i=0;i<b.positions.length/3;i++){var j=i*3,k=i*stride;for(var a=0;a<3;a++){vertices[k+a]=b.positions[j+a]/U;vertices[k+3+a]=b.normals[j+a];}if(b.uvs){vertices[k+6]=b.uvs[i*2];vertices[k+7]=1-b.uvs[i*2+1];}}
         // Blender's palette is linear RGB; study actor colors use display sRGB.
         var color=/** @type {[number,number,number]} */(asset.materials[b.material].map(function(v){return v<=.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-.055;}));
-        return {batch:/** @type {Batch} */({vertices:vertices,color:color,staticGeometry:true,stride:stride,texture:b.uvs?paint:undefined}),group:b.group||''};
+        var texture=depotTextures[b.material];
+        return {batch:/** @type {Batch} */({vertices:vertices,color:color,staticGeometry:true,stride:stride,texture:b.uvs?texture:undefined}),group:b.group||''};
     });}
     /** @type {ReturnType<typeof buildDepot>} */var modules=[];
     if(DW.flightMissions.current().id==='evacuation'){

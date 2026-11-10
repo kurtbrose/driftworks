@@ -1,5 +1,70 @@
 # Refueling depot prototype
 
+## Freighter-family finish and transfer equipment (2026-11-09)
+
+The storage tanks now reuse the current industrial freighters' neutral barrel
+and projected end-cap artwork from `assets/ships/industrial-kit/panels.png`.
+The same atlas supplies the service-cassette faces on the bank pumps and removable
+impact shields. It is referenced locally by the GLB and flight scenery adapter;
+no new texture, runtime generator or network dependency is required. Tank UVs
+address the original atlas directly, without the freighter viewer's canvas paint
+variants. Orange depot bands, individual tank numbers, coating repairs, open
+racks and four empty slots remain specific to the station.
+
+Each bank has two row collectors, a common transfer manifold, paired pump
+cassettes and a connected riser to the spine fuel main. Installed tanks have
+isolation valves and short EVA handholds; absent tanks retain connected capped
+branches. Pumps mount on existing rack crossmembers, with fuel inlets below and
+an impact shield on standoffs above. These are authored equipment details, not
+fuel-transfer quantities or new mission rules. The 336 m spine, tank dimensions,
+nine independent arm pivots and inactive hub C are retained.
+
+The shell is continuous across the barrel and ellipsoidal heads. Head graphics
+use planar projection so stencils do not pinch at the poles. Small added pipes,
+grips and mounts avoid unnecessary bevel subdivisions; structural modules and
+moving arms retain their existing batching boundaries. The offline builder uses
+direct mesh datablocks for repeated boxes and cylinders to avoid repeated
+whole-scene operator updates. `depot.blend` remains the editable source.
+
+The flight adapter converts the decoder's Blender UVs to top-origin image UVs
+for the production renderer's `flipY=false` textures. This matters for the
+asymmetric tank/service sheet; the old repeating caution texture concealed the
+orientation mismatch. The material regression checks image selection and every
+transferred UV component.
+
+The final indexed export contains 390,625 triangles, 474,035 shared vertex tuples,
+146 material/module batches and 14,692,192 bytes. The previous export had 375,793
+triangles, 439,838 tuples, 138 batches and 13,480,732 bytes. The first detailed
+bake had 444,513 triangles; simplifying only the added narrow pipes, grips and
+mounts removed 53,888 triangles without changing the tank silhouette or artwork.
+
+Matched frozen evacuation-mission comparison, foreground Chrome, 1500 x 1000,
+DPR 1, default render scale, intact planet, both initial liner poses and mission
+fighters retained, fixed 45-degree overview camera 440/-480/310 m from the depot:
+
+| Depot | Main draws | Main triangles | CPU submission median / p95 | Frame median / p95 |
+| --- | ---: | ---: | ---: | ---: |
+| Previous | 159 | 970,898 | 7.6 / 13.1 ms | 13.3 / 13.5 ms |
+| Updated | 167 | 985,730 | 7.9 / 12.1 ms | 13.3 / 13.5 ms |
+
+Each comparison alternated scenery off/on/on/off, with 25 warm-up and 60 sampled
+frames per leg (120 measured frames per visibility state). With evacuation
+scenery off, both samples submitted 3 draws / 5,288 triangles. This switch hides
+the depot and liners together; the before/after on-state isolates the depot
+revision. Timings include production sky/main rendering and CPU scene preparation,
+not GPU completion. Simulation was frozen, so this establishes the asset's
+rendering cost in the actual mission, not a moving combat stress budget.
+
+Visual comparison covered the existing tanker whole ship, valve branch and pump
+shield; the depot's matched overview, rack, plan and approach views; and production
+mission overview, tank rack, underside and berth views. A production atlas-row
+error found during comparison was corrected before the final captures.
+Both real liners were also inspected coupled during the manual fueling hold and
+after arm retraction at departure in the live depot cycle. Existing headless
+cycle and mission checks cover contact, phase ordering and release behavior.
+Temporary labeled captures and raw measurements are in ignored
+`output/depot-refresh/`.
+
 Original Driftworks geometry, guided by the user-supplied depot concept image.
 The reference image is not embedded in the asset or used as a texture.
 

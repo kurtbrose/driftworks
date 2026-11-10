@@ -1,8 +1,9 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('experiments/evacuation-scenery.js','utf8');
-const context={U:16.666666666666668,paint:{}};
+const context={U:16.666666666666668,paint:{kind:'caution'},machineryPaint:{kind:'industrial'}};
 vm.createContext(context);
+vm.runInContext(source.match(/var depotTextures=([^;]+);/)[0],context);
 vm.runInContext(source.slice(source.indexOf('    function buildDepot('),source.indexOf('    /** @type {ReturnType<typeof buildDepot>}'))+'\nthis.build=buildDepot;',context);
 const asset = require('./depot-asset.cjs');
 const before=JSON.stringify(asset.materials),batches=context.build(asset);
@@ -16,5 +17,13 @@ for(let i=0;i<batches.length;i++){
     assert.equal(out.vertices.length,input.positions.length/3*(input.uvs?8:6));
     assert.equal(out.staticGeometry,true);
     assert(out.color.every(Number.isFinite));
+    if(input.uvs){
+        assert.equal(out.stride,8);
+        assert.equal(out.texture,input.material==='caution-paint'?context.paint:context.machineryPaint,'Freighter finishes must not sample the caution stripe image');
+        for(let v=0;v<input.uvs.length/2;v++){
+            assert.equal(out.vertices[v*8+6],input.uvs[v*2]);
+            assert.equal(out.vertices[v*8+7],Math.fround(1-input.uvs[v*2+1]),'Flight flipY=false textures address image rows from the top');
+        }
+    }else assert.equal(out.texture,undefined);
 }
-console.log('PASS evacuation depot colors: linear palette converts to display sRGB, safety orange and immutable source colors');
+console.log('PASS evacuation depot materials: linear palette, safety orange, shared freighter/caution texture routing and preserved UVs');
