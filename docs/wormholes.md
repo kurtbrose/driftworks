@@ -163,8 +163,11 @@ Bastion's mission main-battery mask remains in place: this is still a portal att
 not a visible pursuing-capital encounter.
 
 Fired rounds are independent batches, not attached hull effects. Registered
-capital rounds are selected in the observer's space and bypass the hull owner's
-mask; engines and shields retain their owner. This prevents transferred rounds
+capital rounds and impacts retain their physical space and individual optical
+centers in every observer view, bypassing the hull owner's mask. Freighters
+also use individual optical centers for hulls and engines when links are present;
+model-local GPU buffers remain shared. Unlinked convoys retain instancing.
+Engines and shields retain their hull owner. This prevents transferred rounds
 from being drawn in their launch space or disappearing with their firing hull.
 
 Fighters in adjacent spaces can pursue through a declared mouth when a target is

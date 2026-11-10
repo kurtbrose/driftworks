@@ -26,7 +26,7 @@
     /** @type {WeakMap<import('./types').ConvoyState,import('./types').RenderPlacement>} */var cargoPlacements=new WeakMap();
     /** @param {import('./types').ConvoyState} state */function cargoPlacement(state){
         var p=cargoPlacements.get(state);if(!p){p={};cargoPlacements.set(state,p);}
-        DW.wormholes.clear(p);
+        DW.wormholes.clear(p);p.region=0;
         var exit=state.evacuation&&state.elapsed>=state.evacuation.rescueAt?state.evacuation.exit:null;
         if(exit)DW.wormholes.mouth(p,exit.position,exit.normal,exit.radiusM/U*DW.wormholes.phase(state.elapsed,exit).amount,'back');
         return p;
@@ -111,7 +111,7 @@
         var state=combat.convoy,placement=cargoPlacement(state);
         var effects=state.ships.filter(function(s){return s.hull>0&&(!state.evacuation||!s.arrived);}).map(function(s,index){
             var axes=DW.fleetGuidance.frame(s.forward||[0,1,0]);
-            var batch=DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:axes.right,back:axes.back,up:axes.up,velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);DW.wormholes.own([batch],placement);return batch;
+            var batch=DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:axes.right,back:axes.back,up:axes.up,velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);DW.wormholes.own([batch],Object.assign({},placement,{lensCenter:s.position,lensRadius:100}));return batch;
         });
         var portals=[state.arrivalPortal,state.evacuation?state.evacuation.exit:undefined];
         if(view.region&&combat.wormholes)portals=combat.wormholes.flatMap(function(link){var mouth=link.mouths.find(function(m){return m.space===view.region;});return mouth?[{position:mouth.position.map(function(v){return v/U;}),radiusM:mouth.radius,opensAt:link.lifecycle&&link.lifecycle.opensAt||0,closesAt:link.lifecycle&&link.lifecycle.closesAt||Infinity,spawned:true}]:[];});
@@ -144,7 +144,18 @@
         return effects;
     },geometry:function(combat){
         if(!combat.convoy||!this.visible)return [];
-        var state=combat.convoy,key=state.ships.map(function(s){return s.id+':'+s.model+':'+(s.hull>0&&(!state.evacuation||!s.arrived)?'1':'0');}).join('|'),cached=cache.get(state);
+        var state=combat.convoy;
+        if(combat.wormholes&&combat.wormholes.length){
+            // A formation has no single optical image. Keep immutable model
+            // buffers shared, but place each freighter in its own finite image.
+            var owner=cargoPlacement(state);
+            return state.ships.filter(function(ship){return ship.hull>0&&(!state.evacuation||!ship.arrived);}).flatMap(function(ship){
+                var axes=DW.fleetGuidance.frame(ship.forward||[0,1,0]),basis=new Float32Array(axes.right.concat(axes.back.map(function(v){return -v;}),axes.up));
+                var placement=Object.assign({},owner,{lensCenter:ship.position,lensRadius:100});
+                return (models[ship.model]||[]).map(function(batch){return Object.assign({},batch,{origin:ship.position,basis:basis,cargoSeed:cargoRecipes.cargoSeed(ship.id),placement:placement});});
+            });
+        }
+        var key=state.ships.map(function(s){return s.id+':'+s.model+':'+(s.hull>0&&(!state.evacuation||!s.arrived)?'1':'0');}).join('|'),cached=cache.get(state);
         if(!cached||cached.key!==key){
             /** @type {Batch[]} */var batches=[];
             Object.keys(models).forEach(function(name){

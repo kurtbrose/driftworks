@@ -56,7 +56,9 @@ assert.equal(rig.telemetry().capitals[0].shots,shotsBefore,'Point defense must n
 assert(rig.telemetry().mounts.filter(m=>m.kind!=='heavy').every(m=>m.targetId!==target.id));
 target.pose.region=0;DW.flightSim.collisionChanged(view.combat);
 for(let i=0;i<600;i++)rig.step(1/30,view);
-const liveEffects=rig.effects(view.state,false),rounds=liveEffects.filter(batch=>batch.independent);assert(rounds.some(batch=>batch.vertices.length>0),'Actual capital rounds reach the effect renderer');assert(rounds.every(batch=>!batch.placement&&(batch.region||0)===0),'Rounds own their physical space rather than the firing hull mask');
+const liveEffects=rig.effects(view.state,false),rounds=liveEffects.filter(batch=>batch.independent);assert(rounds.some(batch=>batch.vertices.length>0),'Actual capital rounds reach the effect renderer');assert(rounds.every(batch=>!batch.placement&&batch.lensCenter),'Rounds own their physical space and optical center rather than the firing hull mask');
+assert(rounds.some(batch=>batch.region===1&&batch.vertices.length),'Remote capital rounds are submitted through the mouth before crossing');
+const returnRounds=rig.effects({...view.state,region:1},false).filter(batch=>batch.independent);assert(returnRounds.some(batch=>batch.region===0&&batch.vertices.length),'Local rounds remain visible to the return observer');
 const report=rig.telemetry();assert(report.shots>0&&report.hits>0,'Bastion provides actual point-defense support after arriving');assert(target.hp<10000);assert.equal(report.launches,0);
 assert(report.mounts.slice(0,24).filter(m=>m.kind==='heavy').every(m=>m.shots===0),'Bastion does not fire at remote capital coordinates');
 view.combat.enemies=view.combat.enemies.filter(ship=>ship.team==='ally');DW.flightSim.collisionChanged(view.combat);
@@ -67,6 +69,14 @@ const rayStart=remoteState.position.map((v,k)=>v+(k===0?2000/U:0)),rayEnd=remote
 const remoteRound={region:1,position:rayStart,direction:[-1,0,0],weapon:DW.retailWeapons[0],age:0};
 const remoteContact=rig.hit(rayStart,rayEnd,remoteRound);assert(remoteContact,'Remote capital participates in collision in its own space');
 const integrityBefore=remoteState.integrity;assert(rig.damage(remoteContact,10,view.combat,1));assert(remoteState.integrity<integrityBefore,'Region-aware impact damages the remote capital');
+// Actual freighter assets retain shared buffers but own distinct optical images.
+const root=require('node:path').join(__dirname,'..'),meta=JSON.parse(fs.readFileSync(require('node:path').join(root,'assets/ships/industrial-kit/convoy-flight.json'),'utf8')),bytes=fs.readFileSync(require('node:path').join(root,'assets/ships/industrial-kit/convoy-flight.bin'));
+DW.convoyScenery.install(meta,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
+const cargo=DW.convoyScenery.geometry(view.combat),liveCargo=view.combat.convoy.ships.filter(ship=>ship.hull>0&&!ship.arrived);
+assert(cargo.length&&liveCargo.length);
+for(const ship of liveCargo){const parts=cargo.filter(batch=>batch.placement.lensCenter===ship.position);assert(parts.length,'Each freighter has its own return-view image');assert(parts.every(batch=>batch.placement.region===0&&!batch.instanceOffsets&&batch.basis.length===9));}
+const repeatCargo=DW.convoyScenery.geometry(view.combat);assert(cargo.every((batch,i)=>batch.vertices===repeatCargo[i].vertices),'Freighter optical images reuse immutable mesh buffers');
+const cargoEffects=DW.convoyScenery.effects(view.combat,{...view.state,region:1});assert(cargoEffects.filter(batch=>batch.placement).every(batch=>liveCargo.some(ship=>ship.position===batch.placement.lensCenter)),'Freighter engines share their ship optical center');
 const initial=b.position.slice();DW.convoyBattle.updateEvacuation(view.combat,1);assert.notDeepEqual(rig.telemetry().capitals[0].position,initial,'Renderer observes mission-owned movement');
 flight.reset();const reset=flight.snapshot();rig.reset(reset.combat);assert.equal(rig.geometry().length,0);assert(rig.telemetry().capitals.every(ship=>ship.integrity===20000));
 reset.combat.convoy.complete=true;const shots=rig.telemetry().shots;rig.step(1/30,reset);assert.equal(rig.telemetry().shots,shots);
