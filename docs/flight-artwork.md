@@ -315,3 +315,60 @@ median browser cadence. This frozen embedded-browser sample is not GPU timing
 or a fleet combat benchmark. Matched captures and measurements are in ignored
 output/impact-light/. The flight menu was checked for the independent toggle
 and Heavy preset with barrel heat disabled.
+
+
+### Overhead battle performance audit
+
+The full production `mission=battle&view=overhead` scene was profiled at commit
+4432ba01 with concurrent working changes identified by source hashes in ignored
+`output/battle-performance/sources.json`. This mission includes 30 fighters,
+the asteroid and its attached machinery, and the background mothership in
+addition to the two Aegis capitals. This audit changes no runtime settings or art.
+
+The foreground embedded browser used a 1280 x 720 viewport, DPR 1.5, 1920 x 1080
+backing, uncapped rendering, and an RTX 3070 Ti through ANGLE/D3D11. A frozen
+23.34 s combat snapshot used 10 warm-up and 50 measured frames per treatment,
+then the treatments in reverse order (100 samples per treatment). Camera,
+resolution and combat state stayed fixed; the main-scene GPU timer reported
+valid, non-disjoint results. CPU includes preparation, sky and scene submission;
+GPU queries cover the main scene and exclude the separate sky submission.
+
+| Treatment | CPU median / p95 (ms) | Main-scene GPU median / p95 (ms) |
+| --- | --- | --- |
+| Current | 28.6 / 32.4 | 12.0 / 15.0 |
+| Heavy | 30.5 / 33.8 | 11.9 / 14.7 |
+| Muzzle illumination only | 28.2 / 32.2 | 11.1 / 14.2 |
+| Impact illumination only | 28.6 / 31.3 | 11.2 / 15.3 |
+| Wakes only | 30.2 / 33.6 | 11.5 / 15.1 |
+| Layered impacts only | 28.3 / 30.8 | 11.8 / 15.1 |
+
+All six submitted 922 draws and retained the same 52 explosion events. Heavy
+added 1,070 effect triangles; lighting added no geometry. Differences below
+roughly a millisecond should not be treated as reliable speedups. Wakes added
+about 1.6 ms CPU, while illumination was near baseline in this sampled view.
+
+A separate frozen 31.15 s snapshot used the same mirrored sampling protocol:
+
+| Rendering control | CPU median / p95 (ms) | Draws | Triangles |
+| --- | --- | --- | --- |
+| Current | 30.6 / 33.0 | 962 | 606,238 |
+| Heavy | 32.5 / 35.1 | 962 | 607,492 |
+| Explosion events removed | 22.8 / 26.0 | 786 | 598,728 |
+| Asteroid removed, also omitting its attached machinery | 19.9 / 22.1 | 566 | 238,111 |
+| Background mothership removed | 30.7 / 33.6 | 953 | 575,346 |
+
+Removal controls diagnose costs; they are not proposed gameplay changes or
+appearance-preserving optimizations. The live Heavy sample preceding the second
+freeze had a 53.1 ms median frame interval, 45.0 ms median CPU frame, 9.2 ms
+fighter/session simulation, 3.3 ms capital update, and 30.6 ms presentation.
+Simulation p95 was 63.7 ms, so render optimization alone will not remove all
+stutters. Median/p95 stages are independent distributions and are not additive.
+
+The measured bottleneck is predominantly main-thread work, with expensive
+scenery submission and explosion preparation/submission already present in
+Current. Non-evacuation capital hits currently request the full ship-destruction
+effect, including fragments retained up to 5.5 seconds. Candidates for a later
+appearance-reviewed optimization are batching attached machinery, a dedicated
+capital-strike effect instead of full destruction per hit, cheaper wake geometry
+preparation, and a separate fighter-simulation hotspot audit. Do not infer that
+the earlier isolated close-view timings establish full-battle readiness.
