@@ -225,7 +225,7 @@
             return false;
         });
         var skybox = DW.flightSkybox.create(host);
-        ready=Promise.all([ready,skybox.ready]).then(function(results){return results[0]&&results[1];}).catch(function(error){get('art-credit').textContent=String(error);return false;});
+        ready=Promise.all([ready,skybox.ready]).then(function(results){return results[0]&&results[1];}).catch(function(/** @type {unknown} */ error){get('art-credit').textContent=String(error);return false;});
         /** @type {ReturnType<typeof DW.flightSkybox.create>|null} */var xrSkybox=null;
         var shieldVisible=0,shieldWaves=0,shieldVisibleWave=false;
         var shieldParams=new URLSearchParams(typeof location==='undefined'?'':location.search),ownShield=shieldParams.get('shields')==='own',shieldDefault=!['own','whole'].includes(shieldParams.get('shields')||''),shieldEnabled=shieldParams.get('shields')!=='off',shieldTracker=DW.flightShields?DW.flightShields.tracker():null;

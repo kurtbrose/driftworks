@@ -214,9 +214,9 @@
             return [...new Set(ids)];
         }
         /** @param {number} value */ function setStyle(value) { style = Number.isInteger(value) && value >= 0 && value < options.length ? value : 7; if (definitions)
-            load(rootId()).catch(function (error) { canvas.dataset.environment = String(error); }); }
+            load(rootId()).catch(function (/** @type {unknown} */ error) { canvas.dataset.environment = String(error); }); }
         var ready = catalog().then(function (data) { if (data.version !== 1)
-            throw Error("Unsupported baked environment catalog"); definitions = data; return Promise.all(required().map(load)); }).then(function () { canvas.dataset.environment = "ready"; canvas.dataset.cube = "ready"; canvas.dataset.linkedSky = "ready"; canvas.dataset.bridgeSky = "ellis"; return true; }).catch(function (error) { canvas.dataset.environment = "error"; throw error; });
+            throw Error("Unsupported baked environment catalog"); definitions = data; return Promise.all(required().map(load)); }).then(function () { canvas.dataset.environment = "ready"; canvas.dataset.cube = "ready"; canvas.dataset.linkedSky = "ready"; canvas.dataset.bridgeSky = "ellis"; return true; }).catch(function (/** @type {unknown} */ error) { canvas.dataset.environment = "error"; throw error; });
         var params = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
         var controls = /** @type {HTMLDivElement|null} */ (null);
         if (mission.sky.bakedImpact && (!config || config.cueControls !== false) && !external) {
@@ -307,7 +307,7 @@
                 }
                 var ids = [local, dest1, dest2, next, mission.sky.bakedImpact?definitions.impact[1]:local,defaultLocal];
                 if (ids.some(function (id) { var entry = maps.get(id); if (!entry) {
-                    load(id).catch(function (error) { canvas.dataset.environment = String(error); });
+                    load(id).catch(function (/** @type {unknown} */ error) { canvas.dataset.environment = String(error); });
                     return true;
                 } return !entry.ready; })) {
                     gl.clearColor(0, 0, 0, 1);

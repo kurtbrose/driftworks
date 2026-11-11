@@ -277,6 +277,7 @@
         }
         return null;
     }
+    /** @type {WeakMap<Guns,{age:number;heat:number}>} */
     var muzzlePulses=new WeakMap();
     var visualOptions={compactHeads:false,wakes:false,muzzleLight:false,layeredImpacts:false,barrelHeat:false,impactLight:false,mode:'current',radius:3,exposure:.8},visualInterval=1/60,visualTime=NaN;
     /** Session-only rendering preferences; never alter gun or weapon state.

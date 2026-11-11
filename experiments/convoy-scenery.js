@@ -3,6 +3,7 @@
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
     /** @typedef {import('./types').Batch} Batch */
     /** @type {Record<string,Batch[]>} */var models={};
+    /** @type {{cargoSeed:(id:string)=>number}} */
     var cargoRecipes={cargoSeed:function(id){var seed=17;for(var i=0;i<String(id).length;i++)seed=(seed*31+String(id).charCodeAt(i))%4093;return seed;}};
     /** @type {Record<string,number[][]>} */var mouths={};
     /** Authored factory origins, metre scale, normals and atlas UVs; shared GPU buffers.
@@ -37,7 +38,7 @@
             fetch(assetUrl('../assets/ships/industrial-kit/convoy-flight.json')).then(function(r){if(!r.ok)throw Error(r.statusText);return /** @type {Promise<import('./types').ConvoyAsset>} */(r.json());}),
             fetch(assetUrl('../assets/ships/industrial-kit/convoy-flight.bin')).then(function(r){if(!r.ok)throw Error(r.statusText);return r.arrayBuffer();}),
             new Promise(/** @param {(value:boolean)=>void} resolve @param {(reason:Error)=>void} reject */function(resolve,reject){image.onload=function(){resolve(true);};image.onerror=function(){reject(Error('Industrial paint atlas unavailable'));};image.src=assetUrl('../assets/ships/industrial-kit/panels.png');})
-        ]).then(async function(values){var paint=await import(assetUrl('../assets/ships/industrial-kit/cargo-paint.js'));cargoRecipes=paint;var painted=await paint.prepareCargoImage(image);texture=painted;DW.convoyScenery.texture=painted;image.onload=null;image.onerror=null;image.removeAttribute('src');install(/** @type {import('./types').ConvoyAsset} */(values[0]),values[1],painted);return true;}).catch(/** @param {unknown} error */function(error){console.error('Convoy ships:',error);return false;});
+        ]).then(async function(values){var paint=await /** @type {Promise<{cargoSeed:(id:string)=>number;prepareCargoImage:(image:HTMLImageElement)=>Promise<HTMLImageElement>}>} */(import(assetUrl('../assets/ships/industrial-kit/cargo-paint.js')));cargoRecipes=paint;var painted=await paint.prepareCargoImage(image);texture=painted;DW.convoyScenery.texture=painted;image.onload=null;image.onerror=null;image.removeAttribute('src');install(/** @type {import('./types').ConvoyAsset} */(values[0]),values[1],painted);return true;}).catch(/** @param {unknown} error */function(error){console.error('Convoy ships:',error);return false;});
     }
     /** Reuse the production idle Aegis rig, including its materials, scale and hull contacts.
      * @returns {import('./types').AegisFlightRig} */
