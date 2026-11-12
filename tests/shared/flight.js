@@ -595,8 +595,8 @@
     assertClose(c.view().mouse[0],80/360);
     f.host.clientWidth=1920;f.host.clientHeight=1080;assertClose(c.view().stickRange,486);
     f.host.clientWidth=600;f.host.clientHeight=900;assertClose(c.view().stickRange,270);
-    f.doc.emit('mousedown',{button:2});assert(c.sample().fire);
-    f.doc.emit('mouseup',{button:2});assert(!c.sample().fire);
+    f.doc.emit('mousedown',{button:2});assert(c.sample().secondary&&!c.sample().fire);
+    f.doc.emit('mouseup',{button:2});assert(!c.sample().secondary);
     f.key('KeyC');assert(c.sample().pitch===0&&c.view().mouse[0]===0);
     f.doc.getElementById('input-mode').value='controller';f.doc.emit('mousemove',{movementX:80,movementY:40});assert(c.sample().yaw===0);
     c.release();assert(f.doc.pointerLockElement===null);f.doc.emit('pointerlockchange');assert(f.counts.pause===1);
@@ -670,7 +670,7 @@
 
   test('flight', 'flight controls retain controller edges, editable bindings and disconnect pause',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Test controller',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
-    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===12);
+    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===15);
     pad.buttons[3].pressed=true;c.sample();c.sample();assert(f.counts.weapon===1);
     pad.buttons[3].pressed=false;c.sample();pad.buttons[3].pressed=true;c.sample();assert(f.counts.weapon===2);
     var pitchSelect=f.elements.bindings.children[0].children[0];pitchSelect.value='0';pitchSelect.onchange();pad.axes[0]=1;assertClose(c.sample().pitch,-1);

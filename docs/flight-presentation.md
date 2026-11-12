@@ -508,3 +508,21 @@ without pausing or resetting combat. Restart restores the mission and fixed
 camera while retaining visual selections. Return to flight leaves this mode.
 The overhead mode does not capture the pointer or draw the pilot HUD; Escape
 still pauses. Normal flight and the existing hold-Shift camera are unchanged.
+
+## Missile controls and feedback
+
+Right mouse/B holds secondary fire; H holds countermeasure deployment; M cycles
+secondary banks on the press edge. Left mouse/Space retain primary fire; C still
+centers the stick and V still changes radar range. Standard controller defaults
+use RB/R1, LT/L2 and left stick press respectively; generic sticks use buttons
+4/5/6 (zero-based), all editable in Settings. Touch has separate Missile, Decoy
+and Missile bank buttons. Pause and focus loss clear held input.
+
+The lower-left status panel includes missile type, remaining rounds, aspect-lock
+percentage/LOCK and countermeasure count. Incoming seekers show a red warning.
+Settings / Missile loadout offers supported weapons from the current ship's
+retail allowed list. Changing type preserves remaining cargo rather than
+refilling ammunition. Reset/profile reconfiguration rearms. Unsupported specialty
+defaults are labeled unavailable until replaced with a supported allowed type.
+Missiles use world-space swept paths and the shared production projectile effect
+renderer. These are original placeholder effects, not FreeSpace artwork.

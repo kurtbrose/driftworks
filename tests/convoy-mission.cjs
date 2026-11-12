@@ -11,7 +11,7 @@ assert.equal(c.enemies.filter(e=>e.team==='ally').length,2);
 assert.equal(c.enemies.filter(e=>e.team==='enemy').length,0);
 assert(!c.convoy.raidStarted);
 // Isolate route/formation checks from the separately tested first-contact gate.
-c.convoy.raidStarted=true;c.convoy.director.raids=3;
+c.convoy.raidStarted=true;c.convoy.director.raids=3;c.missilesEnabled=false;
 assert.equal(world.asteroids.length,0);
 assert.equal(world.ships.length,0);
 assert.equal(c.convoy.ships.length,30);
@@ -166,7 +166,7 @@ f.reset();c=f.snapshot().combat;c.convoy.ships.forEach(s=>{s.hull=0;});f.DW.conv
 console.log('PASS escort combat: weapons, real raiders and defending wingmen, cargo damage/targets/losses, victory and failure');
 
 // Close the actual chase/aim/shoot loop through the normal control and gun paths.
-f.reset();c=f.snapshot().combat;f.advance(60);c.convoy.director.raids=3;
+f.reset();c=f.snapshot().combat;c.missilesEnabled=false;f.advance(60);c.convoy.director.raids=3;
 // Approach with the screen. Waiting idle behind it can let the wingmen finish
 // the fight before this replay's player ever reaches firing range.
 for(let i=0;i<1200&&!c.dead&&!c.enemies.some(e=>e.team==='ally'&&e.guns.fired>0);i++){

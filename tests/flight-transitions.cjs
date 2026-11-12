@@ -16,6 +16,7 @@ module.exports = function runFlightTransitions(namespace) {
       }
       set textContent(value) { this.text = value; this.options = []; }
       get textContent() { return this.text || ''; }
+      replaceChildren(...children) { this.options = [...children]; }
       appendChild(option) { this.options.push(option); if (this.options.length === 1) this.value = option.value; }
       addEventListener() {}
       setAttribute() {}

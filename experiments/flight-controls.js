@@ -16,7 +16,7 @@
         }
         if (!document.getElementById('touch-controls')) {
             var touchContainer = document.createElement('div');
-            touchContainer.innerHTML = "<div id=\"touch-controls\" aria-label=\"Touch flight controls\">\n<button id=\"flight-fullscreen\" class=\"touch-fullscreen\" type=\"button\">Full screen</button>\n<button data-touch=\"pause\" class=\"touch-pause\">Pause</button>\n<div id=\"touch-stick\" role=\"group\" aria-label=\"Drag to steer pitch and yaw\"><span id=\"touch-knob\"></span><span class=\"stick-caption\">STEER</span></div>\n<div class=\"touch-actions\"><button data-touch=\"target\">Target</button><button data-touch=\"weapon\">Weapon</button><button data-touch=\"boost\">Boost</button><button data-touch=\"fire\" class=\"touch-fire\">Fire</button></div>\n<div class=\"touch-throttle\"><button data-touch=\"down\" aria-label=\"Decrease throttle\">−</button><span>THR</span><button data-touch=\"up\" aria-label=\"Increase throttle\">+</button></div>\n</div>";
+            touchContainer.innerHTML = "<div id=\"touch-controls\" aria-label=\"Touch flight controls\">\n<button id=\"flight-fullscreen\" class=\"touch-fullscreen\" type=\"button\">Full screen</button>\n<button data-touch=\"pause\" class=\"touch-pause\">Pause</button>\n<div id=\"touch-stick\" role=\"group\" aria-label=\"Drag to steer pitch and yaw\"><span id=\"touch-knob\"></span><span class=\"stick-caption\">STEER</span></div>\n<div class=\"touch-actions\"><button data-touch=\"target\">Target</button><button data-touch=\"weapon\">Weapon</button><button data-touch=\"boost\">Boost</button><button data-touch=\"secondary\">Missile</button><button data-touch=\"countermeasure\">Decoy</button><button data-touch=\"missile-bank\">Missile bank</button><button data-touch=\"fire\" class=\"touch-fire\">Fire</button></div>\n<div class=\"touch-throttle\"><button data-touch=\"down\" aria-label=\"Decrease throttle\">−</button><span>THR</span><button data-touch=\"up\" aria-label=\"Increase throttle\">+</button></div>\n</div>";
             var touchElement = touchContainer.firstElementChild;
             if (touchElement) document.body.appendChild(touchElement);
         }
@@ -154,14 +154,14 @@
         get('fly').addEventListener('click', function () { if (inputMode.value === 'touch') enterFullscreen(); });
         document.addEventListener('fullscreenchange', updateFullscreen);
         // Pointer IDs keep both thumbs independent; cancellation always releases demand.
-        var touch = {pitch: 0, yaw: 0, fire: false, boost: false, throttleRate: 0};
+        var touch = {secondary:false,countermeasure:false,nextMissileBank:false,pitch: 0, yaw: 0, fire: false, boost: false, throttleRate: 0};
         var touchRoot = document.getElementById('touch-controls');
         var touchStick = document.getElementById('touch-stick');
         var touchKnob = document.getElementById('touch-knob');
         var stickPointer = -1;
         function clearTouch() {
             touch.pitch = touch.yaw = touch.throttleRate = 0;
-            touch.fire = touch.boost = false;
+            touch.fire = touch.boost = touch.secondary = touch.countermeasure = touch.nextMissileBank = false;
             stickPointer = -1;
             if (touchKnob && touchKnob.style) touchKnob.style.transform = '';
             if (touchRoot && touchRoot.querySelectorAll) touchRoot.querySelectorAll('button').forEach(function (button) { button.classList.remove('held'); });
@@ -216,6 +216,9 @@
                     var e = /** @type {PointerEvent} */(event);
                     if (actions.isPaused() || pointer !== -1) return;
                     e.preventDefault(); pointer = e.pointerId; button.setPointerCapture(pointer); button.classList.add('held');
+                    if(name==='secondary')touch.secondary=true;
+                    if(name==='countermeasure')touch.countermeasure=true;
+                    if(name==='missile-bank')touch.nextMissileBank=true;
                     if (name === 'fire') touch.fire = true;
                     if (name === 'boost') touch.boost = true;
                     if (name === 'up') touch.throttleRate = 1;
@@ -228,7 +231,10 @@
                     button.addEventListener(eventName, function (event) {
                         if (/** @type {PointerEvent} */(event).pointerId !== pointer) return;
                         pointer = -1; button.classList.remove('held');
-                        if (name === 'fire') touch.fire = false;
+                        if(name==='secondary')touch.secondary=false;
+                    if(name==='countermeasure')touch.countermeasure=false;
+                    if(name==='missile-bank')touch.nextMissileBank=false;
+                    if (name === 'fire') touch.fire = false;
                         if (name === 'boost') touch.boost = false;
                         if (name === 'up' && touch.throttleRate > 0 || name === 'down' && touch.throttleRate < 0) touch.throttleRate = 0;
                     });
@@ -359,7 +365,7 @@
             bindingHost.hidden = false;
             get('controller-layout').hidden = pad.mapping !== 'standard';
             get('deadzone').value = String(mapping.deadzone);
-            /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down', 'lock', 'throttleRate']).forEach(function (name) {
+            /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down', 'lock', 'throttleRate', 'secondary', 'countermeasure', 'nextMissileBank']).forEach(function (name) {
                 var label = document.createElement('label');
                 label.textContent = (name === 'roll' ? 'Roll stick (move left)' : name === 'throttle' ? 'Throttle lever (absolute; use None for a stick)' : name === 'up' ? 'Throttle increase button' : name === 'down' ? 'Throttle decrease button' : name === 'throttleRate' ? 'Throttle stick (push forward)' : name === 'pitch' ? 'Turning stick (pull back)' : name === 'yaw' ? 'Turning stick (move left)' : name) + ' ';
                 var selectBinding = document.createElement('select');
@@ -371,7 +377,7 @@
                     option.textContent = n < 0 ? 'None' : (isAxis ? 'Axis ' : 'Button ') + n;
                     selectBinding.appendChild(option);
                 }
-                selectBinding.value = String(mapping[name] < count ? mapping[name] : -1);
+                selectBinding.value = String((mapping[name] ?? -1) < count ? (mapping[name] ?? -1) : -1);
                 mapping[name] = Number(selectBinding.value);
                 selectBinding.onchange = function () {
                     mapping[name] = Number(selectBinding.value);
@@ -508,7 +514,7 @@
                 actions.selectProfile(Number(e.code.slice(-1)) - 1);
                 return;
             }
-            if (['ShiftLeft', 'ShiftRight', 'Space', 'KeyW', 'KeyS', 'KeyX', 'KeyQ', 'KeyE', 'KeyA', 'KeyD', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0) {
+            if (['KeyH', 'KeyM', 'KeyB', 'ShiftLeft', 'ShiftRight', 'Space', 'KeyW', 'KeyS', 'KeyX', 'KeyQ', 'KeyE', 'KeyA', 'KeyD', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0) {
                 e.preventDefault();
                 if (!actions.isPaused()) {
                     if (e.code === 'KeyW' && !e.repeat && !keys.KeyW) {
@@ -653,9 +659,9 @@
             if (pad && learnInput(pad)) { previousButtons = {bank:false,lock:false,pause:false}; return {pitch:0,yaw:0,roll:0,throttle:null,throttleRate:0,fire:false,boost:false}; }
             if (inputMode.value === 'touch') {
                 if (actions.isPaused()) clearTouch();
-                return {pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
+                return {secondary:touch.secondary,countermeasure:touch.countermeasure,nextMissileBank:touch.nextMissileBank,pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
             }
-            var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, side: 0, vertical: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, lock: false, pause: false };
+            var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, side: 0, vertical: 0, throttle: null, throttleRate: 0, secondary:false,countermeasure:false,nextMissileBank:false,fire: false, boost: false, bank: false, lock: false, pause: false };
             if (activePad) {
                 mouseActive = false;
                 mouse = [0, 0];
@@ -684,7 +690,7 @@
             previousButtons = { bank: controls.bank, lock: controls.lock, pause: controls.pause };
             var look = inputMode.value === 'mouse' && mouseActive ? input.stickDemand(mouse, .08, steeringPreset.value === 'medium-soft' ? 1.6 : 1) : [0, 0];
             var wBoost = !!keys.KeyW && !keys.KeyS && !keys.KeyX && !actions.isPaused() && (doubleWBoost || (currentThrottle || 0) >= 1);
-            return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost || (!keys.KeyS && !keys.KeyX && !actions.isPaused() && forwardBoost(controls.throttleRate,currentThrottle)), fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
+            return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost || (!keys.KeyS && !keys.KeyX && !actions.isPaused() && forwardBoost(controls.throttleRate,currentThrottle)), secondary:!!(keys.KeyB || keys.mouse2 || controls.secondary), countermeasure:!!(keys.KeyH || controls.countermeasure), nextMissileBank:!!(keys.KeyM || controls.nextMissileBank), fire: keys.Space || keys.mouse0 || controls.fire };
         }
         function view() {
             if(vr&&vr.active())return {mouse:[0,0],inputMode:'controller',tactical:false,uncapturedMouse:false,stickRange:stickRange(),showMouseStick:false};

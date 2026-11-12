@@ -145,6 +145,11 @@
         new Set(participants.map(function(c){return c.guns;})).forEach(function(g){g.bolts.forEach(function(b){b.direction=vector(b.direction,b.position);b.position=position(b.position);});g.impacts.forEach(function(h){h.position=position(h.position);});});
         combat.flashes.forEach(function(f){if(f.velocity)f.velocity=vector(f.velocity,f.position);f.position=position(f.position);});
         // Retain the chart transform for world-fixed grid and trajectory history.
+        if(combat.missileState){
+            combat.missileState.missiles.forEach(function(m){m.direction=vector(m.direction,m.position);m.zig=vector(m.zig,m.position);m.position=position(m.position);});
+            combat.missileState.shockwaves.forEach(function(w){w.missile.direction=vector(w.missile.direction,w.missile.position);w.missile.position=position(w.missile.position);});
+            combat.missileState.decoys.forEach(function(d){d.velocity=vector(d.velocity,d.position);d.position=position(d.position);});
+        }
         var sky=combat.player.pose.spaceFrame||[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
         combat.player.pose.spaceFrame=sky.map(transform);
     }

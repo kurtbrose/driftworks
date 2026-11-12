@@ -104,6 +104,7 @@
         state.throttle = Math.max(-1, Math.min(1, state.throttle + controls.throttleRate * dt * .5));
         if (controls.stop) state.throttle = 0;
         craft.fire = controls.fire;
+        if(DW.flightMissiles)DW.flightMissiles.input(craft,controls);
         DW.arcade.step(state, craft.profile, controls, dt);
     }
     /** Shared manual/duel tick: controlled movement, combat/NPCs, then controlled guns.
@@ -114,6 +115,7 @@
      * @param {() => void} [afterCombat] @param {() => void} [afterMovement] */
     function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat, afterMovement) {
         var craft = t.player, pose = craft.pose, guns = craft.guns;
+        var missilesBefore=DW.flightMissiles?DW.flightMissiles.rack(craft).fired:0;
         var convoyCraft=t.convoy?participants(t).map(function(c){return c.pose.eye.slice();}):null;
         var convoyShips=t.convoy?t.convoy.ships.map(function(s){return s.position.slice();}):null;
         var travelers=/** @type {import('../experiments/types').Pose[]} */(t.wormholes?[pose,...t.enemies.map(function(c){return c.pose;}),...t.wrecks.map(function(c){return c.pose;})]:[]);
@@ -133,7 +135,7 @@
         collisionBatch(t,function(){DW.flightGuns.step(guns, pose, weapon, !mission(t).weaponsDisabled && !t.dead && !openingPending(t) && controls.fire, dt, function (start, end, bolt) {
             return DW.flightSim.trace(t, start, end, bolt, 'player', terrainHit, pose);
         }, function () { return DW.flightSim.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.flightSim.gunAnchors(craft), shotSpace(t));});
-        return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
+        return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore || !!DW.flightMissiles&&DW.flightMissiles.rack(craft).fired>missilesBefore,
             impact: convoyImpact || guns.hits > hitsBefore || t.lastHit > hitBefore };
     }
     /** @param {Combat} t @returns {Craft[]} */
@@ -192,11 +194,13 @@
         t.maxHull = profile.hull === undefined ? 100 : profile.hull;
         t.maxShield = unshielded ? 0 : profile.shield === undefined ? 120 : profile.shield;
         t.hull = t.maxHull; t.shield = t.maxShield;
+        if(DW.flightMissiles)DW.flightMissiles.reset(t.player);
     }
     /** @param {Craft} e @param {import('../experiments/types').Profile} profile @param {number} weaponIndex @param {boolean} [unshielded] */
     function equip(e, profile, weaponIndex, unshielded) {
         e.profile = profile; e.maxHp = profile.hull === undefined ? 90 : profile.hull; e.hp = e.maxHp;
         e.maxShield = unshielded ? 0 : profile.shield || 0; e.shield = e.maxShield; e.weaponIndex = weaponIndex;
+        if(DW.flightMissiles)DW.flightMissiles.reset(e);
     }
     /** @param {Pick<Combat, 'enemies'>} t */
     function alive(t) {
@@ -670,6 +674,7 @@
         shieldContacts(t,dt);
         if(afterMovement)afterMovement();
         if(mission(t).sky.wormhole)t.enemies.forEach(fireGuns);
+        if(DW.flightMissiles)DW.flightMissiles.step(t,dt,terrainHit,shotSpace(t));
         });
         if(t.scramble&&t.time<10){
             var story=t.scramble;
@@ -775,6 +780,11 @@
             e.guns.impacts.forEach(function(hit){result.impacts.push(hit);});
         });
         if(t.convoy&&t.convoy.evacuation)t.convoy.evacuation.guns.bolts.forEach(function(b){result.bolts.push(b);});
+        if(DW.flightMissiles){
+            var missiles=DW.flightMissiles.state(t);
+            missiles.missiles.forEach(function(m){result.bolts.push({curvature:m.curvature,position:m.position,direction:m.direction,age:m.age,region:m.region,weapon:m.weapon,team:m.team});});
+            missiles.decoys.forEach(function(d){result.impacts.push({position:d.position,region:d.region,age:(d.age%.2),scale:1.3});});
+        }
         return result;
     }
     DW.flightSim = { rebaseGeometry:function(t){if(t.player.pose.curvature){DW.flightHyperbolic.rebase(t,function(c){return opponentPolicy.trackFor(c);});collision.changed(t);}}, setCollisionMode: setCollisionMode, collisionBatch: collisionBatch, collisionStats: collisionStats, collisionChanged: collisionChanged, stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, firingSolution:firingSolution, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };

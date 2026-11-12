@@ -136,6 +136,7 @@ export type Demand = FlightInput & {
     throttleRate: number;
     stop?: boolean;
     fire: boolean;
+    secondary?:boolean; countermeasure?:boolean; nextMissileBank?:boolean;
 };
 /** Complete legal control request shared by evaluation pilots and replay. */
 export type PilotInput = Required<FlightInput> & { throttle: number; fire: boolean };
@@ -154,6 +155,7 @@ export type DuelOptions = {
     weapon?: number;
     opponentWeapon?: number;
     unshielded?: boolean;
+    missiles?:boolean;
 };
 export type DuelReplay = {
     version:number; policy:string; observation:string; cadence:number;
@@ -258,6 +260,7 @@ export type ArtCraft = {
 };
 export type CollisionShape = { kind: 'sphere'; radiusM: number } | { kind: 'model'; modelId: string };
 export type Craft = ArtCraft & {
+    missileRack?:import('./missile-types').MissileRack;
     convoyBattle?:{front:number;wing:number;slot:number};
     convoyRaider?:{breakUntil?:number;commitUntil?:number;wing:number;slot:number;role:'strike'|'cover';cargoId:string;stage:'form'|'attack'|'defend'|'extend';holdUntil:number;runAt:number;fired:number};
     plotArmor?: boolean;
@@ -333,6 +336,8 @@ export type ConvoyState = {evacuation?:FleetEvacuation;navigation?:import("../sr
 export type ShotSpace=boolean|'thin-shell'|number|{links:WormholeLink[];time:number};
 export type PortalSkyView={position:Vector;radius:number;sky?:number|string;localSky?:number|string;other?:PortalSkyView};
 export type Combat = {
+    missilesEnabled?:boolean;
+    missileState?:import('./missile-types').MissileState;
     wormholes?:WormholeLink[];
     convoy?:ConvoyState;
     scramble?:{beat:number;radio:number};
@@ -511,8 +516,9 @@ export type Measurements = {
 export type Pacer = {
     next: number | null;
 };
-export type Mapping = Record<'pitch' | 'yaw' | 'roll' | 'throttle' | 'fire' | 'boost' | 'bank' | 'lock' | 'pause' | 'up' | 'down' | 'deadzone' | 'throttleRate' | 'fireAxis' | 'fireThreshold', number> & Record<'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert' | 'throttleRateInvert' | 'fireAxisInvert', boolean>;
+export type Mapping = Partial<Record<'secondary'|'countermeasure'|'nextMissileBank',number>> & Record<'pitch' | 'yaw' | 'roll' | 'throttle' | 'fire' | 'boost' | 'bank' | 'lock' | 'pause' | 'up' | 'down' | 'deadzone' | 'throttleRate' | 'fireAxis' | 'fireThreshold', number> & Record<'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert' | 'throttleRateInvert' | 'fireAxisInvert', boolean>;
 export type PadDemand = {
+    secondary?:boolean;countermeasure?:boolean;nextMissileBank?:boolean;
     side: number;
     vertical: number;
     pitch: number;
@@ -1314,6 +1320,8 @@ declare module '../src/types' {
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];
+        retailMissiles?:import('./missile-types').RetailMissiles;
+        flightMissiles?:import('./missile-types').MissileApi;
         shipPacks?: Pack[];
         originalShipModels?: {id:string;name:string;author:string;provenance:string;study:string;geometry:(units:number)=>Batch[]}[];
     }

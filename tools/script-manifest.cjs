@@ -20,7 +20,7 @@ const groups = {
   dialogue: ['experiments/mumble.js', 'experiments/flight-dialogue.js'],
   flightRuntime: [
     'src/fleet-guidance.js', 'src/convoy-battle.js', 'src/convoy-ambush.js', 'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
-    'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'src/flight-prediction.js'
+    'src/flight-opponent.js', 'src/flight-blockout.js', 'experiments/retail-missiles.js', 'src/flight-missiles.js', 'src/flight-sim.js', 'src/flight-prediction.js'
   ],
   flightAi: ['experiments/flight-ai.js', 'experiments/flight-duel.js'],
   flightView: [
@@ -113,6 +113,7 @@ const profiles = {
 const dependencies = {
   'src/flight-collision.js': ['src/sim.js'],
   'src/flight-combat.js': ['src/flight-collision.js'],
+  'src/flight-missiles.js': ['src/flight-combat.js', 'experiments/retail-missiles.js'],
   'src/convoy-mission.js': ['src/fleet-guidance.js', 'src/convoy-battle.js'],
   'src/flight-sim.js': ['src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js'],
   'src/sim.js': ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js'],
@@ -131,7 +132,7 @@ const dependencies = {
   'src/ship-render.js': ['src/ship-catalog.js', 'src/ship-assets.js'],
   'experiments/ship-packs.js': ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js', 'assets/ships/concept-trio/meshes.js'],
   'experiments/flight-scenery.js': ['src/roadside-layout.js'],
-  'experiments/flight-session.js': ['src/roadside-layout.js','src/sim.js', 'experiments/flight-model.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'experiments/flight-comms.js'],
+  'experiments/flight-session.js': ['src/roadside-layout.js','src/sim.js', 'experiments/flight-model.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'experiments/retail-missiles.js', 'src/flight-missiles.js', 'src/flight-sim.js', 'experiments/flight-comms.js'],
   'experiments/aegis-flight.js': ['src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js'],
   'experiments/hyperbolic-battle.js': ['experiments/flight-hyperbolic.js', 'src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js'],
     'experiments/hyperbolic-flyby.js': ['experiments/flight-hyperbolic.js', 'experiments/flight-session.js', 'experiments/flight-presentation.js'],

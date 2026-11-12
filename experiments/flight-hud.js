@@ -692,6 +692,15 @@
             // instruments while suppressing pilot-relative markers and radar.
             if (chase) gpu.begin(w, h,immersive?14:0);
             instruments(view, selected, w, h);
+            if(!chase&&DW.flightMissiles){
+                var seekerRack=DW.flightMissiles.rack(combat.player),seekerWeapon=DW.flightMissiles.weapon(combat.player);
+                if(seekerWeapon&&seekerWeapon.homing==='aspect'&&seekerRack.indicator&&seekerRack.targetId===combat.targetId){
+                    var gaugeScale=h/(640*Math.tan(Math.PI/8)),gaugeX=w/2+seekerRack.indicator[0]*gaugeScale,gaugeY=h/2-seekerRack.indicator[1]*gaugeScale;
+                    combatHud.strokeStyle=seekerRack.locked?'#ffe7a3':'#f5ac5c';combatHud.lineWidth=1.5;
+                    combatHud.strokeRect(gaugeX-7,gaugeY-7,14,14);
+                    if(seekerRack.locked)combatHud.strokeRect(gaugeX-11,gaugeY-11,22,22);
+                }
+            }
             if (!chase && targetBearing !== null) paintTargetBearing(bearingHud, w, h, targetBearing);
             gpu.end(immersive);
         }
@@ -722,15 +731,22 @@
                 label('THR '+Math.round(view.state.throttle*100)+'%',124,57,13);
                 label(selected ? DW.flightSim.callsign(selected) : 'NO TARGET',12,104,12,gold);
             } else {
-            var leftY=bottom-162;
-            panel(margin,leftY,pw,162);
+            var leftY=bottom-180;
+            panel(margin,leftY,pw,180);
             label('YOUR SHIP',margin+14,leftY+23,10,muted);
             meter('SHIELD',combat.shield,combat.maxShield||120,margin+14,leftY+44,pw-28,'#79b8e7');
             meter('HULL',combat.hull,combat.maxHull||100,margin+14,leftY+70,pw-28,combat.hull/(combat.maxHull||100)<.25?'#ff776b':'#91d29b');
             label(String(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)),margin+14,leftY+115,25);
             label(mission.units.speedLabel,margin+80,leftY+115,11,muted);
             label((view.state.throttle<0?'REV ':'THR ')+Math.round(Math.abs(view.state.throttle)*100)+'%',margin+14,leftY+141,11);
-            label(view.weapon.name.slice(0,Math.floor((pw-28)/6.7)),margin+14,leftY-12,11,muted);
+            label(view.weapon.name.slice(0,Math.floor((pw-28)/6.7)),margin+14,leftY+158,10,muted);
+            if(DW.flightMissiles){
+                var rack=DW.flightMissiles.rack(combat.player),missile=DW.flightMissiles.weapon(combat.player),bank=rack.banks[rack.bank];
+                var missileLabel=missile?missile.name+' '+bank.ammo+(missile.homing==='aspect'?(rack.locked?' LOCK':' '+Math.round(rack.lock/missile.minLockTime*100)+'%'):''):bank?bank.name+' unavailable':'NO MISSILES';
+                label(missileLabel+' / CM '+rack.countermeasures,margin+14,leftY+174,10,rack.locked?gold:muted);
+                var threats=DW.flightMissiles.incoming(combat,combat.player);
+                if(threats.length)label('MISSILE INBOUND '+threats.length+' / H: DECOY',w/2-130,198,14,'#ff776b');
+            }
             var rightX=w-margin-pw, rightY=bottom-198;
             panel(rightX,rightY,pw,198);
             label(selected?(combat.targetLocked?'TARGET LOCK':'AUTO TARGET'):'NO TARGET',rightX+14,rightY+22,10,selected?gold:muted);

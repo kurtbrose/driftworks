@@ -743,3 +743,28 @@ All procedural hulls and effects use the same wormhole-capable shader source.
 Transit uniforms disable section tests when inactive. Switching foreground
 optics does not rebuild pooled materials or source geometry; native PBR and
 procedural materials retain their existing appearance roles.
+
+## Secondary weapons
+
+`src/flight-missiles.js` owns missile racks, seeker locks, guidance, salvo timing,
+finite magazines, countermeasure decisions and blast resolution. Numeric retail
+missile/ship-magazine data lives in `experiments/retail-missiles.js`, generated
+by `tools/import-retail-missiles.cjs`. Both load through `flightRuntime` before
+`flight-sim.js`; no runtime downloads or package dependencies are involved.
+
+`Demand.secondary`, `countermeasure` and `nextMissileBank` are held demands.
+The rack edge-detects bank changes. `stepInput` records input; the common combat
+step advances all missiles after movement and wormhole transport. AI uses the
+same magazines, locks, turns and damage. `Combat.missileState` and
+`Craft.missileRack` contain JSON-safe IDs and numbers; both follow session reset.
+Configure/equip resets the associated rack. Player respawn/configuration rearms
+the player without deleting already flying projectiles. `allGuns` supplies
+missile heads and countermeasure flashes to the existing production effect path.
+Curved-space chart rebasing transports missile, countermeasure and shockwave
+state alongside craft and primary bolts.
+
+`Combat.missilesEnabled=false` explicitly isolates primary-only experiments.
+The duel harness defaults to that isolation and accepts `DuelOptions.missiles`
+for secondary-armed trials. Gameplay sessions enable missiles by default.
+See [missile reference](flight-missiles.md) for provenance, controls, exact table
+fields, behavioral adaptations and verification limits.

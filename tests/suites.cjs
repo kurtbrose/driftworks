@@ -73,6 +73,7 @@ const suites = {
     "projectile-broadphase.cjs",
     "collision-events.cjs",
     "flight-properties.cjs",
+    "flight-missiles.cjs",
     "refueling-cycle.cjs"
   ],
   rendering: [

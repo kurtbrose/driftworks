@@ -293,6 +293,8 @@ retains its designed 1,305 m length. W/S adjusts throttle, Space fires, and Esc
 pauses. Heavy hull hits produce fighter-style explosions and reduce capital
 integrity; coarse collision proxies stop hull crossings. The [kit and rig reference](docs/dreadnaught-kit.md)
 describes this prototype's scope and asset generation.
+Flight missiles: right mouse or B fires the selected secondary bank, H deploys a countermeasure, and M cycles secondary banks. Choose missile types in Settings / Missile loadout; Reset rearms. Standard controller: RB/R1 fires missiles, LT/L2 deploys countermeasures, left stick press changes secondary bank. See [missile mechanics and scope](docs/flight-missiles.md).
+
 The flight-input selector is visible above Start/Resume. If the browser rejects
 mouse capture, mouse mode uses cursor steering: move away from screen center to
 turn and return to center to stop turning. Esc or leaving the flight area pauses.

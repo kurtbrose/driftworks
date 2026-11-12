@@ -190,7 +190,7 @@ Flagging thresholds are exploratory: kills under three seconds, dry intervals of
 
 Download JSON for canonical per-case options, results, design, AI version, fixed cadence and source SHA-256 fingerprints where browser Web Crypto is available. Markdown provides a readable summary plus every case's options. Preserve the corresponding source revision: a Watch link reruns current code and is not an archived input replay. Existing CLI duel recordings remain available for input-level replay; see [AI validation](flight-ai-validation.md).
 
-Imported FreeSpace values are starting points, not a reproduction of retail balance. Current experiments use pooled shields and shared regeneration rules, model-derived primary counts with temporary muzzle positions, unlimited fuel/weapon energy, and no missile or subsystem simulation. The model deliberately preserves Driftworks' continuous arcade flight. Ship art is independent of these numeric profiles. See [loadout provenance and adaptations](retail-flight-loadouts.md).
+Imported FreeSpace values are starting points, not a reproduction of retail balance. Current experiments use pooled shields and shared regeneration rules, model-derived primary counts with temporary muzzle positions, unlimited fuel/weapon energy, and no subsystem simulation. The [missile runtime](flight-missiles.md) is enabled in gameplay; primary-only duel comparisons explicitly disable it. The model deliberately preserves Driftworks' continuous arcade flight. Ship art is independent of these numeric profiles. See [loadout provenance and adaptations](retail-flight-loadouts.md).
 
 ## Human playtesting questions
 

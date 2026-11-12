@@ -165,6 +165,23 @@
     }
     // The initial reset below creates the sortie before any frame or input runs.
     var paused = true;
+    var missileSettings=document.createElement('details'),missileSettingsKey='';
+    missileSettings.id='missile-loadout';
+    document.getElementById('flight-settings')?.appendChild(missileSettings);
+    function updateMissileSettings(){
+        var craft=session.snapshot().combat.player,rack=DW.flightMissiles.rack(craft),key=craft.profile.name+'|'+rack.banks.map(function(b){return b.name;}).join('|');
+        if(key===missileSettingsKey)return;missileSettingsKey=key;
+        missileSettings.replaceChildren();var summary=document.createElement('summary');summary.textContent='Missile loadout';missileSettings.appendChild(summary);
+        var profile=DW.retailMissiles.profiles.find(function(p){return p.name===craft.profile.name;});
+        rack.banks.forEach(function(bank,index){
+            var label=document.createElement('label'),select=document.createElement('select');label.textContent='Secondary bank '+(index+1);select.setAttribute('aria-label',label.textContent);
+            (profile?profile.allowed:[]).filter(function(name){return DW.retailMissiles.missiles.some(function(w){return w.name===name;});}).forEach(function(name){var option=document.createElement('option');option.value=name;option.textContent=name;select.appendChild(option);});
+            if(!Array.from(select.options).some(function(o){return o.value===bank.name;})){var unavailable=document.createElement('option');unavailable.value=bank.name;unavailable.textContent=bank.name+' (unavailable)';select.appendChild(unavailable);}
+            select.value=bank.name;label.appendChild(select);missileSettings.appendChild(label);
+            select.onchange=function(){if(!paused)return;DW.flightMissiles.equipBank(session.snapshot().combat.player,index,select.value);missileSettingsKey='';updateMissileSettings();};
+        });
+        var note=document.createElement('small');note.textContent='Right mouse / B: fire missile. H: countermeasure. M: secondary bank. Aspect missiles need a steady target for homing. Changing type preserves remaining ammunition cargo; Reset rearms.';missileSettings.appendChild(note);
+    }
     // Copy freshly rendered buffers in the same frame: WebGL does not retain
     // its drawing buffer after compositing. Never resume simulation to capture.
     var screenshotRequest = /** @type {{hud:boolean,resolve:(blob:Blob)=>void,reject:(error:Error)=>void}|null} */ (null);
@@ -486,6 +503,7 @@
         activeMission:activeMission,aegis:aegis,diagnostics:diagnostics,get:get,host:host,pause:pause,presentation:presentation,resume:resume,shipStretching:shipStretching,view:view});
     /** @param {number} t */
     function frame(t) {
+        if(paused)updateMissileSettings();
         if(ohioMusic && !paused) ohioMusic.update();
         if(studies.benchmarking)return;
         var timing = diagnostics.beginFrame(t, paused, !!(DW.flightVr&&DW.flightVr.forHost(host)?.active()));

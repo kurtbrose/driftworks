@@ -22,7 +22,7 @@
     }
     /** @param {Options} [configuration] */
     function create(configuration) {
-        var options=Object.assign(/** @type {Required<Options>} */ ({allyHull:'mixed',enemyHull:'mixed',opponentStyle:'baseline',start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
+        var options=Object.assign(/** @type {Required<Options>} */ ({allyHull:'mixed',enemyHull:'mixed',opponentStyle:'baseline',start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false,missiles:false}),configuration);
         if(!styles.includes(options.opponentStyle) || !Object.prototype.hasOwnProperty.call(starts,options.start) || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile] || !Number.isInteger(options.seed) || options.seed<0 || options.seed>4294967295) throw new Error('Invalid duel options');
         var profile=DW.arcade.profiles[options.profile], enemyProfile=options.opponentProfile === -1 ? profile : DW.arcade.profiles[options.opponentProfile];
         var weaponIndex=options.weapon === -1 ? DW.flightSim.defaultWeapon(profile) : options.weapon;
@@ -30,6 +30,7 @@
         var enemyWeaponIndex=requestedEnemyWeapon === -1 ? (enemyProfile ? DW.flightSim.defaultWeapon(enemyProfile) : 0) : requestedEnemyWeapon;
         if (!enemyProfile || !DW.retailWeapons[weaponIndex] || !DW.retailWeapons[enemyWeaponIndex] || typeof options.unshielded !== 'boolean') throw new Error('Invalid duel loadout');
         var weapon=DW.retailWeapons[weaponIndex], player=DW.arcade.create(0), combat=DW.flightSim.create('training');
+        combat.missilesEnabled=options.missiles;
         DW.flightSim.configure(combat,profile,options.unshielded);
         setup(player,[0,0,0],[0,1,0],profile);
         DW.flightSim.spawn(combat,player,0); combat.enemies=combat.enemies.slice(0,1);
