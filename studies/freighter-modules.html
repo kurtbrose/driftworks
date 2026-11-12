@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Freighter damage range · Driftworks</title>
+<script src="../src/asset-versions.js?v=518d19c34231"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
+<style>
+:root{color-scheme:dark;font:14px/1.5 system-ui;color:#e8e5db;background:#090f16}*{box-sizing:border-box}body{margin:0;display:grid;grid-template-columns:285px 1fr;height:100dvh}aside{padding:24px;background:#15202a;overflow:auto;border-right:1px solid #344450}h1{font-size:26px;line-height:1.1;font-weight:500}small{color:#d9b579;letter-spacing:2px}p{color:#a8b7c2;font-size:12px}label{display:block;margin-top:18px;font-size:12px;color:#b6c6d2}button,select{width:100%;padding:10px;margin-top:7px;background:#253644;color:inherit;border:1px solid #526575;border-radius:4px;font:inherit}button{cursor:pointer}button:hover{border-color:#e3b97a}button:disabled{opacity:.4}#fire{background:#b79054;color:#101820;font-weight:650}#stage{position:relative;min-width:0;overflow:hidden}canvas{display:block;width:100%;height:100%;touch-action:none}.overlay{position:absolute;left:24px;top:22px;pointer-events:none;color:#aabac6;font-size:12px}.overlay strong{display:block;color:#ece9df;font-size:19px;font-weight:450}#log{white-space:pre-line;min-height:60px;color:#e0b57a}#health{width:100%;accent-color:#d6ac6d}#perf{font-size:11px;font-variant-numeric:tabular-nums;white-space:pre-line}a{color:#e0b57a}.views{display:flex;gap:6px}.views button{font-size:12px}.note{border-top:1px solid #344450;padding-top:15px;margin-top:22px}@media(max-width:650px){body{grid-template-columns:195px 1fr}aside{padding:14px}h1{font-size:21px}.overlay{left:12px}}
+</style>
+</head>
+<body>
+<aside>
+<small>DAMAGE RANGE / 01</small><h1>Freighter<br>submodules</h1>
+<p>Pick a component on the ship, then fire. Drag to orbit; scroll to approach. The camera stays fixed while firing.</p>
+<label for="model">Freighter</label><select id="model"><option value="container">Container run · 24 containers</option><option value="mixed">Local feeder · 8 containers</option><option value="fluid">Bulk fluid · 4 tanks</option></select>
+<div class="views"><button id="side">Broadside</button><button id="stern">Engines</button><button id="bow">Command</button></div>
+<label for="module">Component</label><select id="module"></select>
+<p id="selection">Loading authored geometry…</p><progress id="health" value="100" max="100" aria-label="Selected component integrity"></progress>
+<button id="fire" disabled>Fire shot · 35 damage</button><button id="reset">Restore freighter</button>
+<p id="systems"></p><p id="log" role="status" aria-live="polite"></p>
+<p class="note">Shots stop at the first surface: orbit to expose hidden parts. Detached parts coast and tumble.<br><br>3D prototype using the authored flight freighter meshes, metre scale, paint and module pivots. Convoy missions do not use these damage rules yet.</p>
+<p id="perf"></p><p><a href="../experiments/flight.html?mission=convoy">Flight simulator</a> · <a href="industrial-kit.html">Shipyard</a></p>
+</aside>
+<main id="stage"><div class="overlay"><strong>Selective destruction</strong>Containers / tanks / drives / command / maneuvering</div></main>
+<script type="module" src="freighter-modules.js?v=463572e0f6f5"></script>
+</body>
+</html>
