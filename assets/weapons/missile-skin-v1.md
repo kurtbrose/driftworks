@@ -7,8 +7,8 @@ No FreeSpace artwork or reference image was supplied.
 offline from the generated sheet with bicubic filtering. It uses one shared
 texture, the renderer's existing mipmaps and one body batch; there is no normal,
 roughness or metallic map. The horizontal coordinate runs from tail to nose;
-the vertical coordinate wraps around the circumference. Fin faces sample the
-graphite tail region. Smooth vertex normals supply the round appearance.
+the vertical coordinate wraps around the circumference. Three finless body profiles share the same image. Smooth vertex normals
+supply the round appearance.
 
 The full generated sheet and visual review captures remain in ignored
 `output/missile-skin/`. Texture and source are original generated artwork;

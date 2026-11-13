@@ -375,13 +375,14 @@
             if(bolt.missile){
                 let range=Math.hypot.apply(null,bolt.position.map(function(v,i){return v-pose.eye[i];}))*units;
                 let heavy='cargoSize' in bolt.weapon&&Number(bolt.weapon.cargoSize)>=10;
-                let length=(heavy?5.4:3.2)/units,radius=(heavy?.32:.16)/units;
+                let dart=!heavy&&'homing' in bolt.weapon&&bolt.weapon.homing==='none';
+                let length=(heavy?5.4:dart?2.8:3.2)/units,radius=(heavy?.32:dart?.13:.16)/units;
                 let forward=bolt.direction,radial=unitVector(cross(forward,Math.abs(forward[2])<.9?[0,0,1]:[0,1,0])),vertical=cross(radial,forward);
                 /** @param {number} z @param {number} r @param {number} angle */
                 function vertex(z,r,angle){let offset=forward.map(function(v,i){return v*z+radial[i]*r*Math.cos(angle)+vertical[i]*r*Math.sin(angle);});return curvature?DW.flightHyperbolic.offset(bolt.position,offset,curvature):bolt.position.map(function(v,i){return v+offset[i];});}
                 // Smooth normals on a compact surface of revolution; texture carries panel detail.
                 if(range<length*units*180){
-                    let rings=[[-1,.92],[-.94,1],[-.3,1],[-.18,.88],[-.08,.55],[-.025,.22],[0,0]];
+                    let rings=heavy?[[-1,.88],[-.94,1],[-.24,1],[-.14,.86],[-.065,.57],[-.02,.26],[0,0]]:dart?[[-1,.85],[-.95,1],[-.46,1],[-.3,.85],[-.15,.5],[-.045,.18],[0,0]]:[[-1,.92],[-.94,1],[-.3,1],[-.18,.88],[-.08,.55],[-.025,.22],[0,0]];
                     /** @param {number} ring @param {number} angle */
                     function bodyVertex(ring,angle){
                         let entry=rings[ring],before=rings[Math.max(0,ring-1)],after=rings[Math.min(rings.length-1,ring+1)],slope=(after[1]-before[1])*radius/((after[0]-before[0])*length);
@@ -393,7 +394,6 @@
                         bodies.push.apply(bodies,frontA.concat(backA,backB,frontA,backB,frontB));
                     }
                     for(let face=0;face<24;face++)triangle(vertex(-length,0,0),vertex(-length,radius*.92,(face+1)*Math.PI/12),vertex(-length,radius*.92,face*Math.PI/12));
-                    for(let fin=0;fin<4;fin++){let angle=fin*Math.PI/2,root=vertex(-length*.7,radius,angle),tip=vertex(-length*.96,radius*2.1,angle),end=vertex(-length*.98,radius,angle);triangle(root,tip,end);triangle(end,tip,root);}
                 }
                 let nozzle=vertex(-length,0,0),glow=Math.max(radius*1.9,Math.min(.7/units,range/units*.00065));
                 quad(exhaust,nozzle,pose.right,pose.up,glow,glow,1.4);

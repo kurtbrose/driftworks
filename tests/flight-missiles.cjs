@@ -108,7 +108,7 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  const bolt={...missile,missile:true};const batches=D.flightGuns.geometry({bolts:[bolt],impacts:[]},pose);
  assert.ok(batches.some(b=>b.finish===0&&b.vertices.length>0),'nearby missile has opaque body geometry');
  const body=batches.find(b=>b.finish===0);assert.equal(body.stride,8,'missile body carries normals and UVs');
- assert.ok(body.vertices.length/8/3<=350,'smooth missile stays within a small triangle budget');
+ assert.equal(body.vertices.length/8/3,312,'finless body contains only the smooth shell and rear cap');
  for(let i=0;i<body.vertices.length;i+=8){
   assert.ok(Math.abs(Math.hypot(...body.vertices.slice(i+3,i+6))-1)<1e-5,'smooth surface normals stay unit length');
   assert.ok(body.vertices[i+6]>=0&&body.vertices[i+6]<=1&&body.vertices[i+7]>=0&&body.vertices[i+7]<=1,'body UVs stay on shared texture');
@@ -130,5 +130,13 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  const far=D.flightGuns.geometry({bolts:[bolt],impacts:[]},{...pose,eye:[5000/U,0,0]});
  assert.equal(far.find(b=>b.finish===0)?.vertices.length||0,0,'distant missiles omit subpixel body');
  assert.ok(far.some(b=>b.color[0]===1&&b.vertices.length>0),'distant missile retains engine glow');
+ const extents=['Tempest','Harpoon','Cyclops'].map(name=>{
+  const weapon=D.retailMissiles.missiles.find(w=>w.name===name),b=D.flightGuns.geometry({bolts:[{...bolt,weapon,position:[0,0,0],direction:[0,1,0]}],impacts:[]},{...pose,eye:[10/U,0,0]}).find(b=>b.finish===0).vertices;
+  const ys=[],xs=[];for(let i=0;i<b.length;i+=8){xs.push(b[i]);ys.push(b[i+1]);}
+  return [(Math.max(...ys)-Math.min(...ys))*U,(Math.max(...xs)-Math.min(...xs))*U];
+ });
+ assert.ok(Math.abs(extents[0][0]-2.8)<1e-5&&Math.abs(extents[1][0]-3.2)<1e-5&&Math.abs(extents[2][0]-5.4)<1e-5,'three silhouettes retain their authored metre lengths');
+ assert.ok(extents[0][1]<extents[1][1]&&extents[1][1]<extents[2][1],'dart, missile and torpedo have distinct widths');
+
 }
 console.log('PASS missiles: retail tuning, timed locks, bank changes, ammo, dumbfire, bombs, swarms, heat/aspect guidance, bounded turns, CM cooldown/lifetime/rolls, damage, regions, terrain and production session');

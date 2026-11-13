@@ -137,15 +137,17 @@ No CI result is claimed.
 ## Original missile visuals
 
 The production gun/effect path now draws original smooth missile
-bodies with rounded noses and four small swept fins. Standard missiles are 3.2 m long with a 0.16 m
-body radius; heavy weapons (cargo size at least 10) use 5.4 m / 0.32 m.
+finless bodies in three silhouettes: unguided darts (2.8 m / 0.13 m radius),
+guided general-purpose missiles (3.2 m / 0.16 m), and heavy torpedoes
+(cargo size at least 10: 5.4 m / 0.32 m). Darts have a longer taper, torpedoes
+a fuller, shorter nose. All variants reuse the same skin and body batch.
 These are authored visual dimensions, not imported FreeSpace model dimensions.
 Opaque, depth-writing bodies disappear beyond 180 body lengths; additive nozzle
 glows and exhaust remain. Missile artwork bypasses primary-gun visual options.
 No FreeSpace mesh, texture, sound or effect asset is used.
 
 The body uses a 24-sided, seven-ring surface of revolution with smooth normals
-(320 triangles including caps and double-sided fins). One shared 512×256
+(312 triangles including the rear cap). One shared 512×256
 ImageGen albedo supplies pale metal, orange identification bands and maintenance
 marks. It adds one texture sample, with no normal/roughness maps or extra detail
 meshes. The effect adapter accepts the same stride-8 textured buffers as ship
