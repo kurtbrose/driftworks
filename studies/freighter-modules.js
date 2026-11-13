@@ -2,7 +2,8 @@ import * as T from 'three';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js';
 import {mergeGeometries} from '../vendor/three/examples/jsm/utils/BufferGeometryUtils.js';
 import {buildFreighter,batchStatic,disposeBatch,setSurfaceTexture} from '../assets/ships/industrial-kit/kit.js';
-import {contact,releaseKick} from './freighter-contact.js';
+import {contact,releaseKick,springFraction,respondContact} from './freighter-contact.js';
+import {damageContainer,createVents} from './freighter-effects.js';
 
 const $=id=>document.getElementById(id),host=$('stage');
 const renderer=new T.WebGLRenderer({antialias:true});
@@ -14,6 +15,8 @@ scene.add(new T.HemisphereLight(0xc5dded,0x444342,2.1));
 const key=new T.DirectionalLight(0xffedce,3.3);key.position.set(-30,70,40);scene.add(key);
 const fill=new T.DirectionalLight(0x8badc9,1.5);fill.position.set(30,-15,-50);scene.add(fill);
 const hull=new T.Group(),debris=new T.Group();scene.add(hull,debris);
+const vents=createVents(scene);
+const acceleration=()=> $('motion').value==='thrust'?1.4:0;
 const ray=new T.Raycaster(),pointer=new T.Vector2(),box=new T.Box3();
 const outline=new T.Box3Helper(box,0xe6b166);scene.add(outline);outline.visible=false;
 const boltGeometry=new T.CylinderGeometry(.055,.055,2.8,6),boltMaterial=new T.MeshBasicMaterial({color:0x95eaff});
@@ -64,6 +67,7 @@ function rebuildHull(){
  revision++;
 }
 function clearEffects(){
+ vents.clear();
  bolts.forEach(b=>scene.remove(b.mesh));bolts=[];
  flashes.forEach(f=>{scene.remove(f.mesh);f.mesh.material.dispose();});flashes=[];
  while(debris.children.length)debris.remove(debris.children[0]);
@@ -84,6 +88,7 @@ function load(){
  structure.hp=structure.maxHp=1200;shots=0;elapsed=0;samples=[];submission=[];
  $('module').replaceChildren(...modules.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.label;return o;}));
  rebuildHull();select(modules.filter(m=>m.type==='Container'||m.type==='Tank').sort((a,b)=>a.center.x-b.center.x||b.center.y-a.center.y||b.center.z-a.center.z)[0]);view('side');$('log').textContent='Range ready. Three hits detach a component.';
+ $('motion-note').textContent=acceleration()?'Travel ← · camera follows freighter · loose parts coast aft →':'Stationary comparison · camera fixed while firing';
 }
 function updateUI(){
  const live=modules.filter(m=>m.hp>0),drives=modules.filter(m=>m.type==='Drive'),command=modules.find(m=>m.type==='Command');
@@ -118,18 +123,22 @@ function addMark(component,point,normal){
 function impact(point,component,direction,normal){
  const flash=new T.Mesh(flashGeometry,flashMaterial.clone());flash.position.copy(point);scene.add(flash);flashes.push({mesh:flash,age:0});
  if(!component||component.hp<=0)return;
- addMark(component,point,normal);
  component.hp=Math.max(0,component.hp-35);
+ if(component.type==='Container'&&component.hp<=30&&!component.damageName&&$('damage').value!=='none'){
+  const variant=$('damage').value==='auto'?component.id%3:Number($('damage').value);point=damageContainer(component,point,normal,variant);rebuildHull();
+ }
+ addMark(component,point,normal);
+ if(component.type==='Tank')vents.add(component,point,normal);
  if(component.hp===0&&component!==structure){
   component.group.position.copy(component.center);debris.add(component.group);
   component.group.add(component.markGroup);component.markGroup.position.set(0,0,0);
   // Corner locks are authored through the attached container skin. Release only
   // those original contacts, without rotation, until the component slides clear.
   component.mountContacts=new Set(structureBoxes.filter(obstacle=>fittingContact(componentBox(component),obstacle)));
-  const spring=releaseKick($('model').value+'-'+component.id,component.center.toArray(),component.half);
+  const spring=releaseKick($('model').value+'-'+component.id,component.center.toArray(),component.half,!!acceleration());
   component.release=spring;
-  component.velocity.set(...spring.velocity).addScaledVector(direction,.12);
-  component.spin.set(...spring.spin);component.age=0;
+  component.velocity.set(...spring.velocity).multiplyScalar(.25).addScaledVector(direction,.12);
+  component.spin.set(...spring.spin).multiplyScalar(.25);component.age=0;
   // Bound debris lifetime and visible count, retaining the reusable component buffers.
   if(debris.children.length>12)debris.remove(debris.children[0]);
   rebuildHull();$('log').textContent=component.label+' destroyed. Structure remains intact.';
@@ -155,9 +164,14 @@ renderer.domElement.addEventListener('pointerup',e=>{if(down&&Math.hypot(e.clien
 renderer.domElement.addEventListener('pointercancel',()=>{down=null;});
 $('fire').onclick=fire;$('module').onchange=()=>select(modules[Number($('module').value)]);
 $('model').onchange=load;$('reset').onclick=load;
+$('motion').onchange=load;$('damage').onchange=load;$('vent').onchange=()=>vents.setEnabled($('vent').checked);
 for(const preset of ['side','stern','bow'])$(preset).onclick=()=>view(preset);
 new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe(host);
 function drift(component,dt){
+ const spring=component.release,gain=.75*springFraction(component.age-dt,dt,spring.duration);
+ component.velocity.addScaledVector(new T.Vector3(...spring.velocity),gain);component.spin.addScaledVector(new T.Vector3(...spring.spin),gain);
+ // The intact freighter remains under thrust; loose parts keep their momentum.
+ component.velocity.x+=acceleration()*dt;
  if(component.velocity.lengthSq()<1e-8&&component.spin.lengthSq()<1e-8)return;
  const steps=Math.max(1,Math.ceil(dt*120)),step=dt/steps;
  for(let i=0;i<steps;i++){
@@ -168,26 +182,32 @@ function drift(component,dt){
   // Slide clear of the authored mounting fittings before beginning the tumble.
   if(!mounting){component.group.rotateX(component.spin.x*step);component.group.rotateY(component.spin.y*step);component.group.rotateZ(component.spin.z*step);}
   const after=componentBox(component);
-  let blocked=null;
+  let blocked=null,blockedCenter=null,swept=false;
   for(const obstacle of obstacles){const next=contact(after,obstacle);if(!next)continue;const previous=contact(before,obstacle);
    // Authored mounting fittings may initially overlap conservative bounds.
    // Permit motion that reduces that existing overlap; never deepen it.
    const distance=body=>body.center.reduce((n,v,k)=>n+(v-obstacle.center[k])**2,0);
    if(previous&&next.depth<=previous.depth+.0001&&distance(after)>=distance(before))continue;
-   blocked=next.normal;break;
+   blocked=next.normal;blockedCenter=obstacle.center;break;
   }
   if(!blocked)for(const obstacle of structureBoxes){
    const next=fittingContact(after,obstacle);if(!next)continue;
    if(component.mountContacts.has(obstacle))continue;
-   blocked=next;break;
+   blocked=next;blockedCenter=obstacle.center;break;
   }
   // Also sweep through the actual shared hull index, guarding thin spine contacts.
   const pose={eye:structure.center.toArray(),right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
-  if(!blocked){const hit=window.Driftworks.shipHulls.hullHit(structure.model,pose,position.toArray(),after.center,1,.04);if(hit&&component.velocity.dot(new T.Vector3(...hit.normal))<0)blocked=hit.normal;}
+  if(!blocked){const hit=window.Driftworks.shipHulls.hullHit(structure.model,pose,position.toArray(),after.center,1,.04);if(hit&&component.velocity.dot(new T.Vector3(...hit.normal))<0){blocked=hit.normal;blockedCenter=hit.point;swept=true;}}
   if(blocked){
-   component.group.position.copy(position);component.group.quaternion.copy(rotation);component.spin.set(0,0,0);
-   const normal=new T.Vector3(...blocked),inward=component.velocity.dot(normal);if(inward<0)component.velocity.addScaledVector(normal,-1.15*inward);
-   component.velocity.multiplyScalar(.65);contacts++;break;
+   // A rotating corner can hit while the centre is moving safely clear. Keep
+   // that safe translation instead of repeatedly pinning the whole component.
+   component.group.quaternion.copy(rotation);const translated=componentBox(component);
+   const translationFree=!swept&&obstacles.every(obstacle=>{const next=contact(translated,obstacle);if(!next)return true;const previous=contact(before,obstacle);return previous&&next.depth<=previous.depth+.0001;})&&structureBoxes.every(obstacle=>component.mountContacts.has(obstacle)||!fittingContact(translated,obstacle));
+   if(!translationFree)component.group.position.copy(position);
+   const inverse=rotation.clone().invert(),normal=new T.Vector3(...blocked).applyQuaternion(inverse),toward=new T.Vector3(...blockedCenter).sub(position).applyQuaternion(inverse);
+   const lever=toward.toArray().map((v,k)=>Math.max(-component.half[k],Math.min(component.half[k],v)));
+   const response=respondContact(component.velocity.clone().applyQuaternion(inverse).toArray(),component.spin.toArray(),normal.toArray(),lever,component.half);
+   component.velocity.set(...response.velocity).applyQuaternion(rotation);component.spin.set(...response.spin);contacts++;break;
   }
   for(const obstacle of component.mountContacts)if(!fittingContact(after,obstacle))component.mountContacts.delete(obstacle);
  }
@@ -214,6 +234,7 @@ function frame(now){
   b.mesh.position.addScaledVector(b.direction,span);b.distance+=span;if(b.distance>1200){scene.remove(b.mesh);return false;}return true;
  });
  for(const m of modules)if(m.group.parent===debris){m.age+=dt;drift(m,dt);if(m.age>18)debris.remove(m.group);}
+ vents.step(dt,acceleration(),renderer.domElement.height);
  flashes=flashes.filter(f=>{f.age+=dt;f.mesh.scale.setScalar(.2+f.age*7);f.mesh.material.opacity=Math.max(0,.85-f.age*2);if(f.age>.45){scene.remove(f.mesh);f.mesh.material.dispose();return false;}return true;});
  const start=performance.now();renderer.render(scene,camera);submission.push(performance.now()-start);samples.push(raw*1000);
  if(samples.length>240){samples.shift();submission.shift();}
@@ -224,5 +245,9 @@ try{
  const texture=await new T.TextureLoader().loadAsync('../assets/ships/industrial-kit/panels.png');setSurfaceTexture(texture);
  load();requestAnimationFrame(frame);
  // Read-only inspection for the range's focused browser regression and profiling.
- window.freighterRange={snapshot:()=>({model:$('model').value,modules:modules.map(m=>({id:m.id,label:m.label,type:m.type,hp:m.hp,center:m.center.toArray(),marks:m.scorches.length,markTriangles:m.markGroup.children.reduce((n,mesh)=>n+mesh.geometry.attributes.position.count/3,0),marksFollowDebris:m.markGroup.parent===m.group})),revision,shots,contacts,debris:debris.children.length,bolts:bolts.length,draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,camera:camera.position.toArray(),target:controls.target.toArray(),samples:samples.slice(),submission:submission.slice(),resolution:renderer.getDrawingBufferSize(new T.Vector2()).toArray(),dpr:renderer.getPixelRatio()})};
+ window.freighterRange={snapshot:()=>({
+  model:$('model').value,motion:$('motion').value,acceleration:acceleration(),vents:vents.stats(),
+  modules:modules.map(m=>({id:m.id,label:m.label,type:m.type,hp:m.hp,center:m.center.toArray(),position:m.group.position.toArray(),spin:m.spin.toArray(),damage:m.damageName||null,marks:m.scorches.length,markTriangles:m.markGroup.children.reduce((n,mesh)=>n+mesh.geometry.attributes.position.count/3,0),marksFollowDebris:m.markGroup.parent===m.group})),
+  revision,shots,contacts,debris:debris.children.length,bolts:bolts.length,draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,camera:camera.position.toArray(),target:controls.target.toArray(),samples:samples.slice(),submission:submission.slice(),resolution:renderer.getDrawingBufferSize(new T.Vector2()).toArray(),dpr:renderer.getPixelRatio()
+ })};
 }catch(error){$('log').textContent='Range could not load: '+error.message;console.error(error);}

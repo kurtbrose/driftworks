@@ -12,10 +12,16 @@ assert.equal(contact(box([0,0,3]),box([0,0,0])),null,'Contacts respect 3D separa
 const spring=context.releaseKick('container-7',[-2,3,7.65],[5,2.5,2.5]);
 assert.equal(JSON.stringify(spring),JSON.stringify(context.releaseKick('container-7',[-2,3,7.65],[5,2.5,2.5])),'Release is repeatable');
 const other=context.releaseKick('container-8',[-2,3,7.65],[5,2.5,2.5]);assert.notEqual(spring.strength,other.strength);assert.notEqual(JSON.stringify(spring.attachment),JSON.stringify(other.attachment));
-assert(spring.velocity[1]>0&&spring.velocity[2]>0,'Spring lifts the upper payload away from the mount');
+assert(spring.velocity[1]>0&&spring.velocity[2]>0,'Spring pushes the upper/outboard payload away from the spine');
 assert(Math.hypot(...spring.spin)>.01&&Math.hypot(...spring.spin)<=.650001,'Off-centre kick creates bounded tumble');
 spring.attachment.forEach((v,k)=>assert(Math.abs(v)<=[5,2.5,2.5][k]));
 const cube=context.releaseKick('cube',[0,3,4],[2,2,2]),dot=(a,b)=>a.reduce((n,v,k)=>n+v*b[k],0);
 assert(Math.abs(dot(cube.spin,cube.velocity))<1e-8&&Math.abs(dot(cube.spin,cube.attachment))<1e-8,'Isotropic part tumbles around the torque axis of its off-centre impulse');
 for(const center of [[0,-3,7.65],[0,-3,0],[0,0,0]]){const kick=context.releaseKick('test',center,[5,2.5,2.5]);assert([...kick.velocity,...kick.spin].every(Number.isFinite));if(center[1]||center[2])assert(kick.velocity[1]*center[1]+kick.velocity[2]*center[2]>0,'Lower modules also clear their mounting face');}
-console.log('PASS freighter contact and spring release: 3D overlap/clearance, deterministic attachment and strength variation, outward lift and bounded torque-driven tumble');
+let springSum=0;for(let i=0;i<100;i++)springSum+=context.springFraction(i*.02,.02,1.6);assert(Math.abs(springSum-1)<1e-8,'Long spring delivers one bounded impulse regardless of step partition');assert.equal(context.springFraction(2,.1,1.6),0);
+const response=context.respondContact([-3,0,0],[.2,.1,.3],[1,0,0],[0,2,1],[5,2.5,2.5]);assert(response.velocity[0]>0,'Contact deflects linear motion out of the obstacle');assert(Math.hypot(...response.spin)>.05,'Contact retains and redirects tumble');
+assert(Math.hypot(...context.respondContact([-3,0,0],[0,0,0],[1,0,0],[0,2,1],[5,2.5,2.5]).spin)>.05,'Off-centre contact adds tumble to a non-spinning part');
+const moving=context.releaseKick('container-7',[-2,3,7.65],[5,2.5,2.5],true);assert(moving.attachment[0]<0,'Leading attachment releases first for aft peeling');
+const upper=context.releaseKick('mirror',[0,3,7],[5,2,2]),lower=context.releaseKick('mirror',[0,-3,7],[5,2,2]),side=context.releaseKick('mirror',[0,0,7],[5,2,2]);
+assert(Math.abs(upper.velocity[1]+lower.velocity[1])<1e-8&&upper.velocity[2]===lower.velocity[2],'Mirrored mounting sides give mirrored release directions');assert.equal(side.velocity[1],0,'Side-mounted spring has no upward drift');
+console.log('PASS freighter contact and spring release: 3D overlap/clearance, radial release without up bias, sustained impulse, aft peeling and retained contact tumble');

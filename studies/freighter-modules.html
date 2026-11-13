@@ -16,6 +16,9 @@
 <p>Pick a component on the ship, then fire. Drag to orbit; scroll to approach. The camera stays fixed while firing.</p>
 <label for="model">Freighter</label><select id="model"><option value="container">Container run · 24 containers</option><option value="mixed">Local feeder · 8 containers</option><option value="fluid">Bulk fluid · 4 tanks</option></select>
 <div class="views"><button id="side">Broadside</button><button id="stern">Engines</button><button id="bow">Command</button></div>
+<label for="motion">Motion</label><select id="motion"><option value="thrust">Under thrust · parts trail aft</option><option value="static">Stationary comparison</option></select>
+<label for="damage">Container damage</label><select id="damage"><option value="auto">Mixed shared variants</option><option value="0">Buckled panels</option><option value="1">Crushed corners</option><option value="2">Split seams</option><option value="none">Original shells · hit marks only</option></select>
+<label><input id="vent" type="checkbox" checked> Tank venting</label>
 <label for="module">Component</label><select id="module"></select>
 <p id="selection">Loading authored geometry…</p><progress id="health" value="100" max="100" aria-label="Selected component integrity"></progress>
 <button id="fire" disabled>Fire shot · 35 damage</button><button id="reset">Restore freighter</button>
@@ -23,7 +26,7 @@
 <p class="note">Shots stop at the first surface: orbit to expose hidden parts. Detached parts coast and tumble.<br><br>3D prototype using the authored flight freighter meshes, metre scale, paint and module pivots. Convoy missions do not use these damage rules yet.</p>
 <p id="perf"></p><p><a href="../experiments/flight.html?mission=convoy">Flight simulator</a> · <a href="industrial-kit.html">Shipyard</a></p>
 </aside>
-<main id="stage"><div class="overlay"><strong>Selective destruction</strong>Containers / tanks / drives / command / maneuvering</div></main>
-<script type="module" src="freighter-modules.js?v=f733229b86b2"></script>
+<main id="stage"><div class="overlay"><strong>Selective destruction</strong><span id="motion-note">Travel ← · camera follows freighter · loose parts coast aft →</span></div></main>
+<script type="module" src="freighter-modules.js?v=6c84f48177b0"></script>
 </body>
 </html>
