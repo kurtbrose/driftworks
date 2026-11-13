@@ -27,35 +27,60 @@ function wornMaterial(source,variant){
  };
  material.customProgramCacheKey=()=> 'freighter-shared-wear-v1';variants[variant]=material;return material;
 }
-// Tessellate only a damaged part, once. UVs interpolate from the original atlas.
-function damagedGeometry(source,warp,cut){
- const p=source.attributes.position,uv=source.attributes.uv,positions=[],uvs=[];
+// Split out one coplanar painted panel. Hardware and other faces retain their
+// original attributes; the selected panel has a fixed, small triangle budget.
+function damagedGeometry(source,selected,level,warp,cut){
+ const p=source.attributes.position,uv=source.attributes.uv,n=source.attributes.normal,positions=[],uvs=[],restPositions=[],restUvs=[],restNormals=[];
  const vertex=i=>({p:new T.Vector3().fromBufferAttribute(p,i),uv:new T.Vector2().fromBufferAttribute(uv,i)});
  const mid=(a,b)=>({p:a.p.clone().add(b.p).multiplyScalar(.5),uv:a.uv.clone().add(b.uv).multiplyScalar(.5)});
  function triangle(a,b,c,depth){
-  if(depth<3&&Math.max(a.p.distanceTo(b.p),b.p.distanceTo(c.p),c.p.distanceTo(a.p))>1.35){const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a);triangle(a,ab,ca,depth+1);triangle(ab,b,bc,depth+1);triangle(ca,bc,c,depth+1);triangle(ab,bc,ca,depth+1);return;}
+  if(depth<level){const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a);triangle(a,ab,ca,depth+1);triangle(ab,b,bc,depth+1);triangle(ca,bc,c,depth+1);triangle(ab,bc,ca,depth+1);return;}
   if(cut(a.p.clone().add(b.p).add(c.p).multiplyScalar(1/3)))return;
   for(const v of [a,b,c]){const q=warp(v.p);positions.push(q.x,q.y,q.z);uvs.push(v.uv.x,v.uv.y);}
  }
- for(let i=0;i<p.count;i+=3)triangle(vertex(i),vertex(i+1),vertex(i+2),0);
- const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geometry.computeVertexNormals();geometry.computeBoundingSphere();return geometry;
+ for(let i=0;i<p.count;i+=3){
+  if(selected(i)){triangle(vertex(i),vertex(i+1),vertex(i+2),0);continue;}
+  for(let j=i;j<i+3;j++){restPositions.push(p.getX(j),p.getY(j),p.getZ(j));restUvs.push(uv.getX(j),uv.getY(j));restNormals.push(n.getX(j),n.getY(j),n.getZ(j));}
+ }
+ function geometry(points,texcoords,normals){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(points,3));g.setAttribute('uv',new T.Float32BufferAttribute(texcoords,2));if(normals)g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));else g.computeVertexNormals();g.computeBoundingSphere();return g;}
+ return {panel:geometry(positions,uvs),rest:geometry(restPositions,restUvs,restNormals)};
 }
 export function damageContainer(component,point,normal,variant){
  if(component.damageName)return point;
- const hit=point.clone().sub(component.center),n=normal.clone().normalize();
+ const hit=point.clone().sub(component.center),dominant=[0,1,2].sort((a,b)=>Math.abs(normal.getComponent(b))-Math.abs(normal.getComponent(a)))[0],n=new T.Vector3().setComponent(dominant,Math.sign(normal.getComponent(dominant)));
  const axis=Math.abs(n.x)<.8?new T.Vector3(1,0,0):new T.Vector3(0,0,1),t=axis.addScaledVector(n,-axis.dot(n)).normalize(),b=new T.Vector3().crossVectors(n,t);
+ const planes=new Map(),selectedTriangles=new Map();
+ let before=0;
+ for(const mesh of component.surfaceMeshes){
+  const p=mesh.geometry.attributes.position,normals=mesh.geometry.attributes.normal;before+=p.count/3;if(!mesh.material.map)continue;
+  for(let i=0;i<p.count;i+=3){
+   const face=new T.Vector3().fromBufferAttribute(normals,i);if(face.dot(n)<.999)continue;
+   const a=new T.Vector3().fromBufferAttribute(p,i),q=new T.Vector3().fromBufferAttribute(p,i+1),r=new T.Vector3().fromBufferAttribute(p,i+2),plane=Math.round(a.dot(n)*1000)/1000,key=String(plane);
+   let bucket=planes.get(key);if(!bucket){bucket={plane,area:0,triangles:[]};planes.set(key,bucket);}
+   bucket.area+=q.sub(a).cross(r.sub(a)).length()*.5;bucket.triangles.push({mesh,offset:i});
+  }
+ }
+ const panel=[...planes.values()].sort((a,b)=>b.area/(1+100*(b.plane-hit.dot(n))**2)-a.area/(1+100*(a.plane-hit.dot(n))**2))[0];
+ if(!panel)return point;
+ const level=Math.min(3,Math.max(0,Math.floor(Math.log(384/panel.triangles.length)/Math.log(4))));
+ const extents=[Infinity,-Infinity,Infinity,-Infinity];
+ for(const tri of panel.triangles){let offsets=selectedTriangles.get(tri.mesh);if(!offsets){offsets=new Set();selectedTriangles.set(tri.mesh,offsets);}offsets.add(tri.offset);
+  const p=tri.mesh.geometry.attributes.position;for(let i=tri.offset;i<tri.offset+3;i++){const v=new T.Vector3().fromBufferAttribute(p,i),u=v.dot(t),w=v.dot(b);extents[0]=Math.min(extents[0],u);extents[1]=Math.max(extents[1],u);extents[2]=Math.min(extents[2],w);extents[3]=Math.max(extents[3],w);}
+ }
  const anchor=variant===1?new T.Vector3(...component.half.map((h,k)=>Math.sign(hit.getComponent(k)||1)*h*.88)):hit.clone();
  const coordinates=p=>{const d=p.clone().sub(anchor);return [d.dot(t),d.dot(b),d.dot(n)];};
  const warp=p=>{
+  if(Math.abs(p.dot(n)-panel.plane)>.08)return p.clone();
   const [u,v,depth]=coordinates(p),weight=Math.max(0,1-(u/3.8)**2-(v/2.6)**2)*Math.exp(-Math.abs(depth)/.6),q=p.clone();
+  const clamp=x=>Math.max(0,Math.min(1,x)),s=p.dot(t),w=p.dot(b),rim=clamp((s-extents[0])/.35)*clamp((extents[1]-s)/.35)*clamp((w-extents[2])/.35)*clamp((extents[3]-w)/.35);
   const dent=variant===0?.48*(.6+.4*Math.cos(u*2.5)):variant===1?.7:.28;
-  q.addScaledVector(n,-dent*weight);
-  if(variant===2){q.addScaledVector(t,Math.sign(u)*.16*weight);q.addScaledVector(b,Math.sin(u*2.6)*.16*weight);}return q;
+  q.addScaledVector(n,-dent*weight*rim);
+  if(variant===2){q.addScaledVector(t,Math.sign(u)*.16*weight*rim);q.addScaledVector(b,Math.sin(u*2.6)*.16*weight*rim);}return q;
  };
- const cut=p=>{const [u,v,depth]=coordinates(p);return variant===2&&Math.abs(depth)<.4&&Math.abs(u)<.38&&Math.abs(v)<1.35;};
- for(const mesh of component.surfaceMeshes){
-  const original=mesh.geometry;mesh.geometry=damagedGeometry(original,warp,cut);original.dispose();
-  if(mesh.material.map)mesh.material=wornMaterial(mesh.material,variant);
+ const cut=p=>{const [u,v,depth]=coordinates(p);return variant===2&&Math.abs(p.dot(n)-panel.plane)<.08&&Math.abs(depth)<.4&&Math.abs(u)<.38&&Math.abs(v)<1.35;};
+ for(const [mesh,offsets] of selectedTriangles){
+  const original=mesh.geometry,parts=damagedGeometry(original,i=>offsets.has(i),level,warp,cut);mesh.geometry=parts.rest;original.dispose();
+  const skin=new T.Mesh(parts.panel,wornMaterial(mesh.material,variant));component.group.add(skin);component.surfaceMeshes.push(skin);
  }
  if(variant===2){const liner=new T.Mesh(new T.BoxGeometry(...component.half.map((h,k)=>Math.max(.2,h-(k?.9:.6))*2)).toNonIndexed(),innerMaterial);component.group.add(liner);component.surfaceMeshes.push(liner);}
  for(const mark of component.scorches)mark.layers=mark.layers.map(layer=>{
@@ -65,7 +90,7 @@ export function damageContainer(component,point,normal,variant){
  });
  const vertices=[],bounds=new T.Box3();
  for(const mesh of component.surfaceMeshes){const p=mesh.geometry.attributes.position,normals=mesh.geometry.attributes.normal;for(let i=0;i<p.count;i++){vertices.push(p.getX(i),p.getY(i),p.getZ(i),normals.getX(i),normals.getY(i),normals.getZ(i));bounds.expandByPoint(new T.Vector3().fromBufferAttribute(p,i));}}
- component.model={id:component.model.id,vertices};component.half=component.half.map((h,k)=>Math.max(h,Math.abs(bounds.min.getComponent(k)),Math.abs(bounds.max.getComponent(k))));
+ component.model={id:component.model.id,vertices};component.damageTriangles={before,after:vertices.length/18,added:vertices.length/18-before,panel:panel.triangles.length*4**level,untouched:before-panel.triangles.length};component.half=component.half.map((h,k)=>Math.max(h,Math.abs(bounds.min.getComponent(k)),Math.abs(bounds.max.getComponent(k))));
  component.damageName=damageNames[variant];component.group.updateMatrixWorld(true);
  const ray=new T.Raycaster(point.clone().addScaledVector(n,1.2),n.clone().negate(),0,3),surface=ray.intersectObjects(component.surfaceMeshes,false)[0];
  return surface?surface.point:warp(hit).add(component.center);

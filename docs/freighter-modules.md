@@ -51,8 +51,18 @@ ownership follows the authored groups, not arbitrary slices through the hull.
 
 Container damage becomes visible at 30 integrity. Three shared variants buckle
 the panel, crush a corner or open a split seam with a dark interior liner.
-Only the damaged component is tessellated, at most three subdivision levels,
-and its collision triangles and existing marks follow the deformed surface.
+Only the struck coplanar painted panel is tessellated, with a budget of at most
+384 panel triangles (at most three subdivision levels). Other faces, frame and
+fittings retain their original geometry attributes and materials. The panel's
+outer edge stays seated against the unchanged frame. Collision triangles and
+existing marks follow the deformed surface. Focused geometry checks measured
+126–133 added triangles for the side-panel range views and up to 252 for tested
+door-face variants; the regression limit is 400 added triangles including a
+split-seam liner. At the same range camera and 1115 × 900, DPR 1, the partial
+damage views fell from about 32,200 submitted triangles to 23,550–23,650.
+Detached containers need one additional draw to keep their unchanged paint and
+damaged panel separate. Recorded frame cadence stayed at about 13.3 ms median;
+this demonstrates reduced geometry, not a measured frame-rate improvement.
 The original paint atlas and branding remain shared. Three reusable 256px wear
 maps add sparse exposed-metal chips and cracks in the material shader; no large
 atlas copies or unique container textures are generated. The selector can choose
@@ -88,7 +98,9 @@ It checks all three freighters, independent damage, payload/drive/command
 detachment, persistent marks, fixed firing poses, deliberate impacts against the
 freighter and other debris, outward spring direction, aft drift, all three damage
 variants, shared atlas retention, one-draw bounded venting, reset and GPU geometry lifetime. Run
-`node tests/freighter-contact.cjs` for the dependency-free 3D box contact check.
+`node tests/freighter-contact.cjs` for the dependency-free 3D box contact check,
+and `node tests/freighter-damage.cjs` for panel budget, unchanged hardware/UVs,
+shared atlas and visual/collision triangle-count checks.
 Labeled range captures and matched intact/detached/detached/restored measurements go to ignored
 `output/freighter-modules/`. Measurements report CPU submission and browser
 cadence, not GPU execution or production convoy readiness.

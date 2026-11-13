@@ -247,7 +247,7 @@ try{
  // Read-only inspection for the range's focused browser regression and profiling.
  window.freighterRange={snapshot:()=>({
   model:$('model').value,motion:$('motion').value,acceleration:acceleration(),vents:vents.stats(),
-  modules:modules.map(m=>({id:m.id,label:m.label,type:m.type,hp:m.hp,center:m.center.toArray(),position:m.group.position.toArray(),spin:m.spin.toArray(),damage:m.damageName||null,marks:m.scorches.length,markTriangles:m.markGroup.children.reduce((n,mesh)=>n+mesh.geometry.attributes.position.count/3,0),marksFollowDebris:m.markGroup.parent===m.group})),
+  modules:modules.map(m=>({id:m.id,label:m.label,type:m.type,hp:m.hp,center:m.center.toArray(),position:m.group.position.toArray(),spin:m.spin.toArray(),damage:m.damageName||null,damageTriangles:m.damageTriangles||null,marks:m.scorches.length,markTriangles:m.markGroup.children.reduce((n,mesh)=>n+mesh.geometry.attributes.position.count/3,0),marksFollowDebris:m.markGroup.parent===m.group})),
   revision,shots,contacts,debris:debris.children.length,bolts:bolts.length,draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,camera:camera.position.toArray(),target:controls.target.toArray(),samples:samples.slice(),submission:submission.slice(),resolution:renderer.getDrawingBufferSize(new T.Vector2()).toArray(),dpr:renderer.getPixelRatio()
  })};
 }catch(error){$('log').textContent='Range could not load: '+error.message;console.error(error);}

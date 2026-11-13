@@ -172,6 +172,7 @@ const suites = {
     "concept-ships.cjs",
     "industrial-kit.cjs",
     "freighter-contact.cjs",
+    "freighter-damage.cjs",
     "freighter-finishes.cjs",
     "dreadnaught-kit.cjs",
     "aegis-surface-study.cjs"

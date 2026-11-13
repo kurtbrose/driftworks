@@ -33,7 +33,7 @@ window.rangeContactTest={
     if(shot===2){const point=await page.evaluate(id=>window.rangeContactTest.screen(id),target.id);await page.mouse.click(...point);}
     await shoot();state=await snapshot();assert.equal(state.modules[target.id].hp,Math.max(0,100-shot*35));assert.deepEqual(state.camera,camera,'Firing never moves the camera');
     assert.equal(state.modules[target.id].marks,shot,'Each surface hit leaves a persistent local mark');assert(state.modules[target.id].markTriangles>0,'Marks project onto real module triangles');
-    if(shot===2&&payload==='Container'){assert(state.modules[target.id].damage,'Low-health container uses a damaged geometry');assert(await page.evaluate(id=>window.rangeContactTest.sharedAtlas(id),target.id),'Damaged material retains the common paint atlas');assert(state.triangles<200000,'Damage tessellation stays bounded');await page.screenshot({path:path.join(output,model+'-damaged.png')});}
+    if(shot===2&&payload==='Container'){assert(state.modules[target.id].damage,'Low-health container uses a damaged geometry');assert(await page.evaluate(id=>window.rangeContactTest.sharedAtlas(id),target.id),'Damaged material retains the common paint atlas');assert(state.modules[target.id].damageTriangles.added<=400,'Only the receiving panel adds geometry');await page.screenshot({path:path.join(output,model+'-damaged.png')});}
     if(shot===1){await page.waitForTimeout(600);await page.screenshot({path:path.join(output,model+'-hit.png')});assert.equal((await snapshot()).modules[target.id].marks,1,'Mark survives the transient flash');}
     if(shot===1&&payload==='Tank'){
      const on=await snapshot(),vent=on.vents;assert(vent.leaks>0&&vent.particles>0&&vent.particles<=vent.capacity,'Puncture emits bounded sprite puffs');
@@ -88,8 +88,8 @@ window.rangeContactTest={
   await page.selectOption('#model','mixed');await page.selectOption('#motion','static');
   for(const [variant,name] of ['Buckled panel','Crushed corner','Split seam'].entries()){
    await page.selectOption('#damage',String(variant));await shoot();await shoot();await page.waitForTimeout(650);
-   const state=await snapshot(),damaged=state.modules.find(m=>m.hp===30);assert.equal(damaged.damage,name);assert(damaged.markTriangles>0);assert(await page.evaluate(id=>window.rangeContactTest.sharedAtlas(id),damaged.id));
-   await page.screenshot({path:path.join(output,'damage-variant-'+variant+'.png')});damageVariants.push({name,draws:state.draws,triangles:state.triangles});
+   const state=await snapshot(),damaged=state.modules.find(m=>m.hp===30);assert.equal(damaged.damage,name);assert(damaged.markTriangles>0);assert(await page.evaluate(id=>window.rangeContactTest.sharedAtlas(id),damaged.id));assert(damaged.damageTriangles.added<=400);assert(damaged.damageTriangles.panel<=384);
+   await page.screenshot({path:path.join(output,'damage-variant-'+variant+'.png')});damageVariants.push({name,draws:state.draws,triangles:state.triangles,geometry:damaged.damageTriangles});
    await shoot();await page.waitForTimeout(800);assert.equal((await snapshot()).debris,1,'Damage variant remains detachable');
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'checks.json'),JSON.stringify({scope:'Authored 3D damage range, not production convoy performance; CPU submission and browser cadence, not GPU time.',results,damageVariants},null,2)+'\n');
