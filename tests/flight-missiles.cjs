@@ -107,6 +107,13 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  const pose={eye:[15/U,80/U,5/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]};
  const bolt={...missile,missile:true};const batches=D.flightGuns.geometry({bolts:[bolt],impacts:[]},pose);
  assert.ok(batches.some(b=>b.finish===0&&b.vertices.length>0),'nearby missile has opaque body geometry');
+ const body=batches.find(b=>b.finish===0);assert.equal(body.stride,8,'missile body carries normals and UVs');
+ assert.ok(body.vertices.length/8/3<=350,'smooth missile stays within a small triangle budget');
+ for(let i=0;i<body.vertices.length;i+=8){
+  assert.ok(Math.abs(Math.hypot(...body.vertices.slice(i+3,i+6))-1)<1e-5,'smooth surface normals stay unit length');
+  assert.ok(body.vertices[i+6]>=0&&body.vertices[i+6]<=1&&body.vertices[i+7]>=0&&body.vertices[i+7]<=1,'body UVs stay on shared texture');
+ }
+
  assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)),'missile buffers stay finite');
  const strip=batches.find(b=>b.color[0]===.42).vertices;
  for(let i=0;i<strip.length;i+=6)assert.equal(strip[i+3],0,'trail shader has no longitudinal pulse');

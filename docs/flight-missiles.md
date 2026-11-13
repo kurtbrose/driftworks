@@ -136,13 +136,21 @@ No CI result is claimed.
 
 ## Original missile visuals
 
-The production gun/effect path now draws original eight-sided pointed missile
-bodies with four swept fins. Standard missiles are 3.2 m long with a 0.16 m
+The production gun/effect path now draws original smooth missile
+bodies with rounded noses and four small swept fins. Standard missiles are 3.2 m long with a 0.16 m
 body radius; heavy weapons (cargo size at least 10) use 5.4 m / 0.32 m.
 These are authored visual dimensions, not imported FreeSpace model dimensions.
 Opaque, depth-writing bodies disappear beyond 180 body lengths; additive nozzle
 glows and exhaust remain. Missile artwork bypasses primary-gun visual options.
 No FreeSpace mesh, texture, sound or effect asset is used.
+
+The body uses a 24-sided, seven-ring surface of revolution with smooth normals
+(320 triangles including caps and double-sided fins). One shared 512×256
+ImageGen albedo supplies pale metal, orange identification bands and maintenance
+marks. It adds one texture sample, with no normal/roughness maps or extra detail
+meshes. The effect adapter accepts the same stride-8 textured buffers as ship
+artwork, while trails remain stride-6 emissive strips. See
+[texture provenance and exact generation prompt](../assets/weapons/missile-skin-v1.md).
 
 Simulation history records actual positions approximately every 25 ms, capped at
 48 points / 0.85 seconds. Connected strips share edge vertices and fade only across their width and

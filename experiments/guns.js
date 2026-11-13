@@ -10,6 +10,13 @@
     /** @param {boolean|'thin-shell'|undefined} bridge */
     function metric(bridge){var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);return bridge==='thin-shell'?DW.thinShellOptics:DW.ellisOptics;}
     var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);
+    var assetUrl = /** @type {(value:string,base?:string)=>string} */(window.Driftworks.assetUrl);
+    var skinUrl=typeof document!=='undefined'&&document.currentScript?new URL('../assets/weapons/missile-skin-v1.png',/** @type {HTMLScriptElement} */(document.currentScript).src).href:'';
+    var skin=/** @type {HTMLImageElement|undefined} */(undefined),skinStarted=false;
+    function missileSkin(){
+        if(!skinStarted&&skinUrl&&typeof Image!=='undefined'){skinStarted=true;skin=new Image();skin.src=assetUrl(skinUrl);}
+        return skin&&skin.complete&&skin.naturalWidth?skin:undefined;
+    }
     var units = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).sim.METERS_PER_UNIT;
     /** @param {Vector} vector @param {Vector} normal */
     function bridgeVector(vector,normal){var radial=vector.reduce(function(sum,v,i){return sum+v*normal[i];},0);return vector.map(function(v,i){return 2*radial*normal[i]-v;});}
@@ -304,7 +311,7 @@
         /** @param {Vector} v */
         function unitVector(v){var n=Math.hypot.apply(null,v)||1;return v.map(function(x){return x/n;});}
         /** @param {Vector} a @param {Vector} b @param {Vector} c */
-        function triangle(a,b,c){var n=unitVector(cross(b.map(function(v,i){return v-a[i];}),c.map(function(v,i){return v-a[i];})));[a,b,c].forEach(function(v){bodies.push.apply(bodies,v.concat(n));});}
+        function triangle(a,b,c){var n=unitVector(cross(b.map(function(v,i){return v-a[i];}),c.map(function(v,i){return v-a[i];})));[a,b,c].forEach(function(v){bodies.push.apply(bodies,v.concat(n,[.05,.5]));});}
         var curvature=0;
         /** @param {number[]} data @param {Vector} center @param {Vector} along @param {Vector} side @param {number} halfLength @param {number} width @param {number} opacity */
         function quad(data, center, along, side, halfLength, width, opacity) {
@@ -370,16 +377,23 @@
                 let heavy='cargoSize' in bolt.weapon&&Number(bolt.weapon.cargoSize)>=10;
                 let length=(heavy?5.4:3.2)/units,radius=(heavy?.32:.16)/units;
                 let forward=bolt.direction,radial=unitVector(cross(forward,Math.abs(forward[2])<.9?[0,0,1]:[0,1,0])),vertical=cross(radial,forward);
-                /** Original eight-sided body: pointed nose, cylindrical casing and four swept fins.
-                 * @param {number} z @param {number} r @param {number} angle */
+                /** @param {number} z @param {number} r @param {number} angle */
                 function vertex(z,r,angle){let offset=forward.map(function(v,i){return v*z+radial[i]*r*Math.cos(angle)+vertical[i]*r*Math.sin(angle);});return curvature?DW.flightHyperbolic.offset(bolt.position,offset,curvature):bolt.position.map(function(v,i){return v+offset[i];});}
-                // Skip subpixel bodies; distant readability comes from the engine sprite.
+                // Smooth normals on a compact surface of revolution; texture carries panel detail.
                 if(range<length*units*180){
-                    for(let face=0;face<8;face++){
-                        let a=face*Math.PI/4,b=(face+1)*Math.PI/4,frontA=vertex(-length*.23,radius,a),frontB=vertex(-length*.23,radius,b),rearA=vertex(-length,radius,a),rearB=vertex(-length,radius,b);
-                        triangle(vertex(0,0,0),frontA,frontB);triangle(frontA,rearA,rearB);triangle(frontA,rearB,frontB);triangle(vertex(-length,0,0),rearB,rearA);
+                    let rings=[[-1,.92],[-.94,1],[-.3,1],[-.18,.88],[-.08,.55],[-.025,.22],[0,0]];
+                    /** @param {number} ring @param {number} angle */
+                    function bodyVertex(ring,angle){
+                        let entry=rings[ring],before=rings[Math.max(0,ring-1)],after=rings[Math.min(rings.length-1,ring+1)],slope=(after[1]-before[1])*radius/((after[0]-before[0])*length);
+                        let n=unitVector(radial.map(function(v,i){return v*Math.cos(angle)+vertical[i]*Math.sin(angle)-forward[i]*slope;}));
+                        return vertex(entry[0]*length,entry[1]*radius,angle).concat(n,[1+entry[0],angle/(2*Math.PI)]);
                     }
-                    for(let fin=0;fin<4;fin++){let angle=fin*Math.PI/2,root=vertex(-length*.52,radius,angle),tip=vertex(-length*.96,radius*3.3,angle),end=vertex(-length*.98,radius,angle);triangle(root,tip,end);triangle(end,tip,root);}
+                    for(let ring=0;ring<rings.length-1;ring++)for(let face=0;face<24;face++){
+                        let a=face*Math.PI/12,b=(face+1)*Math.PI/12,backA=bodyVertex(ring,a),backB=bodyVertex(ring,b),frontA=bodyVertex(ring+1,a),frontB=bodyVertex(ring+1,b);
+                        bodies.push.apply(bodies,frontA.concat(backA,backB,frontA,backB,frontB));
+                    }
+                    for(let face=0;face<24;face++)triangle(vertex(-length,0,0),vertex(-length,radius*.92,(face+1)*Math.PI/12),vertex(-length,radius*.92,face*Math.PI/12));
+                    for(let fin=0;fin<4;fin++){let angle=fin*Math.PI/2,root=vertex(-length*.7,radius,angle),tip=vertex(-length*.96,radius*2.1,angle),end=vertex(-length*.98,radius,angle);triangle(root,tip,end);triangle(end,tip,root);}
                 }
                 let nozzle=vertex(-length,0,0),glow=Math.max(radius*1.9,Math.min(.7/units,range/units*.00065));
                 quad(exhaust,nozzle,pose.right,pose.up,glow,glow,1.4);
@@ -471,7 +485,7 @@
         var batches = groups.map(function (g) {
             return { vertices: new Float32Array(g.data), color: g.color, projected:!!optical, region:pose.region||0 };
         });
-        if(bodies.length)batches.unshift({vertices:new Float32Array(bodies),color:[.62,.66,.69],finish:0,projected:!!optical,region:pose.region||0});
+        if(bodies.length)batches.unshift({vertices:new Float32Array(bodies),color:skin&&skin.complete?[1,1,1]:[.72,.75,.77],texture:missileSkin(),stride:8,finish:0,projected:!!optical,region:pose.region||0});
         if(exhaust.length)batches.push({vertices:new Float32Array(exhaust),color:[1,.36,.08],projected:!!optical,region:pose.region||0});
         var impacts = /** @type {number[]} */ ([]);
         curvature=pose.curvature||0;

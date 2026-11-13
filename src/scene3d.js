@@ -549,7 +549,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       if(values)mesh.buffer.setAttribute('aBakedDocking',new THREE.BufferAttribute(values,3));
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
-    /** @type {{placement?:import('../experiments/types').RenderPlacement,vertices:Float32Array,color:V3,finish?:number,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
+    /** @type {{placement?:import('../experiments/types').RenderPlacement,vertices:Float32Array,color:V3,stride?:number,texture?:HTMLImageElement,finish?:number,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
@@ -1022,12 +1022,13 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
           drawProjected=!!batch.projected;
           if(!place(batch))return;
           if(!batch.vertices.length)return;
-          renderStats.effectVertices+=batch.vertices.length/6;
+          renderStats.effectVertices+=batch.vertices.length/(batch.stride||6);
           if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));
-          var mesh=studyEffectMeshes[index];updateGeometry(mesh.buffer,batch.vertices,mesh.stride||6);mesh.count=batch.vertices.length/6;
+          var mesh=studyEffectMeshes[index],stride=batch.stride||6;updateGeometry(mesh.buffer,batch.vertices,stride);mesh.stride=stride;mesh.count=batch.vertices.length/stride;
+          bindShipTexture(batch.texture);
           draw(mesh,[0,0,0],[1,1,1],0,batch.color);
         });
-        depthWrite=true;blending=THREE.NoBlending;setFinish(0);setUniform('Habitat',0);
+        depthWrite=true;blending=THREE.NoBlending;setFinish(0);setUniform('Habitat',0);bindShipTexture(undefined);
       }
       drawProjected=false;setUniform('PortalClip',[0,0,0,0]);setUniform('PortalPlane',[0,0,0,0]);
       if(DW.explosions){
