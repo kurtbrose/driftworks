@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const context={};vm.createContext(context);vm.runInContext(fs.readFileSync('studies/freighter-contact.js','utf8').replace('export function contact','function contact')+'\nthis.contact=contact;',context);
+const {contact}=context,axes=[[1,0,0],[0,1,0],[0,0,1]],box=(center,half=[2,1,1],basis=axes)=>({center,half,axes:basis});
+assert.equal(contact(box([0,0,0]),box([5,0,0])),null);
+assert.equal(contact(box([0,0,0]),box([4,0,0])),null,'Touching faces do not block separation');
+const hit=contact(box([3.5,0,0]),box([0,0,0]));assert(hit);assert(Math.abs(hit.depth-.5)<1e-8);assert.deepEqual(Array.from(hit.normal),[1,0,0]);
+const a=Math.PI/4,rotated=[[Math.cos(a),Math.sin(a),0],[-Math.sin(a),Math.cos(a),0],[0,0,1]];
+assert(contact(box([1.9,0,0],[2,.2,.2],rotated),box([0,0,0],[2,.2,.2])),'Rotating corners are constrained');
+assert.equal(contact(box([0,1,0],[2,.1,.1],rotated),box([0,-1,0],[2,.1,.1],rotated)),null,'Separated parallel rotated parts remain free');
+assert.equal(contact(box([0,0,3]),box([0,0,0])),null,'Contacts respect 3D separation');
+console.log('PASS freighter contact: axis-aligned/rotated overlap, corner contacts, separating normals, touching faces and 3D clearance');
