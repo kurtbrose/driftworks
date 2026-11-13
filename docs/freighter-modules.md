@@ -22,8 +22,13 @@ wreck texture.
 The continuous spine and fittings have a separate 1,200-integrity readout;
 structural breakup is not implemented.
 
-Detached components leave the attached collision mesh immediately and coast
-with a deterministic tumble. They are presentation debris, excluded from
+Detached components leave the attached collision mesh immediately. An imaginary
+compressed spring supplies a release impulse at an off-centre attachment near
+the mounted face. Its point and strength vary deterministically by freighter and
+component ID. The impulse lifts the part away from the mount; the attachment
+lever arm crossed with that same impulse supplies tumble, scaled by simple box
+inertia and capped at 0.65 radians/second. There is no drawn spring or ongoing
+tether. The part then coasts. These are presentation debris, excluded from
 further weapon hits, capped at twelve visible components and removed after
 eighteen active seconds. A conservative oriented-box contact check rejects new
 overlaps against attached modules, loose modules and individual spine/fitting

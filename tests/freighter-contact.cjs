@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const context={};vm.createContext(context);vm.runInContext(fs.readFileSync('studies/freighter-contact.js','utf8').replace('export function contact','function contact')+'\nthis.contact=contact;',context);
+const context={};vm.createContext(context);vm.runInContext(fs.readFileSync('studies/freighter-contact.js','utf8').replace(/export function /g,'function '),context);
 const {contact}=context,axes=[[1,0,0],[0,1,0],[0,0,1]],box=(center,half=[2,1,1],basis=axes)=>({center,half,axes:basis});
 assert.equal(contact(box([0,0,0]),box([5,0,0])),null);
 assert.equal(contact(box([0,0,0]),box([4,0,0])),null,'Touching faces do not block separation');
@@ -9,4 +9,13 @@ const a=Math.PI/4,rotated=[[Math.cos(a),Math.sin(a),0],[-Math.sin(a),Math.cos(a)
 assert(contact(box([1.9,0,0],[2,.2,.2],rotated),box([0,0,0],[2,.2,.2])),'Rotating corners are constrained');
 assert.equal(contact(box([0,1,0],[2,.1,.1],rotated),box([0,-1,0],[2,.1,.1],rotated)),null,'Separated parallel rotated parts remain free');
 assert.equal(contact(box([0,0,3]),box([0,0,0])),null,'Contacts respect 3D separation');
-console.log('PASS freighter contact: axis-aligned/rotated overlap, corner contacts, separating normals, touching faces and 3D clearance');
+const spring=context.releaseKick('container-7',[-2,3,7.65],[5,2.5,2.5]);
+assert.equal(JSON.stringify(spring),JSON.stringify(context.releaseKick('container-7',[-2,3,7.65],[5,2.5,2.5])),'Release is repeatable');
+const other=context.releaseKick('container-8',[-2,3,7.65],[5,2.5,2.5]);assert.notEqual(spring.strength,other.strength);assert.notEqual(JSON.stringify(spring.attachment),JSON.stringify(other.attachment));
+assert(spring.velocity[1]>0&&spring.velocity[2]>0,'Spring lifts the upper payload away from the mount');
+assert(Math.hypot(...spring.spin)>.01&&Math.hypot(...spring.spin)<=.650001,'Off-centre kick creates bounded tumble');
+spring.attachment.forEach((v,k)=>assert(Math.abs(v)<=[5,2.5,2.5][k]));
+const cube=context.releaseKick('cube',[0,3,4],[2,2,2]),dot=(a,b)=>a.reduce((n,v,k)=>n+v*b[k],0);
+assert(Math.abs(dot(cube.spin,cube.velocity))<1e-8&&Math.abs(dot(cube.spin,cube.attachment))<1e-8,'Isotropic part tumbles around the torque axis of its off-centre impulse');
+for(const center of [[0,-3,7.65],[0,-3,0],[0,0,0]]){const kick=context.releaseKick('test',center,[5,2.5,2.5]);assert([...kick.velocity,...kick.spin].every(Number.isFinite));if(center[1]||center[2])assert(kick.velocity[1]*center[1]+kick.velocity[2]*center[2]>0,'Lower modules also clear their mounting face');}
+console.log('PASS freighter contact and spring release: 3D overlap/clearance, deterministic attachment and strength variation, outward lift and bounded torque-driven tumble');

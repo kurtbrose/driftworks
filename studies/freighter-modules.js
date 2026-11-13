@@ -2,7 +2,7 @@ import * as T from 'three';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js';
 import {mergeGeometries} from '../vendor/three/examples/jsm/utils/BufferGeometryUtils.js';
 import {buildFreighter,batchStatic,disposeBatch,setSurfaceTexture} from '../assets/ships/industrial-kit/kit.js';
-import {contact} from './freighter-contact.js';
+import {contact,releaseKick} from './freighter-contact.js';
 
 const $=id=>document.getElementById(id),host=$('stage');
 const renderer=new T.WebGLRenderer({antialias:true});
@@ -126,10 +126,10 @@ function impact(point,component,direction,normal){
   // Corner locks are authored through the attached container skin. Release only
   // those original contacts, without rotation, until the component slides clear.
   component.mountContacts=new Set(structureBoxes.filter(obstacle=>fittingContact(componentBox(component),obstacle)));
-  const outward=new T.Vector3(0,component.center.y,component.center.z).normalize();if(outward.lengthSq()<.1)outward.set(-1,0,0);
-  // Break free of the mount radially; the shot adds a small secondary kick.
-  component.velocity.copy(outward.multiplyScalar(2)).addScaledVector(direction,.35);
-  component.spin.set(.08*(component.id%3-1),.07,.05*(component.id%2?1:-1));component.age=0;
+  const spring=releaseKick($('model').value+'-'+component.id,component.center.toArray(),component.half);
+  component.release=spring;
+  component.velocity.set(...spring.velocity).addScaledVector(direction,.12);
+  component.spin.set(...spring.spin);component.age=0;
   // Bound debris lifetime and visible count, retaining the reusable component buffers.
   if(debris.children.length>12)debris.remove(debris.children[0]);
   rebuildHull();$('log').textContent=component.label+' destroyed. Structure remains intact.';
