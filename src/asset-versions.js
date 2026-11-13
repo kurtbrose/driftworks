@@ -2015,6 +2015,7 @@
   "assets/ships/quaternius-ultimate-spaceships/textures/Zenith.wreck.webp": "454865ceadb5",
   "assets/ships/wreck-textures.json": "d162e81a7756",
   "assets/weapons/missile-skin-v1.png": "e0d70bcf7fa8",
+  "assets/weapons/missile-skins-v2.png": "2ec06f44ea2d",
   "experiments/aegis-benchmark-preview.png": "f2fafbea1852",
   "experiments/aegis-flight-preview.png": "0af6e494f115",
   "experiments/aegis-performance-preview.png": "467c11fe4715",

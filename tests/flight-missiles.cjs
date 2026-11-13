@@ -115,6 +115,14 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  }
 
  assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)),'missile buffers stay finite');
+
+ const skinCells=new Set();
+ for(const weapon of D.retailMissiles.missiles){
+  const b=D.flightGuns.geometry({bolts:[{...bolt,weapon}],impacts:[]},pose).find(b=>b.finish===0).vertices,cell=Math.floor(b[6]*2)+2*Math.floor(b[7]*2);skinCells.add(cell);
+  for(let i=0;i<b.length;i+=8){assert.equal(Math.floor(b[i+6]*2)+2*Math.floor(b[i+7]*2),cell,'one missile never samples across atlas tiles');assert.ok((b[i+6]*1024)%512>=3.99&&(b[i+6]*1024)%512<=508.01,'UV padding stays inside the selected skin');}
+  const again=D.flightGuns.geometry({bolts:[{...bolt,weapon}],impacts:[]},pose).find(b=>b.finish===0).vertices;assert.equal(again[6],b[6]);assert.equal(again[7],b[7]);
+ }
+ assert.equal(skinCells.size,4,'catalog uses all four original skin designs');
  const strip=batches.find(b=>b.color[0]===.42).vertices;
  for(let i=0;i<strip.length;i+=6)assert.equal(strip[i+3],0,'trail shader has no longitudinal pulse');
  for(let i=36;i<strip.length;i+=36){

@@ -11,7 +11,7 @@
     function metric(bridge){var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);return bridge==='thin-shell'?DW.thinShellOptics:DW.ellisOptics;}
     var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);
     var assetUrl = /** @type {(value:string,base?:string)=>string} */(window.Driftworks.assetUrl);
-    var skinUrl=typeof document!=='undefined'&&document.currentScript?new URL('../assets/weapons/missile-skin-v1.png',/** @type {HTMLScriptElement} */(document.currentScript).src).href:'';
+    var skinUrl=typeof document!=='undefined'&&document.currentScript?new URL('../assets/weapons/missile-skins-v2.png',/** @type {HTMLScriptElement} */(document.currentScript).src).href:'';
     var skin=/** @type {HTMLImageElement|undefined} */(undefined),skinStarted=false;
     function missileSkin(){
         if(!skinStarted&&skinUrl&&typeof Image!=='undefined'){skinStarted=true;skin=new Image();skin.src=assetUrl(skinUrl);}
@@ -305,13 +305,16 @@
                 return sum + x * b[i];
             }, 0);
         }
+        var bodySkin=0;
+        /** Atlas padding protects adjacent designs from bilinear filtering. @param {number} u @param {number} v */
+        function skinUV(u,v){return [((bodySkin%2)*512+4+u*504)/1024,(Math.floor(bodySkin/2)*256+4+v*248)/512];}
         var bodies=/** @type {number[]} */([]),exhaust=/** @type {number[]} */([]),trails=/** @type {number[]} */([]);
         /** @param {Vector} a @param {Vector} b */
         function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
         /** @param {Vector} v */
         function unitVector(v){var n=Math.hypot.apply(null,v)||1;return v.map(function(x){return x/n;});}
         /** @param {Vector} a @param {Vector} b @param {Vector} c */
-        function triangle(a,b,c){var n=unitVector(cross(b.map(function(v,i){return v-a[i];}),c.map(function(v,i){return v-a[i];})));[a,b,c].forEach(function(v){bodies.push.apply(bodies,v.concat(n,[.05,.5]));});}
+        function triangle(a,b,c){var n=unitVector(cross(b.map(function(v,i){return v-a[i];}),c.map(function(v,i){return v-a[i];})));[a,b,c].forEach(function(v){bodies.push.apply(bodies,v.concat(n,skinUV(.05,.5)));});}
         var curvature=0;
         /** @param {number[]} data @param {Vector} center @param {Vector} along @param {Vector} side @param {number} halfLength @param {number} width @param {number} opacity */
         function quad(data, center, along, side, halfLength, width, opacity) {
@@ -373,6 +376,8 @@
             if (!group)
                 return;
             if(bolt.missile){
+                // Stable per weapon family: D/weak variants keep their parent's livery.
+                bodySkin=0;bolt.weapon.name.replace(/(?:#.*| D$)/g,'').split('').forEach(function(letter){bodySkin=(Math.imul(bodySkin,31)+letter.charCodeAt(0))>>>0;});bodySkin%=4;
                 let range=Math.hypot.apply(null,bolt.position.map(function(v,i){return v-pose.eye[i];}))*units;
                 let heavy='cargoSize' in bolt.weapon&&Number(bolt.weapon.cargoSize)>=10;
                 let dart=!heavy&&'homing' in bolt.weapon&&bolt.weapon.homing==='none';
@@ -387,7 +392,7 @@
                     function bodyVertex(ring,angle){
                         let entry=rings[ring],before=rings[Math.max(0,ring-1)],after=rings[Math.min(rings.length-1,ring+1)],slope=(after[1]-before[1])*radius/((after[0]-before[0])*length);
                         let n=unitVector(radial.map(function(v,i){return v*Math.cos(angle)+vertical[i]*Math.sin(angle)-forward[i]*slope;}));
-                        return vertex(entry[0]*length,entry[1]*radius,angle).concat(n,[1+entry[0],angle/(2*Math.PI)]);
+                        return vertex(entry[0]*length,entry[1]*radius,angle).concat(n,skinUV(1+entry[0],angle/(2*Math.PI)));
                     }
                     for(let ring=0;ring<rings.length-1;ring++)for(let face=0;face<24;face++){
                         let a=face*Math.PI/12,b=(face+1)*Math.PI/12,backA=bodyVertex(ring,a),backB=bodyVertex(ring,b),frontA=bodyVertex(ring+1,a),frontB=bodyVertex(ring+1,b);

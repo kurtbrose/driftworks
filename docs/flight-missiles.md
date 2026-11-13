@@ -140,19 +140,20 @@ The production gun/effect path now draws original smooth missile
 finless bodies in three silhouettes: unguided darts (2.8 m / 0.13 m radius),
 guided general-purpose missiles (3.2 m / 0.16 m), and heavy torpedoes
 (cargo size at least 10: 5.4 m / 0.32 m). Darts have a longer taper, torpedoes
-a fuller, shorter nose. All variants reuse the same skin and body batch.
+a fuller, shorter nose. All variants reuse the same body batch, with four distinct skins selected
+by weapon family.
 These are authored visual dimensions, not imported FreeSpace model dimensions.
 Opaque, depth-writing bodies disappear beyond 180 body lengths; additive nozzle
 glows and exhaust remain. Missile artwork bypasses primary-gun visual options.
 No FreeSpace mesh, texture, sound or effect asset is used.
 
 The body uses a 24-sided, seven-ring surface of revolution with smooth normals
-(312 triangles including the rear cap). One shared 512×256
-ImageGen albedo supplies pale metal, orange identification bands and maintenance
-marks. It adds one texture sample, with no normal/roughness maps or extra detail
+(312 triangles including the rear cap). One shared 1024×512 atlas holds four separately generated ImageGen albedos:
+ivory/orange, hazard yellow/black, blue-white ceramic, and copper/graphite.
+Each design has different panel layouts and markings, not just a color swap. It adds one texture sample, with no normal/roughness maps or extra detail
 meshes. The effect adapter accepts the same stride-8 textured buffers as ship
 artwork, while trails remain stride-6 emissive strips. See
-[texture provenance and exact generation prompt](../assets/weapons/missile-skin-v1.md).
+[atlas provenance and exact generation prompts](../assets/weapons/missile-skins-v2.md).
 
 Simulation history records actual positions approximately every 25 ms, capped at
 48 points / 0.85 seconds. Connected strips share edge vertices and fade only across their width and
