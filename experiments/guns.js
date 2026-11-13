@@ -320,16 +320,32 @@
             const p=metric(optical).primary(pose.eye.map(function(v){return v*units;}),position.map(function(v){return v*units;}),pose.region||0,region);
             return p?{position:pose.eye.map(function(v,i){return v+p.direction[i]*p.length/units;}),direction:p.direction,source:p.sourceDirection}:null;
         }
+        /** A continuous strip: shared endpoints and cross-strip falloff only.
+         * The effect shader sees x=0, so there is no Gaussian restart along each segment.
+         * @param {number[]} data @param {Vector} a @param {Vector} b @param {Vector} sideA @param {Vector} sideB
+         * @param {number} widthA @param {number} widthB @param {number} alphaA @param {number} alphaB */
+        function ribbon(data,a,b,sideA,sideB,widthA,widthB,alphaA,alphaB){
+            [[0,-1],[0,1],[1,1],[0,-1],[1,1],[1,-1]].forEach(function(corner){
+                var point=corner[0]?b:a,side=corner[0]?sideB:sideA,width=corner[0]?widthB:widthA;
+                var offset=side.map(function(v){return v*corner[1]*width;});
+                var vertex=curvature?DW.flightHyperbolic.offset(point,offset,curvature):point.map(function(v,i){return v+offset[i];});
+                data.push.apply(data,vertex.concat([0,corner[1],corner[0]?alphaB:alphaA]));
+            });
+        }
         /** @param {{position:Vector;region:number;age:number}[]} history @param {number} region @param {number} elapsed */
         function trailGeometry(history,region,elapsed){
-                for(var k=1;k<history.length;k++){
-                    var older=history[k-1],newer=history[k];if(older.region!==newer.region)continue;
-                    if(!optical&&older.region!==(region))continue;
-                    var oldImage=image(older.position,older.region),newImage=image(newer.position,newer.region);if(!oldImage||!newImage)continue;
-                    var oldPoint=oldImage.position,newPoint=newImage.position;var delta=newPoint.map(function(v,i){return v-oldPoint[i];}),span=Math.hypot.apply(null,delta);if(span<1e-10)continue;
-                    var axis=unitVector(delta),side=unitVector(cross(axis,pose.back)),mid=oldPoint.map(function(v,i){return (v+newPoint[i])*.5;}),fade=Math.max(0,1-(older.age+elapsed)/.85);
-                    quad(trails,mid,axis,side,span*.85,(.22+(older.age+elapsed)*1.6)/units,fade*fade*.85);
-                }
+            var points=history.map(function(p,i){
+                var before=history[i-1],after=history[i+1];
+                var start=before&&before.region===p.region?before.position:p.position,end=after&&after.region===p.region?after.position:p.position;
+                var tangent=end.map(function(v,k){return v-start[k];}),side=unitVector(cross(tangent,pose.back));
+                if(Math.hypot.apply(null,side)<.1)side=pose.right;
+                var projected=image(p.position,p.region),age=p.age+elapsed,fade=Math.max(0,1-age/.85);
+                return {position:projected?projected.position:null,side:side,width:(.18+age*1.2)/units,alpha:fade*fade*.5,region:p.region};
+            });
+            for(var k=1;k<points.length;k++){
+                var a=points[k-1],b=points[k];if(a.region!==b.region||!a.position||!b.position||!optical&&a.region!==region)continue;
+                ribbon(trails,a.position,b.position,a.side,b.side,a.width,b.width,a.alpha,b.alpha);
+            }
         }
         guns.bolts.forEach(function (bolt) {
             curvature=bolt.curvature||0;
@@ -367,9 +383,12 @@
                 }
                 let nozzle=vertex(-length,0,0),glow=Math.max(radius*1.9,Math.min(.7/units,range/units*.00065));
                 quad(exhaust,nozzle,pose.right,pose.up,glow,glow,1.4);
-                let flame=vertex(-length-.9/units,0,0),flameSide=unitVector(cross(pose.back,forward));
-                quad(exhaust,flame,forward,flameSide,.95/units,radius*1.2,.75);
-                trailGeometry(sourceBolt.trail||[],bolt.region||0,0);
+                let flameEnd=vertex(-length-1.4/units,0,0),flameSide=unitVector(cross(pose.back,forward));
+                if(Math.hypot.apply(null,flameSide)<.1)flameSide=pose.right;
+                ribbon(exhaust,nozzle,flameEnd,flameSide,flameSide,radius*1.05,radius*.25,.8,0);
+                let history=(sourceBolt.trail||[]).slice();
+                history.push({position:sourceBolt.position,region:sourceBolt.region||0,age:0});
+                trailGeometry(history,bolt.region||0,0);
                 return;
             }
             // Camera-distance taper keeps nearby fire from obscuring the target.

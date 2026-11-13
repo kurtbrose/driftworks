@@ -108,6 +108,13 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  const bolt={...missile,missile:true};const batches=D.flightGuns.geometry({bolts:[bolt],impacts:[]},pose);
  assert.ok(batches.some(b=>b.finish===0&&b.vertices.length>0),'nearby missile has opaque body geometry');
  assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)),'missile buffers stay finite');
+ const strip=batches.find(b=>b.color[0]===.42).vertices;
+ for(let i=0;i<strip.length;i+=6)assert.equal(strip[i+3],0,'trail shader has no longitudinal pulse');
+ for(let i=36;i<strip.length;i+=36){
+  assert.deepEqual(Array.from(strip.slice(i,i+3)),Array.from(strip.slice(i-6,i-3)),'adjacent trail segments share lower edge');
+  assert.deepEqual(Array.from(strip.slice(i+6,i+9)),Array.from(strip.slice(i-24,i-21)),'adjacent trail segments share upper edge');
+ }
+
  const broken={...bolt,trail:[{position:[0,0,0],region:0,age:.1},{position:[100,100,100],region:1,age:0}]};
  const split=D.flightGuns.geometry({bolts:[broken],impacts:[]},pose);
  assert.equal(split.find(b=>b.color[0]===.42)?.vertices.length||0,0,'trail never bridges chart boundaries');

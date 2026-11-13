@@ -145,8 +145,9 @@ glows and exhaust remain. Missile artwork bypasses primary-gun visual options.
 No FreeSpace mesh, texture, sound or effect asset is used.
 
 Simulation history records actual positions approximately every 25 ms, capped at
-48 points / 0.85 seconds. Soft overlapping ribbons widen and fade with age;
-region changes break ribbons. Detonation retains the remaining history so the
+48 points / 0.85 seconds. Connected strips share edge vertices and fade only across their width and
+with age, avoiding a repeating bright/dark pattern at each sample;
+region changes break strips. Detonation retains the remaining history so the
 tail fades naturally. Hyperbolic rebasing transforms live and detached history.
 The history is visual data and has no influence on guidance or collision.
 
