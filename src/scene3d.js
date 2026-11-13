@@ -549,7 +549,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       if(values)mesh.buffer.setAttribute('aBakedDocking',new THREE.BufferAttribute(values,3));
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
-    /** @type {{placement?:import('../experiments/types').RenderPlacement,vertices:Float32Array,color:V3,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
+    /** @type {{placement?:import('../experiments/types').RenderPlacement,vertices:Float32Array,color:V3,finish?:number,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
@@ -1017,6 +1017,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         blending=THREE.AdditiveBlending;depthWrite=false;
         setFinish(9);setUniform('Habitat',0);pickSpin=0;setUniform('AxialSpin',0);
         studyEffects.forEach(function(batch,index){
+          setFinish(batch.finish===0?0:9);blending=batch.finish===0?THREE.NoBlending:THREE.AdditiveBlending;depthWrite=batch.finish===0;
           setUniform('Habitat',batch.shieldGlow?1:0);
           drawProjected=!!batch.projected;
           if(!place(batch))return;

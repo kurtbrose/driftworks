@@ -133,3 +133,32 @@ HUD count still fails with the missile module omitted. The focused missile
 changes applied without the concurrent wormhole HUD edits pass that full HUD
 check. These existing workspace failures are not included in the missile change.
 No CI result is claimed.
+
+## Original missile visuals
+
+The production gun/effect path now draws original eight-sided pointed missile
+bodies with four swept fins. Standard missiles are 3.2 m long with a 0.16 m
+body radius; heavy weapons (cargo size at least 10) use 5.4 m / 0.32 m.
+These are authored visual dimensions, not imported FreeSpace model dimensions.
+Opaque, depth-writing bodies disappear beyond 180 body lengths; additive nozzle
+glows and exhaust remain. Missile artwork bypasses primary-gun visual options.
+No FreeSpace mesh, texture, sound or effect asset is used.
+
+Simulation history records actual positions approximately every 25 ms, capped at
+48 points / 0.85 seconds. Soft overlapping ribbons widen and fade with age;
+region changes break ribbons. Detonation retains the remaining history so the
+tail fades naturally. Hyperbolic rebasing transforms live and detached history.
+The history is visual data and has no influence on guidance or collision.
+
+Warheads have a 0.12-second flash, expanding fire puffs and radial sparks fading
+over 1.1 seconds. Visual scale uses the square root of the table's inner blast
+radius, bounded to 3–28 m; damage and propagating shockwave rules are unchanged.
+This first pass has no volumetric smoke, dynamic light or visible damage-wave
+boundary. Countermeasures retain their existing spark treatment.
+
+Focused coverage includes finite opaque geometry, distance culling, bounded
+history, no ribbon across regions and extended detonation lifetime. Fixed-pose
+production Chrome captures under `output/missile-visuals/` cover the ship-scale
+side view, close missile body, a real seeker turn, flash and aftermath. The
+close and turning views use separate fixed camera poses. Portal/rim visual
+acceptance and a full weapon-by-weapon art pass remain unverified.

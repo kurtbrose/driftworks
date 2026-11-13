@@ -138,7 +138,7 @@
     /** @param {Combat} t @param {Missile} m @param {Craft[]} roster @param {import('../experiments/types').TerrainHit} [terrain] */
     function explode(t,m,roster,terrain){
         var w=m.weapon;
-        t.flashes.push({position:m.position.slice(),region:m.region,age:0,scale:Math.min(35,Math.max(4,w.innerRadius)),destruction:false});
+        t.flashes.push({position:m.position.slice(),region:m.region,age:0,scale:Math.min(28,Math.max(3,Math.sqrt(w.innerRadius)*1.6)),warhead:true,trail:m.trail,destruction:false});
         if(w.shockwaveSpeed>0)state(t).shockwaves.push({missile:m,radius:0,hitIds:[]});
         else blast(t,m,roster,Infinity,[],terrain);
     }
@@ -211,6 +211,10 @@
                 if(contact){m.position=contact;hit=true;break;}
             }
             if(!hit){m.position=journey.point;m.direction=journey.direction;m.region=journey.region;}
+            // Store actual flight history, bounded in time and count; never interpolate across charts.
+            var trail=m.trail||(m.trail=[]);trail.forEach(function(p){p.age+=travel;});
+            m.trail=trail.filter(function(p){return p.age<.85;}).slice(-47);
+            if(!m.trail.length||m.region!==m.trail[m.trail.length-1].region||m.age-(m.trailClock||0)>=.025){m.trail.push({position:m.position.slice(),region:m.region,age:0});m.trailClock=m.age;}
             m.age+=travel;m.life-=travel;
             if(hit&&environmentContact){
                 if(terrain&&terrain.onImpact)terrain.onImpact(m.position,{position:m.position,direction:m.direction,weapon:w,age:m.age,region:m.region},t);

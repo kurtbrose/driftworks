@@ -202,6 +202,8 @@ export type Weapon = {
     color2: Vector;
 };
 export type Bolt = {
+    missile?:boolean;
+    trail?:{position:Vector;region:number;age:number}[];
     curvature?:number;
     opticalRay?: OpticalRay;
     region?: number;
@@ -212,6 +214,8 @@ export type Bolt = {
     team?: string;
 };
 export type Impact = {
+    trail?:{position:Vector;region:number;age:number}[];
+    warhead?:boolean;
     region?: number;
     destruction?: boolean;
     velocity?: Vector;

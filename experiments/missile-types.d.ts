@@ -11,6 +11,8 @@ export type MissileRack = {
     secondary:boolean; decoy:boolean; cycle:boolean; cycleHeld:boolean; salvo:number; salvoWait:number; salvoTarget:string|null;
 };
 export type Missile = {
+    trailClock?:number;
+    trail?:{position:Vector;region:number;age:number}[];
     curvature?:number;id:string;owner:string;team:string;targetId:string|null;originalTarget:string|null;weapon:MissileWeapon;
     position:Vector;direction:Vector;region:number;age:number;life:number;speed:number;locked:boolean;seen:string[];zigAt:number;zig:Vector;
 };

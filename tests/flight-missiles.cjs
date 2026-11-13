@@ -100,4 +100,21 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  const t=fixture('Tempest');t.mode='gas-giant';M.rack(t.player).secondary=true;M.rack(t.player).decoy=true;M.step(t,dt);
  assert.equal(M.state(t).missiles.length,0,'weapons-disabled missions prevent launch');assert.equal(M.state(t).decoys.length,0);
 }
+{
+ const t=fixture('Tempest',2000);shoot(t);advance(t,.7);
+ const missile=M.state(t).missiles[0];assert.ok(missile.trail.length>10,'missile records actual trajectory');
+ assert.ok(missile.trail.length<=48);assert.ok(missile.trail.every(p=>p.age<.85));
+ const pose={eye:[15/U,80/U,5/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]};
+ const bolt={...missile,missile:true};const batches=D.flightGuns.geometry({bolts:[bolt],impacts:[]},pose);
+ assert.ok(batches.some(b=>b.finish===0&&b.vertices.length>0),'nearby missile has opaque body geometry');
+ assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)),'missile buffers stay finite');
+ const broken={...bolt,trail:[{position:[0,0,0],region:0,age:.1},{position:[100,100,100],region:1,age:0}]};
+ const split=D.flightGuns.geometry({bolts:[broken],impacts:[]},pose);
+ assert.equal(split.find(b=>b.color[0]===.42)?.vertices.length||0,0,'trail never bridges chart boundaries');
+ const impact=D.flightGuns.geometry({bolts:[],impacts:[{position:[0,0,0],age:.7,warhead:true,scale:5}]},pose);
+ assert.ok(impact.at(-1).vertices.some(v=>v>0),'warhead aftermath outlives gun flash');
+ const far=D.flightGuns.geometry({bolts:[bolt],impacts:[]},{...pose,eye:[5000/U,0,0]});
+ assert.equal(far.find(b=>b.finish===0)?.vertices.length||0,0,'distant missiles omit subpixel body');
+ assert.ok(far.some(b=>b.color[0]===1&&b.vertices.length>0),'distant missile retains engine glow');
+}
 console.log('PASS missiles: retail tuning, timed locks, bank changes, ammo, dumbfire, bombs, swarms, heat/aspect guidance, bounded turns, CM cooldown/lifetime/rolls, damage, regions, terrain and production session');

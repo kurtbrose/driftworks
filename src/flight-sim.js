@@ -491,7 +491,7 @@
         });
         t.flashes = t.flashes.filter(function (f) {
             f.age += dt;
-            return f.age < (f.destruction ? 5.5 : .22);
+            return f.age < (f.destruction ? 5.5 : f.warhead ? 1.1 : .22);
         });
         if(t.convoy)DW.convoyMission.step(t,dt);
         replenish(t,player,radius);
@@ -782,7 +782,7 @@
         if(t.convoy&&t.convoy.evacuation)t.convoy.evacuation.guns.bolts.forEach(function(b){result.bolts.push(b);});
         if(DW.flightMissiles){
             var missiles=DW.flightMissiles.state(t);
-            missiles.missiles.forEach(function(m){result.bolts.push({curvature:m.curvature,position:m.position,direction:m.direction,age:m.age,region:m.region,weapon:m.weapon,team:m.team});});
+            missiles.missiles.forEach(function(m){result.bolts.push({missile:true,trail:m.trail,curvature:m.curvature,position:m.position,direction:m.direction,age:m.age,region:m.region,weapon:m.weapon,team:m.team});});
             missiles.decoys.forEach(function(d){result.impacts.push({position:d.position,region:d.region,age:(d.age%.2),scale:1.3});});
         }
         return result;

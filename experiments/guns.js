@@ -298,6 +298,13 @@
                 return sum + x * b[i];
             }, 0);
         }
+        var bodies=/** @type {number[]} */([]),exhaust=/** @type {number[]} */([]),trails=/** @type {number[]} */([]);
+        /** @param {Vector} a @param {Vector} b */
+        function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+        /** @param {Vector} v */
+        function unitVector(v){var n=Math.hypot.apply(null,v)||1;return v.map(function(x){return x/n;});}
+        /** @param {Vector} a @param {Vector} b @param {Vector} c */
+        function triangle(a,b,c){var n=unitVector(cross(b.map(function(v,i){return v-a[i];}),c.map(function(v,i){return v-a[i];})));[a,b,c].forEach(function(v){bodies.push.apply(bodies,v.concat(n));});}
         var curvature=0;
         /** @param {number[]} data @param {Vector} center @param {Vector} along @param {Vector} side @param {number} halfLength @param {number} width @param {number} opacity */
         function quad(data, center, along, side, halfLength, width, opacity) {
@@ -312,6 +319,17 @@
             if(!optical)return {position:position,direction:null,source:null};
             const p=metric(optical).primary(pose.eye.map(function(v){return v*units;}),position.map(function(v){return v*units;}),pose.region||0,region);
             return p?{position:pose.eye.map(function(v,i){return v+p.direction[i]*p.length/units;}),direction:p.direction,source:p.sourceDirection}:null;
+        }
+        /** @param {{position:Vector;region:number;age:number}[]} history @param {number} region @param {number} elapsed */
+        function trailGeometry(history,region,elapsed){
+                for(var k=1;k<history.length;k++){
+                    var older=history[k-1],newer=history[k];if(older.region!==newer.region)continue;
+                    if(!optical&&older.region!==(region))continue;
+                    var oldImage=image(older.position,older.region),newImage=image(newer.position,newer.region);if(!oldImage||!newImage)continue;
+                    var oldPoint=oldImage.position,newPoint=newImage.position;var delta=newPoint.map(function(v,i){return v-oldPoint[i];}),span=Math.hypot.apply(null,delta);if(span<1e-10)continue;
+                    var axis=unitVector(delta),side=unitVector(cross(axis,pose.back)),mid=oldPoint.map(function(v,i){return (v+newPoint[i])*.5;}),fade=Math.max(0,1-(older.age+elapsed)/.85);
+                    quad(trails,mid,axis,side,span*.85,(.22+(older.age+elapsed)*1.6)/units,fade*fade*.85);
+                }
         }
         guns.bolts.forEach(function (bolt) {
             curvature=bolt.curvature||0;
@@ -331,6 +349,29 @@
             });
             if (!group)
                 return;
+            if(bolt.missile){
+                let range=Math.hypot.apply(null,bolt.position.map(function(v,i){return v-pose.eye[i];}))*units;
+                let heavy='cargoSize' in bolt.weapon&&Number(bolt.weapon.cargoSize)>=10;
+                let length=(heavy?5.4:3.2)/units,radius=(heavy?.32:.16)/units;
+                let forward=bolt.direction,radial=unitVector(cross(forward,Math.abs(forward[2])<.9?[0,0,1]:[0,1,0])),vertical=cross(radial,forward);
+                /** Original eight-sided body: pointed nose, cylindrical casing and four swept fins.
+                 * @param {number} z @param {number} r @param {number} angle */
+                function vertex(z,r,angle){let offset=forward.map(function(v,i){return v*z+radial[i]*r*Math.cos(angle)+vertical[i]*r*Math.sin(angle);});return curvature?DW.flightHyperbolic.offset(bolt.position,offset,curvature):bolt.position.map(function(v,i){return v+offset[i];});}
+                // Skip subpixel bodies; distant readability comes from the engine sprite.
+                if(range<length*units*180){
+                    for(let face=0;face<8;face++){
+                        let a=face*Math.PI/4,b=(face+1)*Math.PI/4,frontA=vertex(-length*.23,radius,a),frontB=vertex(-length*.23,radius,b),rearA=vertex(-length,radius,a),rearB=vertex(-length,radius,b);
+                        triangle(vertex(0,0,0),frontA,frontB);triangle(frontA,rearA,rearB);triangle(frontA,rearB,frontB);triangle(vertex(-length,0,0),rearB,rearA);
+                    }
+                    for(let fin=0;fin<4;fin++){let angle=fin*Math.PI/2,root=vertex(-length*.52,radius,angle),tip=vertex(-length*.96,radius*3.3,angle),end=vertex(-length*.98,radius,angle);triangle(root,tip,end);triangle(end,tip,root);}
+                }
+                let nozzle=vertex(-length,0,0),glow=Math.max(radius*1.9,Math.min(.7/units,range/units*.00065));
+                quad(exhaust,nozzle,pose.right,pose.up,glow,glow,1.4);
+                let flame=vertex(-length-.9/units,0,0),flameSide=unitVector(cross(pose.back,forward));
+                quad(exhaust,flame,forward,flameSide,.95/units,radius*1.2,.75);
+                trailGeometry(sourceBolt.trail||[],bolt.region||0,0);
+                return;
+            }
             // Camera-distance taper keeps nearby fire from obscuring the target.
             // Only artwork shrinks: swept collision still uses the weapon's radius.
             var distanceM = Math.hypot.apply(null, bolt.position.map(function (x, i) {
@@ -407,14 +448,32 @@
             var width = bolt.weapon.headRadius / units * visualScale;
             quad(group.data, center, along, side, Math.max(width, halfLength * projected + width), width, 1);
         });
+        /** @type {Batch[]} */
         var batches = groups.map(function (g) {
             return { vertices: new Float32Array(g.data), color: g.color, projected:!!optical, region:pose.region||0 };
         });
+        if(bodies.length)batches.unshift({vertices:new Float32Array(bodies),color:[.62,.66,.69],finish:0,projected:!!optical,region:pose.region||0});
+        if(exhaust.length)batches.push({vertices:new Float32Array(exhaust),color:[1,.36,.08],projected:!!optical,region:pose.region||0});
         var impacts = /** @type {number[]} */ ([]);
         curvature=pose.curvature||0;
         guns.impacts.forEach(function (hit) {
             var p=image(hit.position,hit.region||0);if(!p)return;
             hit=Object.assign({},hit,{position:p.position});
+            if(hit.warhead){
+                trailGeometry(hit.trail||[],hit.region||0,hit.age);
+                var life=Math.max(0,1-hit.age/1.1),size=(hit.scale||4)/units;
+                var flash=Math.max(0,1-hit.age/.12);
+                quad(impacts,hit.position,pose.up,pose.right,size*(.3+hit.age*3),size*(.3+hit.age*3),flash*2);
+                for(var petal=0;petal<9;petal++){
+                    var angle=petal*2.39996,reach=size*hit.age*(1.3+(petal%3)*.45),point=hit.position.map(function(v,i){return v+reach*(pose.right[i]*Math.cos(angle)+pose.up[i]*Math.sin(angle));}),r=size*(.17+hit.age*.65);
+                    quad(impacts,point,pose.up,pose.right,r,r,life*life*.65);
+                }
+                for(var spark=0;spark<12;spark++){
+                    var angle=spark*2.39996,speed=size*(2+spark%4),travel=hit.age*speed,axis=pose.right.map(function(v,i){return v*Math.cos(angle)+pose.up[i]*Math.sin(angle);}),point=hit.position.map(function(v,i){return v+axis[i]*travel;});
+                    quad(impacts,point,axis,unitVector(cross(axis,pose.back)),size*.14,size*.025,life*life);
+                }
+                return;
+            }
             var r = (.5 + hit.age * 12) * (hit.scale || 1) / units;
             var center = hit.position.map(function (x, i) {
                 return x + pose.back[i] * .08 / units;
@@ -426,6 +485,7 @@
                 for(var spark=0;spark<6;spark++){var angle=spark*Math.PI/3,travel=hit.age*18*scale,sparkPoint=center.map(function(v,i){return v+travel*(pose.right[i]*Math.cos(angle)+pose.up[i]*Math.sin(angle));});quad(impacts,sparkPoint,pose.up,pose.right,scale*.14,scale*.14,(1-hit.age/.22)*.7);}
             }
         });
+        if(trails.length)batches.push({vertices:new Float32Array(trails),color:[.42,.47,.55],projected:!!optical,region:pose.region||0});
         batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3], projected:!!optical, region:pose.region||0 });
         return batches;
     }
