@@ -581,3 +581,13 @@ zero rounds show a red 00 and EMPTY. Bank/type switches, new racks/worlds,
 rearming and clock rewind clear stale highlights. No ammo values are estimated
 or modified by presentation. The same section appears below the touch ship
 readout, with the lateral instrument moved down to preserve spacing.
+
+Capital gun audio is observed by `experiments/aegis-flight.js` through
+`aegisSim.observeRounds`. The observer receives finalized collision legs and
+hits; simulation remains independent of Web Audio. `audio.capitalRound` uses
+listener-region filtering and metre distances: heavy firing fades out at
+1,800 m, close passes at 140 m, and heavy impacts at 1,100 m (point defense:
+650 m firing / 450 m impact). Each round cues firing and flyby once, with
+separate category rate limits to bound overlapping salvos. Flybys measure the
+swept leg truncated at impact, including curved/link traversal segments.
+These synthesized cues use the weapons/impacts mixer channels and SFX mute.

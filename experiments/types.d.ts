@@ -60,6 +60,7 @@ export type AegisFlightRig = {
 };
 export type AegisVisualPart=Readonly<{id:string;kind:string;position:Vector;hp:number;maxHp:number}>;
 export type AegisSimulation=Required<Pick<AegisFlightRig,'setMountAim'|'reset'|'step'|'readout'|'hit'|'damage'|'components'|'telemetry'>> & {
+    observeRounds:(observer:((a:Vector,b:Vector,bolt:Bolt,hit:Vector|null,heavy:boolean,view:FlightView)=>void)|null)=>void;
     visualState:()=>{
         asset:AegisFlightAsset;unarmed:boolean;origin:Vector;team:string;
         mounts:Readonly<{source:AegisFlightAsset['turrets'][number];yaw:number;elevation:number;guns:Guns}>[];

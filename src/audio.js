@@ -308,6 +308,44 @@
     beep(86, 0.07, 0.04, 'sine', 0, 'weapons');
   }
 
+  var capitalSeen=new WeakSet(), capitalPassed=new WeakSet();
+  var capitalTimes={fire:-Infinity,pass:-Infinity,hit:-Infinity};
+  /** Distance in metres to the actual swept leg, including fast between-frame passes.
+   * @param {number[]} a @param {number[]} b @param {number[]} eye */
+  function capitalDistance(a,b,eye){
+    var d=b.map(function(v,i){return v-a[i];}),length=d.reduce(function(n,v){return n+v*v;},0);
+    var t=length?Math.max(0,Math.min(1,d.reduce(function(n,v,i){return n+(eye[i]-a[i])*v;},0)/length)):0;
+    return Math.hypot.apply(null,a.map(function(v,i){return v+d[i]*t-eye[i];}))*(Driftworks.sim?Driftworks.sim.METERS_PER_UNIT:10000/600);
+  }
+  /** @param {number[]} a @param {number[]} b @param {import('../experiments/types').Bolt} bolt @param {number[]|null} hit @param {boolean} heavy @param {import('../experiments/types').Pose} pose */
+  function capitalRound(a,b,bolt,hit,heavy,pose){
+    var first=!capitalSeen.has(bolt);capitalSeen.add(bolt);
+    if((bolt.region||0)!==(pose.region||0)||!settings.sfx)return;
+    /** @param {'fire'|'pass'|'hit'} kind @param {number} distance @param {number} range */
+    function cue(kind,distance,range){
+      if(distance>=range||!unlock()||!context)return;
+      var now=context.currentTime;if(now-capitalTimes[kind]<(kind==='fire'?.09:.07))return;
+      capitalTimes[kind]=now;
+      var level=Math.pow(1-distance/range,2)*(heavy?1:.45);
+      if(kind==='fire'){
+        noiseBurst(.32,.15*level,'lowpass',650,0,'weapons');
+        var body=beep(heavy?62:115,.38,.1*level,'triangle',0,'weapons');
+        if(body)body.frequency.exponentialRampToValueAtTime(28,now+.3);
+      }else if(kind==='pass'){
+        noiseBurst(.19,.18*level,'bandpass',1800,0,'weapons');
+        var zip=beep(1100,.16,.035*level,'sine',0,'weapons');
+        if(zip)zip.frequency.exponentialRampToValueAtTime(260,now+.16);
+      }else{
+        mixer.impact();noiseBurst(.4,.19*level,'lowpass',950,0,'impacts');
+        beep(42,.45,.13*level,'sine',0,'impacts');
+      }
+    }
+    if(first)cue('fire',capitalDistance(a,a,pose.eye),heavy?1800:650);
+    var distance=capitalDistance(a,b,pose.eye);
+    if(!capitalPassed.has(bolt)&&distance<140){capitalPassed.add(bolt);cue('pass',distance,140);}
+    if(hit)cue('hit',capitalDistance(hit,hit,pose.eye),heavy?1100:450);
+  }
+
   /** @param {number} strength */
   function playImpact(strength) {
     if(!settings.sfx || !unlock() || !context)return;
@@ -420,6 +458,7 @@
     playMiningTick: playMiningTick,
     playMissileLaunch:playMissileLaunch,
     playGunshot: playGunshot,
+    capitalRound:capitalRound,
     playImpact: playImpact,
     playDock: playDock,
     playDelivery: playDelivery,
@@ -427,7 +466,7 @@
     playWormhole: playWormhole,
     setEngineThrust: setEngineThrust,
     _test: {
-      loadSettings: loadSettings, normalizeMix:mixer.normalize, mixLevels:mixer.levels,
+      capitalDistance:capitalDistance, loadSettings: loadSettings, normalizeMix:mixer.normalize, mixLevels:mixer.levels,
       getLastEngineLevel: function () {
         return lastEngineLevel;
       }

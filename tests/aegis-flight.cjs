@@ -12,6 +12,7 @@ function fixture(targetZ=250){
  const enemy=DW.flightSim.createCraft('target',pose,'enemy');enemy.controller='ai';enemy.hp=enemy.maxHp=10000;enemy.shield=0;enemy.collision.radiusM=15;
  combat.enemies=[enemy];return {state,combat,guns:DW.flightGuns.create(),world:{},enemy};
 }
+const audioRounds=[];DW.audio={capitalRound:(...args)=>audioRounds.push(args)};
 const rig=DW.aegisFlight.create(),view=fixture();
 assert.equal(rig.telemetry().mounts.length,24);
 assert.equal(rig.telemetry().mounts.filter(m=>m.kind==='heavy').length,12);
@@ -22,6 +23,9 @@ const buffers=initial.map(b=>b.vertices),bases=initial.map(b=>b.basis),beforeMat
 rig.step(0,view);assert.equal(rig.telemetry().seconds,0);
 rig.step(.05,view);assert.ok(rig.telemetry().mounts.every(m=>Math.abs(m.yaw)<=2.8*.05+1e-8&&Math.abs(m.elevation)<=2.2*.05+1e-8));
 for(let i=0;i<240;i++){view.combat.time+=1/60;rig.step(1/60,view);}
+assert.ok(audioRounds.length>0&&audioRounds.some(args=>args[3]),'browser adapter observes real swept rounds and finalized impacts');
+assert.ok(audioRounds.every(args=>args[5]===view.state),'audio uses the player flight pose');
+delete DW.audio;
 assert.ok(rig.telemetry().shots>0,'upper batteries fire after acquiring a target');
 assert.ok(rig.telemetry().hits>0&&view.enemy.hp<10000,'shared projectile/damage resolver hits the target');
 assert.ok(rig.telemetry().mounts.filter(m=>m.kind==='heavy').every(m=>m.yaw===0&&m.elevation===0),'main batteries do not chase fighters');

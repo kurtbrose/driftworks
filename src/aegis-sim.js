@@ -240,9 +240,16 @@
                 randomAim(m);
             }}
         }
+        var roundObserver=/** @type {((a:Vector,b:Vector,bolt:import('../experiments/types').Bolt,hit:Vector|null,heavy:boolean,view:FlightView)=>void)|null} */(null);
         /** Already-fired rounds retain their damage after a mount is destroyed.
          * @param {typeof mounts[number]} m @param {FlightView} view @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} bolt */
         function traceRound(m,view,a,b,bolt){
+            var point=traceRoundHit(m,view,a,b,bolt);
+            if(roundObserver)roundObserver(a,point||b,bolt,point,m.source.kind==='heavy',view);
+            return point;
+        }
+        /** @param {typeof mounts[number]} m @param {FlightView} view @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} bolt */
+        function traceRoundHit(m,view,a,b,bolt){
             var own=(bolt.region||0)!==(options&&options.state.region||0)?null:hit(a,b,m,bolt),opponentRig=options&&options.opponentRig,other=opponentRig&&(!options||(bolt.region||0)===(options.opponent.region||0))?opponentRig.hit(a,b,bolt):null;
             var point=other&&(!own||Math.hypot(...sub(other,a))<Math.hypot(...sub(own,a)))?other:own;
             if(m.source.kind==='heavy'&&!(options&&options.batteryTargets)){
@@ -424,7 +431,7 @@
         function readout(){if(unarmed)return 'AEGIS / 1,305 m · UNARMED';var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts'+(hangars.length?'\nHangar: '+launched+' fighters launched':'');}
         function telemetry(){return {seconds:seconds,contacts:contacts,launches:launched,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind,targetId:m.targetId,shots:m.guns.fired,aimPoint:m.source.kind==='heavy'?m.aimOffset.slice():undefined};})};}
         function visualState(){return {linkedShots:typeof shotMetric==='object',asset:sourceAsset,unarmed:unarmed,origin:origin,team:team,mounts:mounts,parts:parts,shieldHits:shieldHits,impactHits:impactHits,seconds:seconds,bridgeMetric:bridgeMetric};}
-        reset();return {visualState:visualState,setMountAim:function(index,yaw,elevation){var m=mounts[index];if(m){m.yaw=yaw;m.elevation=elevation;}},reset:reset,step:step,readout:readout,hit:/** @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} [bolt] */function(a,b,bolt){return hit(a,b,undefined,bolt);},damage:damage,components:components,telemetry:telemetry};
+        reset();return {observeRounds:function(observer){roundObserver=observer;},visualState:visualState,setMountAim:function(index,yaw,elevation){var m=mounts[index];if(m){m.yaw=yaw;m.elevation=elevation;}},reset:reset,step:step,readout:readout,hit:/** @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} [bolt] */function(a,b,bolt){return hit(a,b,undefined,bolt);},damage:damage,components:components,telemetry:telemetry};
     }
     DW.aegisSim={create:create};
 }());

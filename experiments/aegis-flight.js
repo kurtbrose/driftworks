@@ -5,6 +5,9 @@
      * @param {import('./types').AegisRigOptions} [options] @returns {import('./types').AegisFlightRig} */
     function create(options){
         var simulation=DW.aegisSim.create(options),visual=DW.aegisVisual.create(simulation,options);
+        simulation.observeRounds(function(a,b,bolt,hit,heavy,view){
+            if(DW.audio)DW.audio.capitalRound(a,b,bolt,hit,heavy,view.state);
+        });
         return {
             setMountAim:simulation.setMountAim,setSurfaceDetail:visual.setSurfaceDetail,
             step:simulation.step,geometry:visual.geometry,effects:visual.effects,
