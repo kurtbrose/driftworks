@@ -14,9 +14,10 @@
     /** @type {ReturnType<typeof import('./multiplayer-flight').mount>|null} */var multiplayer=null;
     if(multiplayerMode&&!DW.multiplayerFlight)await new Promise(/** @param {(value:void)=>void} resolve */function(resolve){window.addEventListener('multiplayer-flight-ready',function(){resolve();},{once:true});});
     if(['convoy','fleet-evacuation'].includes(activeMission.id))host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
+    var battleMode=activeMission.id==='battle'||!!activeMission.combatSandbox;
     var cinematic=activeMission.id==='cinematic';
-    var overviewMode=activeMission.id==='battle'&&new URLSearchParams(location.search).get('view')==='overhead';
-    var impactWatch=!!activeMission.emptySpace&&!cinematic&&!activeMission.sky.hyperbolic;
+    var overviewMode=battleMode&&new URLSearchParams(location.search).get('view')==='overhead';
+    var impactWatch=!!activeMission.emptySpace&&!activeMission.combatSandbox&&!cinematic&&!activeMission.sky.hyperbolic;
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
@@ -37,7 +38,7 @@
     if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
-    if(activeMission.sky.hyperbolic||aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'||['convoy','fleet-evacuation'].includes(activeMission.id)){try{await DW.aegisFlight.load();aegis=['convoy','fleet-evacuation'].includes(activeMission.id)?DW.convoyScenery.createArrivalFleet():activeMission.sky.hyperbolic?DW.hyperbolicBattle.create():activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
+    if(activeMission.sky.hyperbolic||aegisMode||battleMode||activeMission.sky.wormhole||activeMission.id==='scramble'||['convoy','fleet-evacuation'].includes(activeMission.id)){try{await DW.aegisFlight.load();aegis=['convoy','fleet-evacuation'].includes(activeMission.id)?DW.convoyScenery.createArrivalFleet():activeMission.sky.hyperbolic?DW.hyperbolicBattle.create():activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:battleMode});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     /** @type {import('./types').TerrainHit} */
     var environmentHit = function (start, end, bolt) {
             var asteroid = session.snapshot().asteroid;
@@ -322,7 +323,7 @@
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
         if(multiplayerMode)session.prepareMultiplayer(multiplayer?multiplayer.isGuest():false);
-        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='fleet-evacuation'||activeMission.id==='battle'||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
+        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='fleet-evacuation'||battleMode||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
         if(aegis&&aegis.spawnPlayer)session.respawn(aegis.spawnPlayer(session.snapshot().state));
         if(overviewMode&&aegis){overviewCamera=DW.flightWatch.battleOverview(aegis);session.setStartPosition(overviewCamera.eye);}
         if(cinematic){session.prepareCinematicObserver();get('watch-panel').hidden=true;}
@@ -453,7 +454,7 @@
         }
         controls.capture();
     };
-    if(activeMission.id==='battle'){
+    if(battleMode){
         var overviewLink=document.createElement('a');overviewLink.textContent=overviewMode?'Return to flight':'Watch battle from above';
         var overviewParams=new URLSearchParams(location.search);if(overviewMode)overviewParams.delete('view');else overviewParams.set('view','overhead');overviewLink.href='?'+overviewParams.toString();
         get('fly').after(overviewLink);

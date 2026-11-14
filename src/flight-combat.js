@@ -76,7 +76,7 @@
     /** @type {WeakMap<Craft,Vector>} */var contactPositions=new WeakMap();
     /** @param {Combat} t @param {Craft} craft @param {Vector} point */
     function shieldImpact(t,craft,point){
-        craft.shield=Math.max(0,(craft.shield||0)-.01);craft.damagedAt=t.time;
+        if(!DW.flightMissions.resolve(t.mode).combatSandbox)craft.shield=Math.max(0,(craft.shield||0)-.01);craft.damagedAt=t.time;
         t.flashes.push({position:point.slice(),region:craft.pose.region||0,age:0});
     }
     /** Swept, smooth envelopes avoid trapping craft in concave hull geometry.
@@ -116,6 +116,7 @@
     function damageCraft(t, e, weapon, shooter) {
         if (e.hp <= 0)
             return;
+        if(DW.flightMissions.resolve(t.mode).combatSandbox){e.damagedAt=t.time;e.hitFlash=.35;return;}
         var hpBefore = e.hp;
         var shieldBefore = e.shield || 0, shieldDamage = weapon.damage * weapon.shieldFactor, absorbed = Math.min(shieldBefore, shieldDamage);
         if (e.shield !== undefined) e.shield = shieldBefore - absorbed;

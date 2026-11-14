@@ -148,6 +148,7 @@
             if(options||part&&part.hp>0)recordImpact(point,amount);
             damageHull(amount,combat);
             if(!part||part.hp<=0)return !!options;
+            if(DW.flightMissions&&DW.flightMissions.resolve(combat.mode).combatSandbox)return true;
             part.hp=Math.max(0,part.hp-amount);
             if(part.hp===0){
                 if(part.mount){part.mount.targetId='';part.mount.burst=0;}
@@ -161,7 +162,7 @@
         /** Hull destruction disables every surviving system once; wrecks remain collidable.
          * @param {number} amount @param {import('../experiments/types').Combat} combat */
         function damageHull(amount,combat){
-            if(!options)return;
+            if(!options||DW.flightMissions&&DW.flightMissions.resolve(combat.mode).combatSandbox)return;
             var before=options.state.integrity;
             options.state.integrity=Math.max(0,before-amount);
             if(before>0&&options.state.integrity===0){

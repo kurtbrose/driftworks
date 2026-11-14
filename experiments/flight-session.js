@@ -149,7 +149,7 @@
             DW.flightSim.bindPlayer(combat, state).guns = guns;
             DW.flightSim.configure(combat, activeProfile);
             configureCombat();
-            combat.enabled = enabled&&(!DW.flightMissions.resolve(mode).emptySpace||mode==='cinematic'||!!DW.flightMissions.resolve(mode).sky.hyperbolic);
+            combat.enabled = enabled&&(!DW.flightMissions.resolve(mode).emptySpace||DW.flightMissions.resolve(mode).combatSandbox||mode==='cinematic'||!!DW.flightMissions.resolve(mode).sky.hyperbolic);
             if (!combat.enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
@@ -165,7 +165,7 @@
             combat = DW.flightSim.create(config.mode);
             activeProfile = config.profile;
             DW.flightSim.configure(combat, activeProfile);
-            combat.enabled = config.enabled&&(!DW.flightMissions.resolve(config.mode).emptySpace||config.mode==='cinematic'||!!DW.flightMissions.resolve(config.mode).sky.hyperbolic);
+            combat.enabled = config.enabled&&(!DW.flightMissions.resolve(config.mode).emptySpace||DW.flightMissions.resolve(config.mode).combatSandbox||config.mode==='cinematic'||!!DW.flightMissions.resolve(config.mode).sky.hyperbolic);
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile, config.mode);
             if(state.curvature&&curvatureOverride)state.curvature=curvatureOverride;

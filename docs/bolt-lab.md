@@ -1,5 +1,14 @@
 # 3D bolt range
 
+## Invulnerable weapons sandbox
+
+Open `experiments/flight.html?mission=weapons-sandbox`, or use **Fly invulnerable
+weapons sandbox** in the projectile experiments menu. This reuses the production
+battle, two Aegis capitals, the gameplay sky and normal flight controls. Twenty-four
+AI fighters dogfight in the gap between the capitals. Player, fighters, capital
+hulls and components retain their health; collisions and impact effects still
+run. This mission alone prevents damage, so firing continues without attrition.
+
 ## Experimental projectile visuals in gameplay
 
 In the actual flight game, open **F3 / Flight lab & diagnostics / Experimental

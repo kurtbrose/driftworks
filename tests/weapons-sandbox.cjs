@@ -1,0 +1,35 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {loadRuntime}=require('../tools/headless.cjs');
+const DW=loadRuntime(),ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math,console});
+for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js','src/aegis-visual.js','src/aegis-battle.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx,{filename:file});
+const session=DW.flightSession.create({seed:1729,onGunshot(){},onImpact(){}});
+session.reset({mode:'weapons-sandbox',enabled:true,profile:DW.arcade.profiles[0]});
+let view=session.snapshot(),combat=view.combat;
+assert.equal(combat.enemies.length,24);
+assert.equal(new Set(combat.enemies.map(c=>c.battleZone.id)).size,1,'Both fighter wings share the central engagement zone');
+const rig=DW.aegisFlight.createBattle({battlefield:true});rig.reset(combat);
+const health=()=>[combat.player,...combat.enemies].map(c=>[c.id,c.hp,c.shield]);
+const initial=JSON.stringify(health());
+const lethal={...DW.retailWeapons[0],damage:1e9};
+for(const c of [combat.player,...combat.enemies])DW.flightCombat.damageCraft(combat,c,lethal);
+assert.equal(JSON.stringify(health()),initial,'Player and both wings resist lethal damage');
+const capitalHP=rig.components().map(c=>c.hp);
+for(let i=0;i<600;i++){
+ session.advance(1/60,{}, {profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]});
+ view=session.snapshot();rig.step(1/60,view);
+}
+const report=rig.telemetry();
+assert(report.capitals.every(c=>c.shots>0&&c.hits>0),'Both capitals exchange actual projectile hits');
+assert(report.capitals.every(c=>c.integrity===20000),'Capital hulls stay intact');
+assert.deepEqual(rig.components().map(c=>c.hp),capitalHP,'Capital components remain intact');
+assert(combat.enemies.every(c=>c.hp===c.maxHp),'All fighters survive sustained crossfire');
+assert(combat.enemies.some(c=>c.guns.fired>0),'Fighters fire while maneuvering');
+assert(!combat.dead&&!combat.roundOver);
+const exposedState={team:'enemy',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:9000};
+const exposed=DW.aegisSim.create({state:exposedState,opponent:{...exposedState,team:'ally'}});
+const part=exposed.visualState().parts[0],point=part.position.map((v,k)=>v/DW.sim.METERS_PER_UNIT+exposedState.position[k]);
+assert(exposed.damage(point,1e9,combat),'Exposed component hit is accepted');
+assert.equal(exposedState.integrity,9000);assert.equal(part.hp,part.maxHp,'Direct component damage is also suppressed');
+const normal=DW.flightSim.create('battle');DW.flightSim.configure(normal,DW.arcade.profiles[0]);DW.flightCombat.damagePlayer(normal,lethal);assert(normal.dead,'Ordinary battle damage remains enabled');
+console.log('PASS weapons sandbox: shared fighter zone, player/fighter immunity, real capital hits, intact hulls/components, sustained firing and normal battle damage');

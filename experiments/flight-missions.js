@@ -52,6 +52,7 @@
     define('furball',{encounter:{kind:'furball',count:16}});
     define('hyperbolic',{emptySpace:true,title:'Hyperbolic flight / Driftworks',heading:'DRIFTWORKS / HYPERBOLIC FLIGHT',subtitle:'NEGATIVE CURVATURE / CAPITAL SHIP BATTLE',hint:'Two armed Aegis carriers fight each other and the opposing fighters. Launch from the friendly hangar; death returns you there while the battle continues. Curvature defaults to 400 m; compare other radii in Settings.',sky:{hyperbolic:400},encounter:{immediate:true}},'furball');
     define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'CAPITAL ENGAGEMENT / SQUADRON ZONE DEFENSE',encounter:{count:30,immediate:true}},'furball');
+    define('weapons-sandbox',{combatSandbox:true,emptySpace:true,title:'Weapons sandbox / Driftworks',heading:'DRIFTWORKS / WEAPONS SANDBOX',subtitle:'INVULNERABLE CAPITALS + FIGHTERS',hint:'Two capitals exchange fire while fighters dogfight between them. All ships are invulnerable. Fly normally; F3 opens projectile experiments.',encounter:{count:24}},'battle');
     /** Frozen fictional system in planet-centered km; all moon centers share one plane.
      * @param {boolean} nearMoon @returns {import('./types').JadeSystem} */
     function jadeSystem(nearMoon){

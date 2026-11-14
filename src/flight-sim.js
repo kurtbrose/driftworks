@@ -265,11 +265,11 @@
                 e.retarget = 0;
             });
         }
-        if(t.mode==='battle') {
+        if((t.mode==='battle'||mission(t).combatSandbox)) {
             var half=Math.ceil(count/2);
             t.enemies.forEach(function(e,i){
-                var local=i%half, zone=Math.floor(local/3), slot=local%3;
-                var lane=zone===0?[0,450,100]:zone===1?[-1600,1800,650]:zone===2?[1600,2000,1000]:zone===3?[-2600,3600,1200]:[2500,3900,700];
+                var local=i%half, zone=mission(t).combatSandbox?0:Math.floor(local/3), slot=local%3;
+                var lane=mission(t).combatSandbox?[0,1950,475]:zone===0?[0,450,100]:zone===1?[-1600,1800,650]:zone===2?[1600,2000,1000]:zone===3?[-2600,3600,1200]:[2500,3900,700];
                 var home=add(player.eye,add(scale(player.right,lane[0]/U),add(scale(player.back,-lane[1]/U),scale(player.up,lane[2]/U))));
                 e.battleZone={id:zone,center:home,radiusM:1000};
                 // Independent approach positions and headings, never a rigid formation.
@@ -525,12 +525,12 @@
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), shotSpace(t));
         }
         /** @param {Craft} craft @param {Craft} other */function linkedNeighbors(craft,other){return !!t.wormholes&&t.wormholes.some(function(link){return DW.wormholes.phase(t.time,link.lifecycle).traversable&&link.mouths.some(function(m){return m.space===(craft.pose.region||0);})&&link.mouths.some(function(m){return m.space===(other.pose.region||0);});});}
-        var neighbors=separationGrid(living), roster=participants(t).concat(t.convoy?DW.convoyMission.targets(t):[]), byId=new Map((t.mode==='battle'||t.convoy?roster:living).map(function(craft){return [craft.id,craft];}));
+        var neighbors=separationGrid(living), roster=participants(t).concat(t.convoy?DW.convoyMission.targets(t):[]), byId=new Map(((t.mode==='battle'||mission(t).combatSandbox)||t.convoy?roster:living).map(function(craft){return [craft.id,craft];}));
         // Snapshot wing decisions before moving any fighter, so handoff does not
         // depend on roster order. Existing raid/escort/withdrawal directors own
         // their missions; this covers ordinary free-space and battle-screen travel.
         /** @type {Map<string,{goal:Vector,speed:number}>} */var wingPlans=new Map();
-        if(mission(t).encounter.kind==='furball'&&(mission(t).emptySpace||!!t.convoy||t.mode==='battle')&&!t.scramble&&!player.curvature&&!mission(t).sky.wormhole){
+        if(mission(t).encounter.kind==='furball'&&(mission(t).emptySpace||!!t.convoy||(t.mode==='battle'||mission(t).combatSandbox))&&!t.scramble&&!player.curvature&&!mission(t).sky.wormhole){
             /** @type {Map<string,Craft[]>} */var wings=new Map();
             t.enemies.forEach(function(c){
                 if(c.controller==='input'||c.convoyRaider||t.convoy&&!c.convoyBattle||c.hangarLaunch)return;

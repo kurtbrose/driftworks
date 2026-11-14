@@ -94,6 +94,7 @@ const suites = {
     "bolt-lab.cjs",
     "projectile-visuals.cjs",
     "gun-effect-capitals.cjs",
+    "weapons-sandbox.cjs",
     "impact-sky.cjs",
     "planet-hero.cjs",
     "sky-cube.cjs",
