@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const hab=require('../src/hab-physics.js'), omega=2*Math.PI/38, dt=1/240;
+const body=hab.create();for(let i=0;i<2400;i++)hab.step(body,dt,omega);
+assert(Math.abs(Math.hypot(body.p[1],body.p[2])-16)<1e-8);
+assert(body.grounded);assert(body.p[1]>10,'Contact carries crew around the rotating drum');
+hab.step(body,dt,omega,0,0,true);assert(!body.grounded);
+const velocity=body.v.slice();for(let i=0;i<120;i++)hab.step(body,dt,omega);
+assert.deepEqual(body.v,velocity,'Free flight has no artificial gravity or air steering');
+for(let i=0;i<4000&&!body.grounded;i++)hab.step(body,dt,omega);
+assert(body.grounded,'Ballistic crew recontact the curved impact surface');
+const stopped=hab.create(0,-Math.PI/2,0);for(let i=0;i<240;i++)hab.step(stopped,dt,0);assert.deepEqual(stopped.v,[0,0,0]);
+const end=hab.create(29.99);end.v[0]=100;hab.step(end,dt,omega);assert(end.p[0]<=30&&end.v[0]<0);
+console.log('Hab physics: rotation, inertial jump, recontact, zero spin, end-wall impact passed');
