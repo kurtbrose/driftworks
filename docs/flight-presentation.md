@@ -554,3 +554,18 @@ Production Chrome screenshots and an OfflineAudioContext render through the
 real audio facade live under ignored `output/missile-lock/`. The revised sound preview in
 `output/missile-tone/` contains a Harpoon acquisition, sustained lock, loss and
 a partial reacquisition.
+
+### Missile launch audio
+
+`SessionEnvironment.onMissileLaunch?()` fires once for each local player missile
+actually emitted by a fixed simulation step, including individual swarm shots.
+The existing gun callback now follows primary-gun emission only. Empty banks,
+cooldown and prevented launches do not emit a launch cue. Headless sessions
+record these separately as `missile-launch` events.
+
+`audio.playMissileLaunch()` combines a 24 ms metallic latch, a low ejection
+impact and a short high-passed exhaust rush. A triangle oscillator falls from
+155 to 48 Hz beneath the noise layers; all layers finish within 0.19 seconds.
+It uses the existing weapons mixer channel and SFX mute, with no runtime audio
+assets. The real Web Audio preview at `output/missile-launch/launch-feedback.wav`
+plays a single launch followed by three swarm ejections.

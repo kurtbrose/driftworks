@@ -86,6 +86,7 @@ function createFlight(options = {}) {
           DW.asteroidTerrain.rockField(asteroid, DW.flightSession.rotateVector(point, -asteroid.rotation)));
       },
       onGunshot: () => emit({source: 'session', kind: 'gunshot'}),
+      onMissileLaunch:()=>emit({source:'session',kind:'missile-launch'}),
       onImpact: () => emit({source: 'session', kind: 'impact'})
     });
     session.reset({mode: mission, enabled, profile: config.profile});

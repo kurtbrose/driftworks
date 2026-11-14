@@ -565,6 +565,7 @@ export type SessionEnvironment = {
         point: Vector;
     };
     onGunshot: () => void;
+    onMissileLaunch?:()=>void;
     onImpact: () => void;
 };
 export type Snapshot = FlightView & {

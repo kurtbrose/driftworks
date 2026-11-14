@@ -288,6 +288,19 @@
     growl.stop(start + 0.2);
   }
 
+  /** Mechanical latch, low ejection thump and a short motor rush. */
+  function playMissileLaunch(){
+    if(!settings.sfx||!unlock()||!context)return;
+    noiseBurst(.024,.12,'bandpass',2700,0,'weapons');
+    noiseBurst(.095,.22,'lowpass',340,.012,'weapons');
+    noiseBurst(.16,.065,'highpass',700,.028,'weapons');
+    var now=context.currentTime,body=context.createOscillator(),gain=context.createGain();
+    body.type='triangle';body.frequency.setValueAtTime(155,now);body.frequency.exponentialRampToValueAtTime(48,now+.085);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.13,now+.003);gain.gain.exponentialRampToValueAtTime(.0001,now+.13);
+    body.connect(gain).connect(mixer.channel('weapons')||sfxBus||context.destination);body.start(now);body.stop(now+.15);
+    body.onended=function(){body.disconnect();gain.disconnect();};
+  }
+
   function playGunshot() {
     if(!settings.sfx || !unlock() || !context || context.currentTime-lastGunshot<.045)return;
     lastGunshot=context.currentTime;
@@ -405,6 +418,7 @@
     playMove: playMove,
     playInvalid: playInvalid,
     playMiningTick: playMiningTick,
+    playMissileLaunch:playMissileLaunch,
     playGunshot: playGunshot,
     playImpact: playImpact,
     playDock: playDock,

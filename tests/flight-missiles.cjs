@@ -147,4 +147,14 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  assert.ok(extents[0][1]<extents[1][1]&&extents[1][1]<extents[2][1],'dart, missile and torpedo have distinct widths');
 
 }
+
+{
+ const f=createFlight({mission:'training',seed:29}),r=M.rack(f.snapshot().combat.player);r.banks=[{name:'Tempest',ammo:1,capacity:100}];r.bank=0;
+ f.advance(.01,{secondary:true,stop:true});assert.equal(f.events.filter(e=>e.kind==='missile-launch').length,1,'actual launch has its own session callback');assert.equal(f.events.filter(e=>e.kind==='gunshot').length,0,'missile launch does not play primary fire');
+ f.advance(.5,{secondary:true,stop:true});assert.equal(f.events.filter(e=>e.kind==='missile-launch').length,1,'empty magazine never makes a launch sound');
+ f.reset();const mixed=M.rack(f.snapshot().combat.player);mixed.banks=[{name:'Tempest',ammo:1,capacity:100}];mixed.bank=0;
+ f.advance(.02,{secondary:true,fire:true,stop:true});assert.equal(f.events.filter(e=>e.kind==='missile-launch').length,1);assert.ok(f.events.some(e=>e.kind==='gunshot'),'primary and secondary sounds remain independent when fired together');
+ f.reset();const salvo=M.rack(f.snapshot().combat.player);salvo.banks=[{name:'Hornet',ammo:4,capacity:100}];salvo.bank=0;
+ f.advance(.01,{secondary:true,stop:true});f.advance(.6,{secondary:false,stop:true});assert.equal(f.events.filter(e=>e.kind==='missile-launch').length,4,'each physical swarm ejection has one callback');
+}
 console.log('PASS missiles: retail tuning, timed locks, bank changes, ammo, dumbfire, bombs, swarms, heat/aspect guidance, bounded turns, CM cooldown/lifetime/rolls, damage, regions, terrain and production session');

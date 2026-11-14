@@ -229,6 +229,7 @@
                 var travelingCraft=bridge?[combat.player,...combat.enemies]:[];
                 var previous=travelers.map(function(p){return p.eye.slice();});
                 var previousFrames=travelingCraft.map(function(c){return DW.flightCollision.radius(c)>300/units?{right:c.pose.right.slice(),up:c.pose.up.slice(),back:c.pose.back.slice()}:null;});
+                var primaryShotsBefore=combat.player.guns.fired,missileShotsBefore=DW.flightMissiles.rack(combat.player).fired;
                 var feedback = DW.flightSim.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit,undefined,bridge?function(){
                     var changed=false;
                     travelers.forEach(function(pose,index){
@@ -256,8 +257,9 @@
                 if(remotePilot){
                     DW.flightGuns.step(remotePilot.guns,remotePilot.pose,DW.retailWeapons[remotePilot.weaponIndex||0],remotePilot.fire,dt,environment.terrainHit);
                 }
-                if (feedback.fired)
-                    environment.onGunshot();
+                if (combat.player.guns.fired>primaryShotsBefore)environment.onGunshot();
+                var missileShots=DW.flightMissiles.rack(combat.player).fired-missileShotsBefore;
+                if(environment.onMissileLaunch)for(var shot=0;shot<missileShots;shot++)environment.onMissileLaunch();
                 if (feedback.impact)
                     environment.onImpact();
                 if (combat.dead) {

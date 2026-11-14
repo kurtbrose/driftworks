@@ -44,7 +44,7 @@ assert.equal(cue(.016,{...tracking,key:'other/Harpoon'}),'tick','target changes 
 
 // Lock audio owns one fixed-pitch voice, including during long held locks.
 const toneNodes=[];let toneContext;
-function toneParam(){return {value:0,setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},setTargetAtTime(v){this.value=v;},cancelScheduledValues(){}};}
+function toneParam(){return {value:0,setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},setTargetAtTime(v){this.value=v;},cancelScheduledValues(){}};}
 function toneNode(){return {connect(next){return next;},disconnect(){},start(){},stop(time){this.stopped=time;}};}
 class ToneContext {
  constructor(){toneContext=this;this.state='running';this.currentTime=0;this.sampleRate=8000;this.destination=toneNode();}
@@ -63,6 +63,9 @@ assert.equal(toneNodes.filter(n=>n.frequency.value===920).length,1,'held tone re
 toneApi.setMissileLock(.016,{...tracking,tracking:false});assert(tone.stopped>toneContext.currentTime,'loss fades and stops the carrier');
 assert.equal(toneNodes.filter(n=>n.frequency.value===920).length,1,'loss creates no melodic notes');
 toneApi.setMissileLock(.016,tracking);toneApi.setMissileLock(.016,{...tracking,active:false});assert(toneNodes.filter(n=>n.frequency.value===920).every(n=>n.stopped!==undefined),'pause clears every seeker voice');
+
+const beforeLaunch=toneNodes.length;toneApi.playMissileLaunch();assert.equal(toneNodes.length,beforeLaunch+1,'one launch thump voice per ejection');assert.equal(toneNodes.at(-1).type,'triangle');assert.equal(toneNodes.at(-1).frequency.value,48,'mechanical thump drops into a low body');
+toneApi.setSfxEnabled(false);const mutedLaunch=toneNodes.length;toneApi.playMissileLaunch();assert.equal(toneNodes.length,mutedLaunch,'muted launch allocates no voices');
 for (const directory of ['', 'tests', 'experiments']) {
   for (const file of fs.readdirSync(path.join(root, directory)).filter(f => f.endsWith('.html'))) {
     const html = fs.readFileSync(path.join(root, directory, file), 'utf8');

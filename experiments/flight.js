@@ -75,7 +75,7 @@
             return DW.asteroidTerrain.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));
         }, onGunshot: function () {
             DW.audio.playGunshot();
-        }, onImpact: function () {
+        }, onMissileLaunch:function(){DW.audio.playMissileLaunch();}, onImpact: function () {
             DW.audio.playImpact(1);
         } });
     if(activeMission.sky.hyperbolic){

@@ -151,7 +151,7 @@ transcripts while retaining ordinary production combat and channel scheduling.
 - `source: 'combat'`: copies of the production `combat.radioEvents`, including
   damage-related radio facts and destruction. Original fields/serials are preserved.
 - `source: 'session'`: observed AI `spawn`/`removed` records and the session's
-  `gunshot`/`impact` callbacks. These observations are not a second gameplay event bus.
+  `gunshot`/`missile-launch`/`impact` callbacks. These observations are not a second gameplay event bus.
 
 `flight.transcript` contains the actual lines returned by `flightComms.step`,
 including text, speaker, event, craft ID and voice settings. Both arrays add
