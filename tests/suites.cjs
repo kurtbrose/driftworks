@@ -4,6 +4,7 @@
 const suites = {
   simulation: [
     "multiplayer.cjs",
+    "multiplayer-room.cjs",
     {"file":"shared.cjs","args":["simulation"]},
     "campaign-intro.cjs",
     "tactical-boundaries.cjs",

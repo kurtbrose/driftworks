@@ -16,7 +16,7 @@ function probe(){
  async function open(page){
    page.on('pageerror',e=>errors.push(String(e)));
    page.on('request',r=>{if(!r.url().startsWith('http://localhost:8000/')&&!r.url().startsWith('data:'))requests.push(r.url());});
-   await page.goto('http://localhost:8000/experiments/multiplayer.html');
+   await page.goto('http://localhost:8000/experiments/flight.html?multiplayer=1');
    await page.waitForFunction(()=>document.querySelector('#net-host')&&!document.querySelector('#fly').disabled,null,{timeout:120000});
    assert.match(page.url(),/flight.html\?multiplayer=1/);
    await page.selectOption('#input-mode','controller');

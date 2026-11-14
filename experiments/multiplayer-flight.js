@@ -1,8 +1,10 @@
 import {protocol,connectionTimeout,decode,receiver} from './multiplayer-model.js';
+import {mountClient} from './multiplayer-client.js';
 /** @typedef {ReturnType<import('./types').ExperimentModules['flightSession']['create']>} Session */
 /** @typedef {import('./multiplayer-model').RemotePilot} RemotePilot */
 /** @param {Session} session @param {()=>{profile:number,weapon:number,model:string}} loadout */
 export function mount(session,loadout) {
+  if(new URLSearchParams(location.search).has('server'))return mountClient(session,loadout);
   const panel=document.createElement('details');panel.id='multiplayer-panel';panel.open=true;
   panel.innerHTML=`<summary>Multiplayer · <span id="net-summary">offline</span></summary>
     <p>Two real fighters in the flight game. Fly while connecting; Esc returns to these controls.</p>

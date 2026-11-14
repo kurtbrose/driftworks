@@ -1,12 +1,64 @@
-# Multiplayer flight experiment
+# Multiplayer flight
 
-Open `experiments/multiplayer.html` (it redirects to `flight.html?multiplayer=1`).
+## Server console and client tabs
+
+Open `experiments/multiplayer.html` (redirects to `multiplayer-server.html`).
+
+1. Choose **Create server**. Keep this console tab open.
+2. Choose **Open flight client** to join yourself in a separate tab. Choose
+   **Start flight** in that client to fly. The console does not occupy a seat.
+3. Open the **local join link** in another tab of the same browser profile and
+   site origin to join a second pilot, without connection-text exchange.
+
+The console displays the two-seat roster, pilot IDs/names, connection type,
+last-heard age, accepted/rejected update counts, and join/disconnect activity.
+**Kick** removes a pilot and prevents that client tab's ID from rejoining the
+same server. This is a trusted-peer operator control, not authentication: opening
+a new client creates a new ID. **Stop server** disconnects everyone. Neither
+action stops local flight. A new server gets a new ID and new join links.
+
+Local tab transport uses `BroadcastChannel`; all tabs must use the same browser
+profile, storage partition and origin (including port). It does not connect
+different computers, different browser profiles, or `localhost` to `127.0.0.1`.
+An unanswered local join fails after five seconds with retry guidance. The local
+HTTP server serves files; the console tab owns multiplayer membership and relay.
+
+For another computer, expand **Invite someone on another computer**. Enter the
+client page address your wingmate can reach (a deployed HTTPS site, or an address
+on your LAN where browser WebRTC/security requirements are satisfied). A localhost
+address points at the recipient's own computer. Optionally configure ICE servers,
+then choose **Create remote invitation**. Send the generated private link; the
+guest opens it and sends their answer text back. Paste that answer into the
+console and choose **Apply answer**. The invite expires after two minutes;
+connection establishment after applying the answer has a 20-second limit.
+
+There is no signaling backend, so remote link sharing still requires this one
+answer exchange. The invitation carries the offer and optional ICE configuration
+in its URL fragment, including TURN credentials if configured. Share privately;
+the client removes the fragment from the address after reading it. Credentials
+are not persisted by application code. Candidate gathering has a 10-second limit.
+No STUN/TURN or other external service is used by default. Direct connectivity
+across machines/networks still requires separate verification.
+
+`multiplayer-room.js` owns bounded membership, stable spawn slots, packet
+validation/sequence rejection and forwarding. The console has no flight renderer
+or authoritative simulation. Clients retain their own physics and send validated
+pose/loadout/trigger updates at up to 20 Hz; the server forwards the other pilot's
+state. Both local and WebRTC clients use this same room protocol. A server tick
+and client heartbeats run every 500 ms; eight seconds without valid activity
+expires a connection. Trigger flags expire 300 ms after the last valid pose,
+even if heartbeats continue. Clients reject reordered server frames. Background
+tab suspension can interrupt a session; keep the server tab running.
+
 This uses the production 3D scene, fighter models, keyboard/controller/mouse
 controls, flight physics, terrain and gun effects. Each browser owns its local
 pilot and sends validated pose/loadout/trigger snapshots to its wingmate. Both
 pilots start facing each other, 90 metres apart, above the same asteroid.
 
-## Connect
+## Original manual peer experiment
+
+The earlier peer-to-peer path remains at `flight.html?multiplayer=1` without a
+`server` parameter. It has no dedicated server console. Its connection flow is:
 
 1. Host chooses **Create host offer** in the Multiplayer panel and sends the
    generated text to the guest.
@@ -57,6 +109,26 @@ Local pause pauses local physics; the other pilot may continue flying and their
 pose continues to update. Existing single-player saves are unaffected.
 
 ## Verification
+
+Verified 2026-11-13: the room/session regressions, existing headless session
+checks and strict application types passed. The server browser probe passed
+local joins, production movement/firing, capacity rejection, kick/retry rejection,
+mixed local/WebRTC forwarding across separate browser contexts, server stop and
+stale-link diagnosis. The roster, production client view, mixed-transport console
+and stale-link screenshots were visually inspected. Cross-device and cross-network
+connectivity remain unverified.
+
+`node tests/multiplayer-room.cjs` checks the server roster, two-seat capacity,
+stable roles after departures, validated forwarding, sequence rejection, stale
+triggers with continuing heartbeats, kick/rejoin rejection, expiry and shutdown.
+
+`node tools/check-multiplayer-server-browser.cjs` uses the production scene and
+controls. It exercises a console plus local client tabs, movement/gun firing,
+capacity rejection, kicks, and server stop. It also connects a client in a separate
+browser context through a real WebRTC invitation/answer and checks movement
+through the mixed local/WebRTC server. Evidence goes under
+`output/multiplayer-server/`. Same-machine browser checks do not prove connectivity
+between physical devices or across networks.
 
 `node tests/multiplayer.cjs` exercises real headless sessions, independent local
 flight, remote craft/weapon observation, disconnect/reset, packet validation and
