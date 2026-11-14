@@ -37,6 +37,7 @@
         // Begin as an established cruise; startup spacing relaxation happens before time zero.
         if(battlefield!==false&&combat.mode!=='fleet-evacuation')DW.convoyBattle.start(combat);
         if(combat.mode==='fleet-evacuation')DW.convoyBattle.startEvacuation(combat);
+        combat.convoy.ships.forEach(function(ship){DW.freighterSim.ensure(ship);});
         targets(combat);
         combat.targetId=null;combat.roundOver=false;
     }
@@ -86,7 +87,7 @@
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
     function step(combat,dt){
         const s=combat.convoy;if(!s||combat.dead)return;
-        if(s.complete){DW.convoyAmbush.step(combat,dt);return;}
+        if(s.complete){DW.freighterSim.step(combat,dt);DW.convoyAmbush.step(combat,dt);return;}
         s.elapsed=s.evacuation?s.elapsed+dt:Math.min(s.destinationY*U/s.speedMps,s.elapsed+dt+1e-12);
         observeAttention(combat,dt);
         var bodies=freighters(combat),navigation=s.navigation;
@@ -107,6 +108,7 @@
                 s.coverage=DW.fleetGuidance.cover(navigation,bodies,escorts,navigationThreats(combat));
             }
         }
+        DW.freighterSim.step(combat,dt);
         DW.convoyBattle.updateEvacuation(combat,dt);
         if(s.complete)return;
         if(s.arrivalPortal&&!s.arrivalPortal.spawned&&combat.time>=s.arrivalPortal.opensAt+4)beginRaid(combat);
@@ -348,6 +350,7 @@
             DW.shipHulls.hullHit(model,hullPose,[0,-1000,0],[0,1000,0],1,.01);
             hulls[name]={model:model,min:min,max:max};
         });
+        DW.freighterSim.install(meta,bytes,hulls);
     }
     /** Sweep in each freighter's moving frame. Inputs and output points use scene units.
      * @param {import('../experiments/types').Combat} combat @param {number[]} start @param {number[]} end
@@ -362,11 +365,11 @@
             var local=function(/** @type {number[]} */point,/** @type {number[]} */origin){var delta=point.map(function(v,k){return v-origin[k];});return [axes.right,forward,axes.up].map(function(axis){return delta.reduce(function(n,v,k){return n+v*axis[k];},0);});};
             var from=local(start,old),to=local(end,ship.position);
             var miss=[0,1,2].some(function(k){return Math.min(from[k],to[k])*U>hull.max[k]+radiusM||Math.max(from[k],to[k])*U<hull.min[k]-radiusM;});if(miss)continue;
-            const hit=DW.shipHulls.hullHit(hull.model,hullPose,from,to,U,radiusM);
+            const hit=DW.freighterSim.trace(ship,hullPose,from,to,U,radiusM);
             if(!hit||best&&hit.fraction>=best.fraction)continue;
-            var away=from.map(function(v,k){return (v+(to[k]-v)*hit.fraction)*U-hit.local[k];}),length=Math.hypot.apply(null,away);
+            var localHit=hit.rootLocal||hit.local,away=from.map(function(v,k){return (v+(to[k]-v)*hit.fraction)*U-localHit[k];}),length=Math.hypot.apply(null,away);
             var normal=length>1e-7?away.map(function(v){return v/length;}):hit.normal;
-            best={shipIndex:i,shipId:ship.id,fraction:hit.fraction,point:ship.position.map(function(v,k){return v+(axes.right[k]*hit.local[0]+forward[k]*hit.local[1]+axes.up[k]*hit.local[2])/U;}),normal:normal.map(function(v,k){return axes.right[k]*normal[0]+forward[k]*normal[1]+axes.up[k]*normal[2];})};
+            best={shipIndex:i,shipId:ship.id,fraction:hit.fraction,point:ship.position.map(function(v,k){return v+(axes.right[k]*localHit[0]+forward[k]*localHit[1]+axes.up[k]*localHit[2])/U;}),normal:normal.map(function(v,k){return axes.right[k]*normal[0]+forward[k]*normal[1]+axes.up[k]*normal[2];})};
         }
         return best;
     }
@@ -401,20 +404,21 @@
         var views=targetViews.get(state);
         if(!views){views=state.ships.map(function(ship,index){
             var craft=DW.flightSim.createCraft(ship.id,DW.arcade.create(0),'ally');
-            craft.index=index;craft.callsign=ship.callsign;craft.convoyModel=ship.model;craft.maxShield=0;craft.shield=0;
+            craft.index=index;craft.callsign=ship.callsign;craft.convoyModel=ship.model;craft.maxShield=0;craft.shield=0;DW.freighterSim.bind(craft,ship);
             Object.defineProperties(craft,{hp:{get:function(){return ship.hull;},set:function(/** @type {number} */v){ship.hull=v;}},maxHp:{get:function(){return ship.maxHull;}}});return craft;
         });targetViews.set(state,views);}
         views.forEach(function(c,i){c.pose.eye=state.ships[i].position;c.pose.velocity=state.ships[i].velocity;var axes=DW.fleetGuidance.frame(state.ships[i].forward||[0,1,0]);c.pose.right=axes.right;c.pose.up=axes.up;c.pose.back=axes.back;c.collision={kind:'sphere',radiusM:hulls[c.convoyModel||'']?DW.shipHulls.hullRadius(hulls[c.convoyModel||''].model):80};});
         return views.filter(function(c,i){return c.hp>0&&(!state.evacuation||!state.ships[i].arrived);});
     }
     /** @param {import('../experiments/types').Craft} craft @param {number[]} start @param {number[]} end @param {number} [radius] */
-    function hitModel(craft,start,end,radius){var h=hulls[craft.convoyModel||''];return h?DW.shipHulls.hullHit(h.model,craft.pose,start,end,U,radius):null;}
+    function hitModel(craft,start,end,radius){return DW.freighterSim.hitCraft(craft,start,end,U,radius);}
     /** @param {string} name */function model(name){const hull=hulls[name];if(!hull)throw Error('Convoy hull not loaded: '+name);return hull.model;}
     /** @param {import('../experiments/types').Combat} combat @param {string} id @param {import('../experiments/types').Weapon} weapon @param {number[]} point */
     function damage(combat,id,weapon,point){
         const state=combat.convoy;if(!state)return;
         var ship=state.ships.find(function(s){return s.id===id;});if(!ship||ship.hull<=0||state.evacuation&&ship.arrived)return;
         ship.hull=Math.max(0,ship.hull-weapon.damage*weapon.armorFactor);
+        var revision=DW.freighterSim.ensure(ship).revision;DW.freighterSim.damage(ship,weapon,point,combat.time);if(DW.freighterSim.ensure(ship).revision!==revision)DW.flightSim.collisionChanged(combat);
         combat.flashes.push({position:point.slice(),velocity:ship.velocity.map(function(v){return v/U;}),age:0,scale:ship.hull>0?1:70,destruction:ship.hull<=0});
     }
     /** The radio channel consumes a cue only when free. Combat interrupts reports and conversation.

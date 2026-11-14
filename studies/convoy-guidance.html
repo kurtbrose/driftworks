@@ -12,7 +12,7 @@
 <section><h2>View + traffic overlays</h2><label>Camera<select id="shot"><option value="overview">Fleet view</option><option value="port">Port side</option><option value="rear">Along the convoy</option><option value="above">Above</option></select></label><div class="toolbar"><button id="focus">Focus selected</button><button id="fit">Frame fleet</button></div><label>Lighting<select id="lighting"><option value="9">Game / sun sky</option><option value="7">Game / deep space</option><option value="0">Inspection light</option></select></label><label>Fly speed<input id="camera-speed" type="range" min="30" max="300" value="100"></label><label><span>Trails / last 24 s</span><input id="trails" type="checkbox"></label><label><span>Local steering intent</span><input id="slots" type="checkbox"></label><label><span>Escort assignments</span><input id="coverage" type="checkbox"></label><label><span>Velocity vectors</span><input id="vectors" type="checkbox"></label><label><span>Follow fleet / selected ship</span><input id="follow" type="checkbox" checked></label><details><summary>Performance check</summary><button id="measure">Measure frozen view</button><pre id="performance" style="white-space:pre-wrap;font-size:10px">CPU submission only; GPU time is not measured.</pre></details><p class="status" id="status">Preparing production formation…</p></section>
 <section><h2>Selected ship</h2><div id="details">Click a ship, then Focus selected to fly close and inspect its motion.</div></section><section><h2>Order log</h2><div id="events"></div></section></aside></main>
 <footer><span class="badge">LOCAL FLOCKING · ACTUAL SHIP RENDER</span><p>Production fleet guidance and escort allocation, seeded from the live convoy. Original convoy hulls, paint atlas, materials and metre scale. Escorts and departing ships use a bounded transit adapter. Threats apply pressure to guidance; this page does not simulate weapon damage. Each freighter has its own heading, acceleration and turn limit. The original packet geometry is only a launch condition.</p></footer>
-<script src="../src/asset-versions.js?v=5dd289248282"></script>
+<script src="../src/asset-versions.js?v=585f00c7225d"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <!-- script-manifest:convoyGuidanceReview -->
 <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
@@ -42,9 +42,12 @@
 <script src="../experiments/flight-hyperbolic.js?v=66ba82a2892d"></script>
 <script src="../experiments/guns.js?v=3beccda2d6f0"></script>
 <script src="../src/fleet-guidance.js?v=aeca40203914"></script>
+<script src="../src/freighter-physics.js?v=e8dcf1f260d9"></script>
+<script src="../src/freighter-geometry.js?v=c88fa4dad670"></script>
+<script src="../src/freighter-sim.js?v=07a7d9db9577"></script>
 <script src="../src/convoy-battle.js?v=244e9d977d0d"></script>
 <script src="../src/convoy-ambush.js?v=5a308e0ad3ed"></script>
-<script src="../src/convoy-mission.js?v=466597c36155"></script>
+<script src="../src/convoy-mission.js?v=18258644b7f1"></script>
 <script src="../src/roadside-layout.js?v=a64b5dd480ed"></script>
 <script src="../src/flight-collision.js?v=b9e653108f6e"></script>
 <script src="../src/flight-combat.js?v=ca1dd9090f4a"></script>
@@ -60,7 +63,7 @@
 <script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
 <script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
 <script src="../src/ship-catalog.js?v=b0863eab6fca"></script>
-<script src="../src/ship-hulls.js?v=23de2720981a"></script>
+<script src="../src/ship-hulls.js?v=ba99f382844c"></script>
 <script src="../src/ship-assets.js?v=c4ac8b8a2539"></script>
 <script src="../src/ship-render.js?v=f8b7bce5ff38"></script>
 <script src="../experiments/ship-packs.js?v=47b193cc205a"></script>

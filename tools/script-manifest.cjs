@@ -19,13 +19,13 @@ const groups = {
   ],
   dialogue: ['experiments/mumble.js', 'experiments/flight-dialogue.js'],
   flightRuntime: [
-    'src/fleet-guidance.js', 'src/convoy-battle.js', 'src/convoy-ambush.js', 'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
+    'src/fleet-guidance.js', 'src/freighter-physics.js', 'src/freighter-geometry.js', 'src/freighter-sim.js', 'src/convoy-battle.js', 'src/convoy-ambush.js', 'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
     'src/flight-opponent.js', 'src/flight-blockout.js', 'experiments/retail-missiles.js', 'src/flight-missiles.js', 'src/flight-sim.js', 'src/flight-prediction.js'
   ],
   flightAi: ['experiments/flight-ai.js', 'experiments/flight-duel.js'],
   flightView: [
     'experiments/flight-vr.js',
-    'experiments/convoy-scenery.js', 'experiments/combat-shields.js', 'experiments/flight-shields.js', 'experiments/shield-pixel-diff.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js',
+    'experiments/convoy-scenery.js', 'experiments/freighter-flight.js', 'experiments/combat-shields.js', 'experiments/flight-shields.js', 'experiments/shield-pixel-diff.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js',
     'experiments/flight-controls.js', 'experiments/flight-session.js'
   ]
 };
@@ -111,6 +111,8 @@ const profiles = {
 
 // Required load-time boundaries. Optional renderer resources stay profile-owned.
 const dependencies = {
+  'src/freighter-sim.js': ['src/fleet-guidance.js', 'src/freighter-physics.js', 'src/freighter-geometry.js'],
+  'experiments/freighter-flight.js': ['experiments/convoy-scenery.js', 'src/freighter-sim.js'],
   'src/flight-collision.js': ['src/sim.js'],
   'src/flight-combat.js': ['src/flight-collision.js'],
   'src/flight-missiles.js': ['src/flight-combat.js', 'experiments/retail-missiles.js'],

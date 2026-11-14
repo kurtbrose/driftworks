@@ -137,9 +137,9 @@
     // Synchronous hull queries do not nest; scratch storage never escapes a query.
     /** @type {HullTree[]} */var hitStack=[];
     var hitTriangle=[[0,0,0],[0,0,0],[0,0,0]];
-    /** @param {Model} model @param {Pose} pose @param {Vector} start @param {Vector} end @param {number} units @param {number} [boltRadius] */
-    function hullHit(model, pose, start, end, units, boltRadius) {
-        var a = localPoint(pose, start, units), d = minus(localPoint(pose, end, units), a), v = model.vertices, best = /** @type {HullHit | null} */ (null);
+    /** @param {Model} model @param {Pose} pose @param {Vector} start @param {Vector} end @param {number} units @param {number} [boltRadius] @param {(offset:number)=>boolean} [acceptTriangle] */
+    function hullHit(model, pose, start, end, units, boltRadius, acceptTriangle) {
+        var a = localPoint(pose, start, units), d = minus(localPoint(pose, end, units), a), v = model.vertices, best = /** @type {(HullHit & {triangleOffset:number}) | null} */ (null);
         var radius = hullRadius(model);
         var padding = boltRadius || 0;
         var span = dot3(d, d), fraction = span ? Math.max(0, Math.min(1, -dot3(a, d) / span)) : 0;
@@ -160,6 +160,7 @@
           }
           for(var triangleIndex=0;triangleIndex<leaf.offsets.length;triangleIndex++) {
             var i=leaf.offsets[triangleIndex];
+            if(acceptTriangle&&!acceptTriangle(i))continue;
             if (padding > 0) {
                 // Reject triangles outside the short swept bolt bounds before
                 // constructing face/edge tests on detailed meshes.
@@ -175,7 +176,7 @@
                 if(contact && (!best || contact.fraction < best.fraction || contact.fraction===best.fraction&&i<bestOffset)) {
                     bestOffset=i;
                     var local=contact.local;
-                    best={fraction:contact.fraction,local:local,normal:contact.normal,model:model,
+                    best={fraction:contact.fraction,local:local,normal:contact.normal,model:model,triangleOffset:i,
                         point:pose.eye.map(function(x,j){return x+(pose.right[j]*local[0]-pose.back[j]*local[1]+pose.up[j]*local[2])/units;})};
                 }
                 continue;
@@ -194,7 +195,7 @@
             if (t < 0 || t > 1 || best && (t > best.fraction || t===best.fraction&&i>=bestOffset))
                 continue;
             var n = normal(p, v.slice(i + 6, i + 9), v.slice(i + 12, i + 15));
-            bestOffset=i;best = { fraction: t, point: start.map(function (x, j) {
+            bestOffset=i;best = { fraction: t, triangleOffset:i, point: start.map(function (x, j) {
                     return x + (end[j] - x) * t;
                 }),
                 local: a.map(function (x, j) {

@@ -76,13 +76,13 @@ over fourteen seconds. The checkbox hides emission for comparison; Restore
 clears leaks and particles. This is visual venting without fuel-loss simulation.
 
 This is a Three.js review range with deliberately simple test projectiles. Its
-shots are not a comparison with current flight weapon effects. Convoy simulation,
-production collision, target selection, HUD and engine behavior are unchanged.
+shots are not a comparison with current flight weapon effects. The range has its
+own controls; production integration is described separately below.
 The drive/command readout only reports component integrity; route interruption,
 loss of propulsion, gameplay fuel loss, secondary explosions and salvage are future work.
-Production integration needs JSON-safe simulation ownership, shared projectile
-and hull contacts, matching visible/collision removal, module targeting, and
-performance and visual acceptance in the actual convoy scene.
+Production convoy and fleet evacuation integration now uses entity-owned state,
+shared projectile contacts and matching visible/collision removal. See
+[freighter entity](freighter-entity.md) for its contract, limits and checks.
 
 Attached geometry is merged by material. Immutable component buffers are reused
 for debris; attached meshes rebuild on damage-variant activation or destruction,

@@ -44,7 +44,7 @@ body[data-mission] #watch-panel{display:none!important}
 <section id="weapons" class="flight-plate"><small>PRIMARY / G TO SWITCH</small><strong id="weapon-name"></strong><span>UNLIMITED ENERGY</span></section><section id="target-info" class="flight-plate" hidden aria-label="Selected target monitor"><div id="target-label"></div><div id="target-camera" aria-label="Live target camera"></div><div id="target-detail"></div><div class="target-integrity"><label>SHIELD <meter id="target-shield" min="0" max="100" value="100" aria-label="Target shield"></meter></label><label>HULL <meter id="target-hull" min="0" max="100" value="100" aria-label="Target hull"></meter></label></div></section><div id="hud-help">ESC PAUSE &middot; L LOCK &middot; TAB TARGET &middot; V RADAR &middot; F3 LAB</div>
 <section id="comms" aria-label="Flight communications"><div class="comms-head"><span data-speaker>RANGE COMMS</span><span data-emotion></span><button id="comms-voice" type="button" aria-label="Mute comms voice" aria-pressed="false">Voice on</button></div><p data-subtitle role="status">Standing by for flight.</p></section>
 <footer>W/S throttle · X stop · hold W at max / double-tap W: afterburner<br>Arrows pitch/yaw · Q/E roll · A/D lateral � R/F vertical (5 m/s)<br>Space / left or right mouse fire · G switch bank<br>V radar range / Tab target · Mouse virtual stick · C center stick · Esc pause & release · 1–4 profiles<br>Sky panorama: ESO/S. Brunier</footer>
-<script src="../src/asset-versions.js?v=5dd289248282"></script>
+<script src="../src/asset-versions.js?v=585f00c7225d"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <!-- script-manifest:asteroidPatrol -->
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
@@ -95,9 +95,12 @@ body[data-mission] #watch-panel{display:none!important}
 <script src="guns.js?v=3beccda2d6f0"></script>
 <script src="input.js?v=8fb280d9ed3d"></script>
 <script src="../src/fleet-guidance.js?v=aeca40203914"></script>
+<script src="../src/freighter-physics.js?v=e8dcf1f260d9"></script>
+<script src="../src/freighter-geometry.js?v=c88fa4dad670"></script>
+<script src="../src/freighter-sim.js?v=07a7d9db9577"></script>
 <script src="../src/convoy-battle.js?v=244e9d977d0d"></script>
 <script src="../src/convoy-ambush.js?v=5a308e0ad3ed"></script>
-<script src="../src/convoy-mission.js?v=466597c36155"></script>
+<script src="../src/convoy-mission.js?v=18258644b7f1"></script>
 <script src="../src/roadside-layout.js?v=a64b5dd480ed"></script>
 <script src="../src/flight-collision.js?v=b9e653108f6e"></script>
 <script src="../src/flight-combat.js?v=ca1dd9090f4a"></script>
@@ -112,7 +115,7 @@ body[data-mission] #watch-panel{display:none!important}
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
 <script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
 <script src="../src/ship-catalog.js?v=b0863eab6fca"></script>
-<script src="../src/ship-hulls.js?v=23de2720981a"></script>
+<script src="../src/ship-hulls.js?v=ba99f382844c"></script>
 <script src="../src/ship-assets.js?v=c4ac8b8a2539"></script>
 <script src="../src/ship-render.js?v=f8b7bce5ff38"></script>
 <script src="ship-packs.js?v=47b193cc205a"></script>
@@ -127,6 +130,7 @@ body[data-mission] #watch-panel{display:none!important}
 <script src="flight-scenery.js?v=d93adc771986"></script>
 <script src="flight-vr.js?v=c15b787f8c8e"></script>
 <script src="convoy-scenery.js?v=e5a98708c994"></script>
+<script src="freighter-flight.js?v=323a47d8d1e3"></script>
 <script src="combat-shields.js?v=ef734d17248b"></script>
 <script src="flight-shields.js?v=0ea60d95057c"></script>
 <script src="shield-pixel-diff.js?v=9a863e0ae736"></script>

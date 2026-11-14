@@ -50,6 +50,7 @@ const suites = {
     "harrow-ai.cjs",
     "evacuation-capitals.cjs",
     "convoy-collision.cjs",
+    "freighter-missions.cjs",
     "headless.cjs",
     "pilot-behavior.cjs",
     "ellis.cjs",
