@@ -14,7 +14,7 @@ const painter={globalAlpha:1,lineWidth:1,strokeStyle:'#fff',fillStyle:'#fff',
   save(){stack.push({globalAlpha:this.globalAlpha,lineWidth:this.lineWidth,strokeStyle:this.strokeStyle,fillStyle:this.fillStyle});},
   restore(){Object.assign(this,stack.pop());},
   beginPath(){points=[];},moveTo(x,y){points.push([x,y]);},lineTo(x,y){points.push([x,y]);},closePath(){},
-  translate(){},rotate(){},arc(x,y,r){calls.push({kind:'arc',x,y,r});},setLineDash(){},fillRect(){},fillText(text,x,y){calls.push({kind:'text',text,x,y});},panel(){},image(){},
+  translate(){},rotate(){},arc(x,y,r){calls.push({kind:'arc',x,y,r});},setLineDash(){},fillRect(){},fillText(text,x,y){calls.push({kind:'text',text,x,y,font:this.font,color:this.fillStyle});},panel(){},image(){},
   stroke(){calls.push({kind:'stroke',points:points.slice(),color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth});},
   fill(){calls.push({kind:'fill',points:points.slice(),color:this.fillStyle,alpha:this.globalAlpha});},
   strokeRect(x,y,w,h){calls.push({kind:'rect',x,y,w,h,color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth});}
@@ -61,6 +61,23 @@ view.combat.player.missileRack.banks[0].name='Cyclops';view.combat.player.missil
 view.combat.player.missileRack=savedRack;view.combat.targetId=null;DW.flightPresentation=savedLockPresentation;
 console.log('PASS missile lock HUD: four target-centered solid pieces, inward translation and ends meeting only on true capture');
 
+
+
+// Ammo presentation follows real counters, not button presses or bank changes.
+const ammoSavedRack=view.combat.player.missileRack,ammoSavedTime=view.combat.time;
+const ammoRack={...DW.flightMissiles.rack(view.combat.player),banks:[{name:'Harpoon',ammo:24,capacity:60},{name:'Tempest',ammo:12,capacity:20}],bank:0,fired:0,cooldown:0};view.combat.player.missileRack=ammoRack;view.combat.time=1;
+function ammoFrame(){hud.render({...view,units:10,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
+function ammoCount(){return calls.find(c=>c.kind==='text'&&c.font==='28px monospace');}
+ammoFrame();assert.equal(ammoCount().text,'24');assert(calls.some(c=>c.text==='MISSILES 1/2'));assert(!calls.some(c=>c.text==='-1'));
+ammoRack.banks[0].ammo--;ammoRack.fired++;view.combat.time+=.01;ammoFrame();assert.equal(ammoCount().text,'23');assert(calls.some(c=>c.text==='-1'),'actual emission flashes spent rounds');
+view.combat.time+=.4;ammoFrame();assert(!calls.some(c=>c.text==='-1'),'launch highlight expires with simulation time');
+ammoRack.bank=1;ammoFrame();assert.equal(ammoCount().text,'12');assert(!calls.some(c=>c.text==='-1'),'switching banks does not fake a launch');
+ammoRack.banks[1].ammo=2;ammoFrame();assert(calls.some(c=>c.text==='LOW AMMO'));
+ammoRack.banks[1].ammo=0;ammoRack.fired+=2;view.combat.time+=.01;ammoFrame();assert.equal(ammoCount().text,'00');assert.equal(ammoCount().color,'#ff776b');assert(calls.some(c=>c.text==='EMPTY'));
+view.combat.time=0;ammoRack.banks[1].ammo=12;ammoFrame();assert(!calls.some(c=>c.text==='-2'),'rearm/clock rewind clears stale spent feedback');
+const ammoBodyContains=document.body.classList.contains;document.body.classList.contains=name=>name==='touch-flight'||ammoBodyContains(name);ammoFrame();assert.equal(ammoCount().text,'12');assert(ammoCount().y>92&&ammoCount().y<172,'touch HUD retains the ammo section');document.body.classList.contains=ammoBodyContains;
+view.combat.player.missileRack=ammoSavedRack;view.combat.time=ammoSavedTime;
+console.log('PASS missile ammo HUD: explicit count, real-emission flash, low/empty states, bank/rearm reset and touch layout');
 
 // Local chase keeps contact geometry while removing every cockpit instrument.
 const tacticalBodyContains=document.body.classList.contains;

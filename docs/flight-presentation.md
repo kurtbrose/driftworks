@@ -569,3 +569,15 @@ impact and a short high-passed exhaust rush. A triangle oscillator falls from
 It uses the existing weapons mixer channel and SFX mute, with no runtime audio
 assets. The real Web Audio preview at `output/missile-launch/launch-feedback.wav`
 plays a single launch followed by three swarm ejections.
+
+### Missile ammunition HUD
+
+The lower-left ship panel has a dedicated missile section with the selected
+bank index, type, large remaining-round count, readiness and countermeasure
+count. A decrease accompanied by the rack's emitted-missile counter highlights
+the count and shows spent rounds for 0.32 simulation seconds. Held fire that
+cannot emit a missile does not trigger feedback. Low magazines show LOW AMMO;
+zero rounds show a red 00 and EMPTY. Bank/type switches, new racks/worlds,
+rearming and clock rewind clear stale highlights. No ammo values are estimated
+or modified by presentation. The same section appears below the touch ship
+readout, with the lateral instrument moved down to preserve spacing.

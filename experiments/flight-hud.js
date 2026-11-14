@@ -376,6 +376,7 @@
             var element=document.getElementById(id); if(element)element.classList.add('gpu-hud-source');
         });
         var targetRendered = false;
+        var ammoMemory=/** @type {{combat:import('./types').Combat|null;rack:import('./missile-types').MissileRack|null;key:string;time:number;fired:number;ammo:number;until:number;spent:number}} */({combat:null,rack:null,key:'',time:0,fired:0,ammo:0,until:0,spent:0});
         /** @type {import('./types').FlightPathSample[]|null} */var guidePath=null;
         var guideClock=-Infinity,guideKey='',guideRange=0,guideSpawn=-Infinity,guideTravel=0,guideLastClock=-Infinity;
         /** @type {import('./types').FlightGuideBatch[]} */var guideBatches=[];
@@ -716,6 +717,25 @@
             if (!chase && targetBearing !== null) paintTargetBearing(bearingHud, w, h, targetBearing);
             gpu.end(immersive);
         }
+        /** @param {HudView} view @param {number} x @param {number} y @param {number} width */
+        function paintMissileAmmo(view,x,y,width){
+            var ctx=gpu.painter,combat=view.combat,rack=DW.flightMissiles.rack(combat.player),weapon=DW.flightMissiles.weapon(combat.player),bank=rack.banks[rack.bank];
+            var ammo=bank?bank.ammo:0,key=rack.bank+'/'+(bank?bank.name:''),time=combat.time;
+            if(ammoMemory.combat!==combat||ammoMemory.rack!==rack||ammoMemory.key!==key||time<ammoMemory.time||ammo>ammoMemory.ammo){
+                ammoMemory={combat:combat,rack:rack,key:key,time:time,fired:rack.fired,ammo:ammo,until:0,spent:0};
+            }else if(rack.fired>ammoMemory.fired&&ammo<ammoMemory.ammo){ammoMemory.until=time+.32;ammoMemory.spent=ammoMemory.ammo-ammo;}
+            ammoMemory.fired=rack.fired;ammoMemory.ammo=ammo;ammoMemory.time=time;
+            var maxAmmo=weapon&&bank?Math.floor(bank.capacity/weapon.cargoSize+.5):0,empty=!!weapon&&ammo===0,low=!!weapon&&ammo<=Math.max(2,Math.floor(maxAmmo*.2));
+            var pulse=time<ammoMemory.until,ink=empty?'#ff776b':pulse?'#ffe7a3':low?'#f5ac5c':'#b9e9dc';
+            ctx.save();ctx.globalAlpha=1;ctx.fillStyle='rgba(3,15,21,.92)';ctx.fillRect(x,y,width,80);ctx.strokeStyle=empty?'#ff776b':pulse?'#ffe7a3':'rgba(111,185,171,.38)';ctx.lineWidth=pulse?2:1;ctx.strokeRect(x,y,width,80);
+            ctx.textAlign='left';ctx.font='10px monospace';ctx.fillStyle='#719a98';ctx.fillText('MISSILES'+(bank?' '+(rack.bank+1)+'/'+rack.banks.length:''),x+14,y+16);
+            ctx.font='12px monospace';ctx.fillStyle=ink;ctx.fillText((weapon?weapon.name:bank?bank.name:'NONE FITTED').slice(0,Math.max(8,Math.floor((width-83)/7.2))),x+14,y+38);
+            var status=!bank?'NO BANK':!weapon?'UNAVAILABLE':empty?'EMPTY':low?'LOW AMMO':rack.cooldown>0?'CYCLING':rack.locked?'LOCKED':weapon.homing==='aspect'?(rack.indicator?'ACQUIRING':'NO LOCK'):'READY';
+            ctx.font='10px monospace';ctx.fillText(status,x+14,y+56);ctx.fillStyle='#719a98';ctx.fillText('CM '+rack.countermeasures,x+14,y+72);
+            ctx.textAlign='right';ctx.font='28px monospace';ctx.fillStyle=ink;ctx.fillText(weapon?String(ammo).padStart(2,'0'):'--',x+width-14,y+48);
+            if(pulse){ctx.font='11px monospace';ctx.fillStyle='#ffe7a3';ctx.fillText('-'+ammoMemory.spent,x+width-14,y+16);}
+            ctx.restore();
+        }
         /** @param {HudView} view @param {import('./types').Craft | undefined} selected @param {number} w @param {number} h */
         function instruments(view, selected, w, h) {
             var ctx = gpu.painter, combat=view.combat, mission=DW.flightMissions.resolve(combat.mode);
@@ -728,7 +748,7 @@
             function label(text,x,y,size,color){ctx.font=(size||11)+'px monospace';ctx.fillStyle=color||ink;ctx.textAlign='left';ctx.fillText(text,x,y);}
             /** @param {string} name @param {number} value @param {number} max @param {number} x @param {number} y @param {number} width @param {string} color */
             function meter(name,value,max,x,y,width,color){var fraction=Math.max(0,Math.min(1,value/Math.max(1,max)));label(name,x,y,10,muted);label(Math.round(fraction*100)+'%',x+width-27,y,10,ink);ctx.fillStyle='#233c43';ctx.fillRect(x,y+6,width,4);ctx.fillStyle=color;ctx.fillRect(x,y+6,width*fraction,4);}
-            paintManeuver(ctx,margin,document.body.classList.contains('touch-flight')?114:bottom-270,view);
+            paintManeuver(ctx,margin,document.body.classList.contains('touch-flight')?180:bottom-332,view);
             if(mission.weaponsDisabled&&!combat.convoy){
                 panel(margin,bottom-65,220,65);
                 label('JADE WEATHER / FREE FLIGHT',margin+12,bottom-43,10,muted);
@@ -741,10 +761,11 @@
                 meter('HULL',combat.hull,combat.maxHull||100,24,54,86,'#91d29b');
                 label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel,124,32,13);
                 label('THR '+Math.round(view.state.throttle*100)+'%',124,57,13);
-                label(selected ? DW.flightSim.callsign(selected) : 'NO TARGET',12,104,12,gold);
+                label(selected ? DW.flightSim.callsign(selected) : 'NO TARGET',12,280,12,gold);
+                if(DW.flightMissiles)paintMissileAmmo(view,12,92,Math.min(250,w-24));
             } else {
-            var leftY=bottom-180;
-            panel(margin,leftY,pw,180);
+            var leftY=bottom-242;
+            panel(margin,leftY,pw,242);
             label('YOUR SHIP',margin+14,leftY+23,10,muted);
             meter('SHIELD',combat.shield,combat.maxShield||120,margin+14,leftY+44,pw-28,'#79b8e7');
             meter('HULL',combat.hull,combat.maxHull||100,margin+14,leftY+70,pw-28,combat.hull/(combat.maxHull||100)<.25?'#ff776b':'#91d29b');
@@ -753,9 +774,7 @@
             label((view.state.throttle<0?'REV ':'THR ')+Math.round(Math.abs(view.state.throttle)*100)+'%',margin+14,leftY+141,11);
             label(view.weapon.name.slice(0,Math.floor((pw-28)/6.7)),margin+14,leftY+158,10,muted);
             if(DW.flightMissiles){
-                var rack=DW.flightMissiles.rack(combat.player),missile=DW.flightMissiles.weapon(combat.player),bank=rack.banks[rack.bank];
-                var missileLabel=missile?missile.name+' '+bank.ammo+(missile.homing==='aspect'?(rack.locked?' LOCK':rack.indicator?' ACQUIRING':''):''):bank?bank.name+' unavailable':'NO MISSILES';
-                label(missileLabel+' / CM '+rack.countermeasures,margin+14,leftY+174,10,rack.locked?gold:muted);
+                paintMissileAmmo(view,margin,leftY+162,pw);
                 var threats=DW.flightMissiles.incoming(combat,combat.player);
                 if(threats.length)label('MISSILE INBOUND '+threats.length+' / H: DECOY',w/2-130,198,14,'#ff776b');
             }
