@@ -702,7 +702,7 @@
                         var lockProgress=Math.max(0,Math.min(1,seekerRack.lock/seekerWeapon.minLockTime));
                         // Four inward-facing Ys meet as a diamond outside the target box.
                         // A small gap persists until actual capture, even at full timer.
-                        var half=32,gap=seekerRack.locked?0:Math.max(4,42*(1-lockProgress)),radius=half*2+gap,stem=14;
+                        var half=28,gap=seekerRack.locked?0:Math.max(4,42*(1-lockProgress)),radius=half*2+gap,stem=24;
                         combatHud.save();combatHud.strokeStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';combatHud.lineWidth=2;
                         [[0,-1],[1,0],[0,1],[-1,0]].forEach(function(axis){
                             var dx=axis[0],dy=axis[1],x=lockX+dx*radius,y=lockY+dy*radius;

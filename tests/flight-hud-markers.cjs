@@ -54,12 +54,14 @@ lockFrame();const earlyLock=pieceExtent();assert.equal(lockPieces().length,4,'fo
 const expectedLockCenter=DW.flightSkybox.project(enemies[0].pose.eye,view.state,1000/700);
 assert(Math.abs(lockPieces().flatMap(p=>p.points).reduce((n,p)=>n+p[0],0)/20-1000*(expectedLockCenter.x+1)/2)<1e-6,'brackets track target image rather than moving seeker cursor');
 view.combat.player.missileRack.lock=1.8;lockFrame();assert(pieceExtent()<earlyLock,'bracket pieces move inward as lock advances');
-view.combat.player.missileRack.lock=2;lockFrame();assert(pieceExtent()>78,'four pieces stay separated if timer is complete but capture is not');
+view.combat.player.missileRack.lock=2;lockFrame();assert(pieceExtent()>80,'four pieces stay separated if timer is complete but capture is not');
 assert(!calls.some(c=>c.kind==='text'&&c.text==='MISSILE LOCK'),'no redundant reticle label');
-view.combat.player.missileRack.locked=true;lockFrame();assert.equal(pieceExtent(),78,'piece ends meet exactly on confirmed lock');assert(lockPieces().every(c=>c.color==='#9cebd6'&&c.points.length===5),'confirmed lock is formed by the same four Y pieces');
+view.combat.player.missileRack.locked=true;lockFrame();assert.equal(pieceExtent(),80,'piece ends meet exactly on confirmed lock');assert(lockPieces().every(c=>c.color==='#9cebd6'&&c.points.length===5),'confirmed lock is formed by the same four Y pieces');
+const center=lockPieces().flatMap(c=>c.points).reduce((p,q)=>[p[0]+q[0]/20,p[1]+q[1]/20],[0,0]);
+for(const piece of lockPieces())for(const end of [piece.points[2],piece.points[4]]){assert.ok(Math.abs(Math.abs(end[0]-center[0])-28)<1e-6);assert.ok(Math.abs(Math.abs(end[1]-center[1])-28)<1e-6,'forks touch the inner square corners');}
 const joins=lockPieces().flatMap(c=>[c.points[2],c.points[4]]);
 for(const p of joins)assert.equal(joins.filter(q=>Math.hypot(p[0]-q[0],p[1]-q[1])<1e-6).length,2,'adjacent forks meet exactly as a diamond');
-view.combat.player.missileRack.banks[0].name='Cyclops';view.combat.player.missileRack.lock=5;lockFrame();assert.equal(lockPieces().length,4,'all seekers use the four-piece closing grammar');assert.equal(pieceExtent(),78);
+view.combat.player.missileRack.banks[0].name='Cyclops';view.combat.player.missileRack.lock=5;lockFrame();assert.equal(lockPieces().length,4,'all seekers use the four-piece closing grammar');assert.equal(pieceExtent(),80);
 view.combat.player.missileRack=savedRack;view.combat.targetId=null;DW.flightPresentation=savedLockPresentation;
 console.log('PASS missile lock HUD: four target-centered solid pieces, inward translation and ends meeting only on true capture');
 

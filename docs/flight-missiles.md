@@ -215,6 +215,6 @@ mechanical impact and brief ignition crack, with no descending oscillator.
 ### Seeker reticle geometry
 
 Four inward-facing Ys translate toward the selected target image. At capture,
-their diagonal forks meet as a diamond with 64 px cardinal radius, enclosing the
-existing inner target box; 14 px stems point out along the cardinal axes. Lines
+their diagonal forks meet as a diamond with 56 px cardinal radius, touching the corners of the
+existing inner target box; 24 px stems point out along the cardinal axes. Lines
 are 2 px wide. The forks retain a gap until actual capture, then turn mint.
