@@ -107,8 +107,16 @@
             if(region===1&&basis)for(var i=0;i<9;i++)if(i%3!==1)basis[i]=-basis[i];
             batches.forEach(function(b){b.region=region;});return batches;
         }
+        /** The legacy patrol is not a projectile target, but its opaque body
+         * still obstructs same-region sensor rays. Match the rendered chart frame.
+         * @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} [probe] */
+        function sightHit(a,b,probe){
+            if(!probe||!probe.visibilityProbe||(probe.region||0)!==region)return null;
+            /** @param {Vector} p */function mirror(p){return region===1?[2*state.position[0]-p[0],p[1],2*state.position[2]-p[2]]:p;}
+            var point=rig.hit(mirror(a),mirror(b),probe);return point?mirror(point):null;
+        }
         function telemetry(){var report=rig.telemetry();report.seconds=seconds;report.capitals=[{team:state.team,position:state.position.slice(),heading:state.heading,integrity:state.integrity,shots:0,hits:0}];return report;}
-        reset();return {setSurfaceDetail:rig.setSurfaceDetail,reset:reset,step:step,geometry:geometry,effects:function(pose){var effects=rig.effects(pose,false),basis=batches[0].basis;if(!basis)return effects;effects.forEach(function(b){b.region=region;b.lensCenter=state.position;b.lensRadius=radius*U;b.lensTransit=transit;});if(region===1)effects.forEach(function(b){for(var i=0;i<b.vertices.length;i+=6){b.vertices[i]=2*state.position[0]-b.vertices[i];b.vertices[i+2]=2*state.position[2]-b.vertices[i+2];}});return effects;},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
+        reset();return {setSurfaceDetail:rig.setSurfaceDetail,reset:reset,step:step,geometry:geometry,effects:function(pose){var effects=rig.effects(pose,false),basis=batches[0].basis;if(!basis)return effects;effects.forEach(function(b){b.region=region;b.lensCenter=state.position;b.lensRadius=radius*U;b.lensTransit=transit;});if(region===1)effects.forEach(function(b){for(var i=0;i<b.vertices.length;i+=6){b.vertices[i]=2*state.position[0]-b.vertices[i];b.vertices[i+2]=2*state.position[2]-b.vertices[i+2];}});return effects;},hit:sightHit,readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
     }
     DW.aegisBattle={createBattle:createBattle,createEllisPatrol:createEllisPatrol};
 }());

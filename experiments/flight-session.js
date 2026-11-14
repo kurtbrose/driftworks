@@ -252,7 +252,7 @@
                         pose.right=bridgeVector(pose.right,crossing.normal);pose.up=bridgeVector(pose.up,crossing.normal);pose.back=bridgeVector(pose.back,crossing.normal);pose.velocity=bridgeVector(pose.velocity,crossing.normal);
                     });
                     if(changed)DW.flightSim.collisionChanged(combat);
-                }:undefined);
+                }:undefined,environment.visibilityHit);
                 if(state.curvature)DW.flightSim.rebaseGeometry(combat);
                 if(remotePilot){
                     DW.flightGuns.step(remotePilot.guns,remotePilot.pose,DW.retailWeapons[remotePilot.weaponIndex||0],remotePilot.fire,dt,environment.terrainHit);

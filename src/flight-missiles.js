@@ -45,16 +45,34 @@
     }
     /** @param {Combat} t @param {Craft} c */function incoming(t,c){return state(t).missiles.filter(function(m){return m.targetId===c.id&&m.team!==c.team&&m.region===(c.pose.region||0);});}
     /** @param {Rack} r */function clearLock(r){r.lock=0;r.locked=false;r.indicator=null;r.catching=false;r.penalty=0;}
+    /** Sensor rays stop just before the selected hull, so the target itself
+     * cannot count as an occluder. All other opaque hulls block regardless of team.
+     * @param {Craft} c @param {Craft} target @param {Weapon} w @param {Craft[]} roster
+     * @param {import('../experiments/types').TerrainHit} [sightHit] */
+    function visible(c,target,w,roster,sightHit){
+        var start=c.pose.eye,contact=DW.flightCollision.hullHit(target,start,target.pose.eye,0),end=contact?contact.point:target.pose.eye;
+        var delta=spaceDelta(start,end,c.pose.curvature),distance=Math.hypot.apply(null,delta),direction=norm(delta);
+        if(distance<1e-9)return true;
+        end=c.pose.curvature?DW.flightHyperbolic.travel(start,direction,Math.max(0,distance-.02/U),c.pose.curvature).point:add(end,direction,-.02/U);
+        var probe={position:start,direction:direction,weapon:w,age:0,region:c.pose.region||0,curvature:c.pose.curvature,visibilityProbe:true};
+        if(sightHit&&(sightHit.allRegions||!probe.region)&&sightHit(start,end,probe))return false;
+        return !roster.some(function(other){
+            if(other.id===c.id||other.id===target.id||other.hp<=0||(other.pose.region||0)!==probe.region)return false;
+            var broad=other.pose.curvature||DW.flightCollision.sphereHit(start,end,other.pose.eye,DW.flightCollision.radius(other));
+            return !!broad&&!!DW.flightCollision.hullHit(other,start,end,0);
+        });
+    }
     /** Source reference and deliberate adaptations: docs/flight-missiles.md.
      * The indicator moves on FSO's virtual 640x480 plane, independent of display resolution.
-     * @param {Craft} c @param {Craft|undefined} target @param {Weapon} w @param {number} dt */
-    function lock(c,target,w,dt){
+     * @param {Craft} c @param {Craft|undefined} target @param {Weapon} w @param {number} dt @param {Craft[]} roster @param {import('../experiments/types').TerrainHit} [sightHit] */
+    function lock(c,target,w,dt,roster,sightHit){
         var r=rack(c);
         if(r.targetId!==(target?target.id:null)){clearLock(r);r.targetId=target?target.id:null;}
         if(w.homing!=='aspect'){r.locked=false;return;}
         var d=target?spaceDelta(c.pose.eye,target.pose.eye,c.pose.curvature):[0,0,0],distance=Math.hypot.apply(null,d),forward=c.pose.back.map(function(v){return -v;}),facing=dot(norm(d),forward);
         var valid=target&&target.hp>0&&target.team!==c.team&&(target.pose.region||0)===(c.pose.region||0)&&distance*U<w.speed*w.lifetime&&facing>.85;
         if(!valid){r.lock=Math.max(0,r.lock-dt);r.locked=false;r.indicator=null;r.catching=false;return;}
+        if(target&&!visible(c,target,w,roster,sightHit)){clearLock(r);return;}
         var z=dot(d,forward),point=[dot(d,c.pose.right)/z*320,dot(d,c.pose.up)/z*320,0];
         if(!r.indicator){r.indicator=[point[0]+(w.minLockTime-r.lock)*w.lockPixelsPerSec,point[1],0];r.penalty=0;}
         if(r.locked){r.indicator=point;return;}
@@ -157,8 +175,8 @@
             else DW.flightCombat.damageCraft(t,c,damage,m.owner);
         });
     }
-    /** @param {Combat} t @param {number} dt @param {import('../experiments/types').TerrainHit} [terrain] @param {import('../experiments/types').ShotSpace} [space] */
-    function step(t,dt,terrain,space){
+    /** @param {Combat} t @param {number} dt @param {import('../experiments/types').TerrainHit} [terrain] @param {import('../experiments/types').ShotSpace} [space] @param {import('../experiments/types').TerrainHit} [sightHit] */
+    function step(t,dt,terrain,space,sightHit){
         if(t.missilesEnabled===false)return;
         var s=state(t),roster=[t.player].concat(t.enemies).concat(t.convoy?DW.convoyMission.targets(t):[]),definition=DW.flightMissions.resolve(t.mode),disabled=!!definition.weaponsDisabled;
         s.shockwaves=s.shockwaves.filter(function(wave){wave.radius+=wave.missile.weapon.shockwaveSpeed*dt;blast(t,wave.missile,roster,wave.radius,wave.hitIds,terrain);return wave.radius<wave.missile.weapon.outerRadius;});
@@ -172,7 +190,7 @@
             var w=weapon(c);if(!w)return;
             var id=c===t.player?t.targetId:c.targetId,target=roster.find(function(other){return other.id===id;});
             if(c.controller==='ai'&&!target)target=roster.find(function(other){return other.hp>0&&other.team!==c.team&&(other.pose.region||0)===(c.pose.region||0);});
-            lock(c,target,w,dt);
+            lock(c,target,w,dt,roster,sightHit||terrain);
             var bank=r.banks[r.bank],targetDistance=target?Math.hypot.apply(null,spaceDelta(c.pose.eye,target.pose.eye,c.pose.curvature))*U:Infinity;
             var ai=c.controller==='ai'&&target&&targetDistance<w.speed*w.lifetime*.8&&targetDistance>w.outerRadius+DW.flightCollision.radius(c)*U&&dot(norm(spaceDelta(c.pose.eye,target.pose.eye,c.pose.curvature)),c.pose.back)<-.9;
             var trigger=c.controller==='ai'?ai:r.secondary;

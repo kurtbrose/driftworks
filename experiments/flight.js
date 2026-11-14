@@ -51,6 +51,12 @@
         };
     environmentHit.allRegions=true;
     environmentHit.onImpact=function(point,bolt,combat){if(aegis&&aegis.damage)aegis.damage(point,bolt.weapon.damage,combat,bolt.region||0);};
+    /** Sight remains available when empty-space missions suppress asteroid contact. @type {import('./types').TerrainHit} */
+    var visibilityHit=function(start,end,probe){
+        var mode=session.snapshot().combat.mode,empty=DW.flightMissions.resolve(mode).emptySpace||['evacuation','scramble','convoy','fleet-evacuation'].includes(mode);
+        return empty?(aegis?aegis.hit(start,end,probe):null):environmentHit(start,end,probe);
+    };
+    visibilityHit.allRegions=true;
     var subsystemId='';
     var subsystemMarker=document.createElement('div');
     subsystemMarker.style.cssText='position:absolute;z-index:8;pointer-events:none;color:#ffd18b;font:12px monospace;text-align:center;white-space:pre;text-shadow:0 1px 3px #000';
@@ -72,7 +78,7 @@
         subsystemMarker.style.left=Math.max(90,Math.min(w-190,sx))+'px';subsystemMarker.style.top=Math.max(70,Math.min(h-90,sy))+'px';
         subsystemMarker.textContent=(forward>0&&sx>0&&sx<w&&sy>0&&sy<h?'[+]':'>>')+' '+part.kind.toUpperCase()+' '+part.id.split('-').pop()+'\n'+(part.hp>0?Math.ceil(part.hp/part.maxHp*100)+'% SYSTEM':'DISABLED')+' / '+Math.round(Math.hypot(...d)*DW.sim.METERS_PER_UNIT)+' m';
     }
-    var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: environmentHit, surfaceFrame: function (asteroid, direction) {
+    var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: environmentHit, visibilityHit:visibilityHit, surfaceFrame: function (asteroid, direction) {
             return DW.asteroidTerrain.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));
         }, onGunshot: function () {
             DW.audio.playGunshot();

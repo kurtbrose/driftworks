@@ -174,3 +174,31 @@ production Chrome captures under `output/missile-visuals/` cover the ship-scale
 side view, close missile body, a real seeker turn, flash and aftermath. The
 close and turning views use separate fixed camera poses. Portal/rim visual
 acceptance and a full weapon-by-weapon art pass remain unverified.
+
+## Seeker line of sight
+
+Aspect acquisition and maintained lock require clear sight from shooter to the
+selected target's near hull surface. The ray stops 2 cm before that surface,
+so the target's own collider does not obstruct acquisition. Other live hulls
+block regardless of allegiance; entities in other regions and geometry behind
+the target do not. A blocked ray immediately clears the lock, indicator and
+accumulated time; revealing the target requires normal acquisition again.
+Both player and AI use this same check.
+
+`SessionEnvironment.visibilityHit?` is forwarded through `flightSim.stepControlled`
+and `flightSim.step` to the optional fifth `flightMissiles.step` argument. It
+remains available in empty-space missions where asteroid/contact queries are
+suppressed. Without an explicit sight query the missile module uses its terrain
+callback. The flight composition supplies actual capital/terrain collision
+queries, excluding the absent asteroid in empty-space missions.
+
+Visibility probes carry `Bolt.visibilityProbe=true`. Capital hit queries skip
+transparent shields and leave pending projectile-surface metadata untouched.
+The legacy Ellis patrol supplies same-region opaque-hull sight queries while
+retaining its existing non-targetable projectile behavior. Sensor queries never
+invoke impact/damage callbacks. These checks govern pre-launch aspect locks;
+in-flight seeker guidance retains its existing rules.
+
+Focused regressions cover the real Aegis hull, immediate lock break and timed
+reacquisition, AI, friendly hulls, region/target-endpoint filtering, transparent
+shields, read-only impact metadata and empty-space session forwarding.

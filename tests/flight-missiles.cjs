@@ -157,4 +157,44 @@ assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnT
  f.reset();const salvo=M.rack(f.snapshot().combat.player);salvo.banks=[{name:'Hornet',ammo:4,capacity:100}];salvo.bank=0;
  f.advance(.01,{secondary:true,stop:true});f.advance(.6,{secondary:false,stop:true});assert.equal(f.events.filter(e=>e.kind==='missile-launch').length,4,'each physical swarm ejection has one callback');
 }
+
+// Acquisition and maintained locks require an unobstructed sensor path.
+function sightAdvance(t,seconds,sight){for(let i=0;i<Math.round(seconds/dt);i++){t.time+=dt;M.step(t,dt,undefined,undefined,sight);}}
+{
+ const t=fixture(),r=M.rack(t.player);let blocked=true,queries=0;
+ const wall=(a,b,probe)=>{queries++;assert.equal(probe.visibilityProbe,true);return blocked?a.map((v,i)=>(v+b[i])*.5):null;};
+ sightAdvance(t,3,wall);assert.equal(r.lock,0);assert.equal(r.locked,false);assert.equal(r.indicator,null);assert(queries>0);
+ blocked=false;sightAdvance(t,2.1,wall);assert.equal(r.locked,true);
+ blocked=true;M.step(t,dt,undefined,undefined,wall);assert.equal(r.locked,false,'new occlusion immediately breaks an acquired lock');assert.equal(r.lock,0,'occlusion discards acquisition progress');
+ blocked=false;sightAdvance(t,1.9,wall);assert.equal(r.locked,false);sightAdvance(t,.2,wall);assert.equal(r.locked,true,'clear line must be reacquired for the normal lock time');
+}
+{
+ const t=fixture(),r=M.rack(t.player),blocker=D.flightSim.createCraft('occluder',D.arcade.create(0),'ally');blocker.controller='input';blocker.pose.eye=[0,200/U,0];blocker.collision={kind:'sphere',radiusM:30};t.enemies.push(blocker);
+ sightAdvance(t,3);assert.equal(r.locked,false,'friendly hulls also obstruct the seeker');
+ blocker.pose.region=1;sightAdvance(t,2.1);assert.equal(r.locked,true,'a hull in another region cannot obstruct');
+ blocker.pose.region=0;blocker.pose.eye=[0,600/U,0];sightAdvance(t,.1);assert.equal(r.locked,true,'geometry behind the selected target does not obstruct');
+ const ownTarget=(a,b)=>D.flightCollision.hullHit(t.enemies[0],a,b,0)?.point||null;sightAdvance(t,.1,ownTarget);assert.equal(r.locked,true,'target surface is not mistaken for an obstacle');
+}
+{
+ const t=fixture(),enemy=t.enemies[0];enemy.controller='ai';enemy.pose.back=[0,1,0];enemy.pose.right=[-1,0,0];enemy.targetId='player';M.rack(enemy).banks=[{name:'Harpoon',ammo:2,capacity:100}];
+ let blocked=true;const wall=(a,b)=>blocked?a.map((v,i)=>(v+b[i])*.5):null;
+ sightAdvance(t,3,wall);assert(!M.state(t).missiles.some(m=>m.owner===enemy.id),'AI cannot obtain an aspect launch through an obstacle');
+ blocked=false;sightAdvance(t,2.2,wall);assert(M.state(t).missiles.some(m=>m.owner===enemy.id),'AI can acquire once the path is clear');
+}
+{
+ const fs=require('node:fs'),vm=require('node:vm'),context=vm.createContext({window:{Driftworks:D},Float32Array,Map,WeakMap,Math});
+ for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context,{filename:file});
+ const capitalState={team:'ally',position:[0,200/U,0],heading:0,velocity:[0,0,0],integrity:20000},rig=D.aegisSim.create({state:capitalState,unarmed:true}),t=fixture(),r=M.rack(t.player),sight=(a,b,p)=>rig.hit(a,b,p);
+ assert(rig.hit(t.player.pose.eye,t.enemies[0].pose.eye),'fixture crosses the real Aegis hull');sightAdvance(t,3,sight);assert.equal(r.locked,false,'real capital hull blocks acquisition');
+ capitalState.position[0]=2000/U;sightAdvance(t,2.1,sight);assert.equal(r.locked,true);capitalState.position[0]=0;M.step(t,dt,undefined,undefined,sight);assert.equal(r.locked,false,'moving the real capital back into view breaks lock');assert.equal(capitalState.integrity,20000,'sight queries do not damage the capital');
+ // A sight probe ignores a transparent shield and cannot overwrite a shot's pending hit metadata.
+ const armedState={...capitalState,position:[0,200/U,0]},armed=D.aegisSim.create({state:armedState,opponent:{...armedState,team:'enemy',position:[0,1000/U,0]}}),a=[0,0,100/U],b=[0,400/U,100/U],shot={position:a,direction:[0,1,0],weapon:harpoon,age:0,region:0};
+ const shield=armed.hit(a,b,shot);assert(shield);assert.equal(armed.hit(a,b,{...shot,visibilityProbe:true}),null,'transparent shield alone does not occlude sight');
+ armed.damage(shield,10,t);assert.equal(armed.visualState().shieldHits.length,1,'read-only probe preserves the original projectile surface metadata');
+ // Empty-space sessions must forward sight queries even though they suppress terrain contacts.
+ let sessionBlocked=true,checks=0;const session=D.flightSession.create({seed:29,terrainHit:()=>null,visibilityHit:(a,b,p)=>{checks++;assert(p.visibilityProbe);return sessionBlocked?a.map((v,i)=>(v+b[i])*.5):null;},surfaceFrame:(asteroid,direction)=>({point:direction}),onGunshot(){},onImpact(){}});
+ const profile=D.arcade.profiles.find(p=>p.name==='GTF Hercules');session.reset({mode:'cinematic',enabled:true,profile});const v=session.snapshot();Object.assign(v.state,t.player.pose,{velocity:[0,0,0],ramp:[0,0,0]});v.combat.enemies=[t.enemies[0]];v.combat.targetId=t.enemies[0].id;M.rack(v.combat.player).banks=[{name:'Harpoon',ammo:2,capacity:100}];
+ for(let i=0;i<360;i++)session.advance(dt,{throttle:0,throttleRate:0,fire:false,stop:true},{profile,weapon:D.retailWeapons[0]});assert(checks>0);assert.equal(M.rack(v.combat.player).locked,false);
+ sessionBlocked=false;for(let i=0;i<270;i++)session.advance(dt,{throttle:0,throttleRate:0,fire:false,stop:true},{profile,weapon:D.retailWeapons[0]});assert.equal(M.rack(v.combat.player).locked,true,'empty-space session restores normal acquisition when visible');
+}
 console.log('PASS missiles: retail tuning, timed locks, bank changes, ammo, dumbfire, bombs, swarms, heat/aspect guidance, bounded turns, CM cooldown/lifetime/rolls, damage, regions, terrain and production session');

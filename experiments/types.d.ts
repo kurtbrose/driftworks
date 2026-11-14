@@ -203,6 +203,7 @@ export type Weapon = {
     color2: Vector;
 };
 export type Bolt = {
+    visibilityProbe?:boolean;
     missile?:boolean;
     trail?:{position:Vector;region:number;age:number}[];
     curvature?:number;
@@ -561,6 +562,7 @@ export type SessionEnvironment = {
     /** Optional seed for a reproducible mission asteroid. */
     seed?: number;
     terrainHit: TerrainHit;
+    visibilityHit?:TerrainHit;
     /** Direction and returned normalized point are in the asteroid body frame. */
     surfaceFrame: (asteroid: Asteroid, direction: Vector) => {
         point: Vector;
@@ -877,7 +879,7 @@ export type ExperimentModules = {
         collisionBatch: <T>(combat: Combat, work: () => T) => T;
         collisionChanged: (combat: Combat, craft?: Craft) => void;
         collisionStats: (combat: Combat) => {mode:string;queued:number;syncs:number;moves:number;queries:number;reuses:number;popped:number;wakes:number};
-        stepControlled: (combat: Combat, controls: Demand, weapon: Weapon, dt: number, radius: number, terrainHit?: TerrainHit, afterCombat?: () => void, afterMovement?:()=>void) => {playerDamaged: boolean; fired: boolean; impact: boolean};
+        stepControlled: (combat: Combat, controls: Demand, weapon: Weapon, dt: number, radius: number, terrainHit?: TerrainHit, afterCombat?: () => void, afterMovement?:()=>void, sightHit?:TerrainHit) => {playerDamaged: boolean; fired: boolean; impact: boolean};
         stepInput: (craft: Craft, controls: Demand, dt: number) => void;
         damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         createCraft: (id: string, pose: FlightState, team: string) => Craft;
@@ -905,7 +907,7 @@ export type ExperimentModules = {
         damageEnemy: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         damagePlayer: (combat: Combat, weapon: Weapon) => void;
         trace: (combat: Combat, start: Vector, end: Vector, bolt: Bolt, team: Craft | string, terrainHit: TerrainHit | undefined, player: FlightState, scorchInterval?:number, onDamage?:() => void) => Vector | null;
-        step: (combat: Combat, player: FlightState, dt: number, radius: number, terrainHit?: TerrainHit, afterMovement?:()=>void) => void;
+        step: (combat: Combat, player: FlightState, dt: number, radius: number, terrainHit?: TerrainHit, afterMovement?:()=>void, sightHit?:TerrainHit) => void;
         cycle: (combat: Combat) => void;
         acquireTarget: (combat: Combat, state: FlightState) => void;
         toggleTargetLock: (combat: Combat) => void;

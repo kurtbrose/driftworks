@@ -352,6 +352,11 @@ assert(crossings>=10,'patrol repeatedly crosses outward and back');assert(turnin
 assert.equal(patrol.telemetry().shots,0);assert.equal(patrol.hit([0,0,0],[1,1,1]),null);
 const patrolTime=patrol.telemetry().seconds;patrol.step(0,view);assert.equal(patrol.telemetry().seconds,patrolTime);
 patrol.reset();assert.equal(patrol.geometry()[0].region,0);assert.equal(patrol.telemetry().seconds,0);
+const patrolCenter=patrol.telemetry().capitals[0].position,patrolRayStart=patrolCenter.map((v,k)=>v-(k===0?200/U:0)),patrolRayEnd=patrolCenter.map((v,k)=>v+(k===0?200/U:0));
+const patrolProbe={position:patrolRayStart,direction:[1,0,0],weapon:DW.retailWeapons[0],age:0,region:0,visibilityProbe:true};
+assert(patrol.hit(patrolRayStart,patrolRayEnd,patrolProbe),'legacy patrol opaque hull participates in sensor visibility');
+assert.equal(patrol.hit(patrolRayStart,patrolRayEnd,{...patrolProbe,region:1}),null,'patrol never blocks the other chart');assert.equal(patrol.hit(patrolRayStart,patrolRayEnd),null,'sight support does not change the legacy projectile-target contract');
+
 console.log('PASS Ellis capital patrol: repeated centerline crossings, turnarounds, region ownership, reset and immutable mesh reuse');
 
 // The optimized representation belongs to the shared ship factory, independent of maps.

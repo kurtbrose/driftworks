@@ -30,7 +30,7 @@ export type MissileApi = {
     weapon(craft:Craft):MissileWeapon|null;
     reset(craft:Craft):void;
     input(craft:Craft,controls:Demand):void;
-    step(combat:Combat,dt:number,terrain?:TerrainHit,space?:ShotSpace):void;
+    step(combat:Combat,dt:number,terrain?:TerrainHit,space?:ShotSpace,sightHit?:TerrainHit):void;
     state(combat:Combat):MissileState;
     incoming(combat:Combat,craft:Craft):Missile[];
 };

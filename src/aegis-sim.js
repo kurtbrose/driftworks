@@ -421,12 +421,12 @@
             });});
         }
          /** @param {Vector} a @param {Vector} b @param {typeof mounts[number]} [ignore] @param {import('../experiments/types').Bolt} [bolt] */function hit(a,b,ignore,bolt){
-            var la=local(a),lb=local(b),relative=bolt?sub(bolt.direction.map(function(v){return v*bolt.weapon.speed;}),options?options.state.velocity:[0,0,0]):[0,0,0],shell=bolt&&Math.hypot(...relative)>30?shieldHit(la,lb):null;
+            var la=local(a),lb=local(b),relative=bolt?sub(bolt.direction.map(function(v){return v*bolt.weapon.speed;}),options?options.state.velocity:[0,0,0]):[0,0,0],shell=bolt&&!bolt.visibilityProbe&&Math.hypot(...relative)>30?shieldHit(la,lb):null;
             if(shell){var shieldPoint=world(shell.point);lastSurface={point:shieldPoint.slice(),part:null,shield:true};return shieldPoint;}
             var h=hullHit(la,lb),p=partHit(la,lb,ignore),component=p&&(!h||p.fraction<h.fraction)?p:null;
             var fraction=component?component.fraction:h?h.fraction:Infinity;
             var point=Number.isFinite(fraction)?a.map(function(v,i){return v+(b[i]-v)*fraction;}):null;
-            lastSurface=point?{point:point.slice(),part:component?component.part:null}:null;return point;
+            if(!bolt||!bolt.visibilityProbe)lastSurface=point?{point:point.slice(),part:component?component.part:null}:null;return point;
         }
         function readout(){if(unarmed)return 'AEGIS / 1,305 m · UNARMED';var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts'+(hangars.length?'\nHangar: '+launched+' fighters launched':'');}
         function telemetry(){return {seconds:seconds,contacts:contacts,launches:launched,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind,targetId:m.targetId,shots:m.guns.fired,aimPoint:m.source.kind==='heavy'?m.aimOffset.slice():undefined};})};}

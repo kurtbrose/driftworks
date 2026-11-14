@@ -112,8 +112,8 @@
      * Scenery rotation, contact, audio, clocks and termination belong to the caller.
      * @param {Combat} t @param {import('../experiments/types').Demand} controls @param {Weapon} weapon
      * @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit]
-     * @param {() => void} [afterCombat] @param {() => void} [afterMovement] */
-    function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat, afterMovement) {
+     * @param {() => void} [afterCombat] @param {() => void} [afterMovement] @param {TerrainHit} [sightHit] */
+    function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat, afterMovement, sightHit) {
         var craft = t.player, pose = craft.pose, guns = craft.guns;
         var missilesBefore=DW.flightMissiles?DW.flightMissiles.rack(craft).fired:0;
         var convoyCraft=t.convoy?participants(t).map(function(c){return c.pose.eye.slice();}):null;
@@ -126,7 +126,7 @@
             var changed=false;travelers.forEach(function(p,i){if(DW.wormholes.travel(t.wormholes||[],beforeTravel[i],p,t.time,U))changed=true;});
             if(changed){t.targetId=null;t.targetLocked=false;DW.flightSim.collisionChanged(t);}
             if(afterMovement)afterMovement();
-        });
+        },sightHit);
         var convoyImpact=convoyCraft&&convoyShips?DW.convoyMission.collide(t,convoyCraft,convoyShips,dt):false;
         var playerDamaged = t.hull < hullBefore || t.shield < shieldBefore;
         if (afterCombat) afterCombat();
@@ -477,8 +477,8 @@
             }
         };
     }
-    /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] @param {() => void} [afterMovement] */
-    function step(t, player, dt, radius, terrainHit, afterMovement) {
+    /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] @param {() => void} [afterMovement] @param {TerrainHit} [sightHit] */
+    function step(t, player, dt, radius, terrainHit, afterMovement, sightHit) {
         if (!t.enabled){if(afterMovement)afterMovement();return;}
         bindPlayer(t, player);
         stepWrecks(t, dt, terrainHit);
@@ -677,7 +677,7 @@
         shieldContacts(t,dt);
         if(afterMovement)afterMovement();
         if(mission(t).sky.wormhole)t.enemies.forEach(fireGuns);
-        if(DW.flightMissiles)DW.flightMissiles.step(t,dt,terrainHit,shotSpace(t));
+        if(DW.flightMissiles)DW.flightMissiles.step(t,dt,terrainHit,shotSpace(t),sightHit);
         });
         if(t.scramble&&t.time<10){
             var story=t.scramble;
