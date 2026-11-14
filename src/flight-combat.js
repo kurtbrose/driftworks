@@ -162,6 +162,8 @@
                 if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; shieldContact=blocked; }
             }
         });
+        var intercepted=DW.flightMissiles&&DW.flightMissiles.interceptTorpedo(t,start,hit||end,bolt,faction);
+        if(intercepted)return intercepted;
         var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
         if (!shieldContact && struck && !struck.convoyModel && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });

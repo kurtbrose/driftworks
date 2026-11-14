@@ -381,7 +381,8 @@
                 let range=Math.hypot.apply(null,bolt.position.map(function(v,i){return v-pose.eye[i];}))*units;
                 let heavy='cargoSize' in bolt.weapon&&Number(bolt.weapon.cargoSize)>=10;
                 let dart=!heavy&&'homing' in bolt.weapon&&bolt.weapon.homing==='none';
-                let length=(heavy?5.4:dart?2.8:3.2)/units,radius=(heavy?.32:dart?.13:.16)/units;
+                let capital=bolt.weapon.name==='Capital torpedo';
+                let length=(capital?12:heavy?5.4:dart?2.8:3.2)/units,radius=(capital?1.2:heavy?.32:dart?.13:.16)/units;
                 let forward=bolt.direction,radial=unitVector(cross(forward,Math.abs(forward[2])<.9?[0,0,1]:[0,1,0])),vertical=cross(radial,forward);
                 /** @param {number} z @param {number} r @param {number} angle */
                 function vertex(z,r,angle){let offset=forward.map(function(v,i){return v*z+radial[i]*r*Math.cos(angle)+vertical[i]*r*Math.sin(angle);});return curvature?DW.flightHyperbolic.offset(bolt.position,offset,curvature):bolt.position.map(function(v,i){return v+offset[i];});}

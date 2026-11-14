@@ -324,7 +324,7 @@ console.log('PASS capital battle: two factions, shared GPU buffers, moving/rotat
 const patrol=DW.aegisFlight.createEllisPatrol(),patrolBatches=patrol.geometry(),patrolBuffers=patrolBatches.map(b=>b.vertices);
 assert.equal(patrolBatches[0].region,0);
 assert(patrolBatches.every(b=>b.lensCenter===patrolBatches[0].origin&&b.lensRadius>650),'all capital materials share one complete-hull optical image');
-assert.equal(patrolBatches.reduce((n,b)=>n+b.vertices.length,0),initial.reduce((n,b)=>n+b.vertices.length,0),'material batching preserves all hull and turret triangles');
+assert.equal(patrolBatches.reduce((n,b)=>n+b.vertices.length,0)+6*8*6*18,initial.reduce((n,b)=>n+b.vertices.length,0),'material batching preserves authored triangles; armed hull additionally carries six torpedo tubes');
 assert.equal(patrolBatches.length,new Set(DW.aegisFlightAsset.batches.map(b=>b.color.join(','))).size+(DW.aegisFlightAsset.interiors||[]).length+1,'one draw per compatible hull material plus separate interior textures');
 const localX=patrolBatches.flatMap(b=>Array.from(b.vertices).filter((v,i)=>i%6===0));
 assert((localX.reduce((a,b)=>Math.max(a,b),-Infinity)-localX.reduce((a,b)=>Math.min(a,b),Infinity))*U>1300,'batching preserves authored metre-scale length and pivots');

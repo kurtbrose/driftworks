@@ -19,6 +19,7 @@
         var renderBatches=rigs.flatMap(function(rig){return rig.geometry();});
         /** @param {import('../experiments/types').Combat} [combat] */function reset(combat){
             seconds=0;motion=[0,0];
+            if(combat&&DW.flightMissiles)DW.flightMissiles.state(combat).missiles=DW.flightMissiles.state(combat).missiles.filter(function(m){return m.owner!=='capital-ally'&&m.owner!=='capital-enemy';});
             if(options&&options.battlefield&&combat){
                 var pose=combat.player.pose;
                 [[-1100,1800,300],[1100,2100,650]].forEach(function(offset,i){

@@ -516,7 +516,7 @@
             if(t.scramble&&t.time<10&&t.enemies.indexOf(e)>=3&&t.enemies.indexOf(e)<6)return;
             var primary=DW.retailWeapons[e.weaponIndex||0],trigger=e.fire;
             if(trigger&&t.wormholes&&t.wormholes.length){
-                var intended=participants(t).concat(t.convoy?DW.convoyMission.targets(t):[]).find(function(c){return c.id===e.targetId;}),solution=intended?firingSolution(t,e,intended,primary):null;
+                var intended=participants(t).concat(t.convoy?DW.convoyMission.targets(t):[]).concat(DW.flightMissiles?DW.flightMissiles.torpedoTargets(t,e.team||'enemy',e.pose.region||0):[]).find(function(c){return c.id===e.targetId;}),solution=intended?firingSolution(t,e,intended,primary):null;
                 trigger=!!solution&&dot(scale(e.pose.back,-1),solution.direction)>Math.cos(.12);
                 if(trigger&&solution&&intended){var actual=DW.wormholes.advanceRay(t.wormholes,e.pose.eye,scale(e.pose.back,-1),solution.distance,e.pose.region||0,t.time,U);if(actual.region!==(intended.pose.region||0))trigger=false;}
             }
@@ -605,6 +605,8 @@
                     opponent = target ? target.pose : null;
                 }
                 if(!opponent&&!e.battleZone){var candidate=roster.find(function(other){return other.hp>0&&((other.pose.region||0)===(e.pose.region||0)||linkedNeighbors(e,other))&&(other.team||'enemy')!==(e.team||'enemy');});opponent=candidate?candidate.pose:null;if(candidate&&t.wormholes)e.targetId=candidate.id;}
+                var torpedo=DW.flightMissiles&&DW.flightMissiles.torpedoTargets(t,e.team||'enemy',e.pose.region||0).filter(function(c){return length(sub(c.pose.eye,e.pose.eye))*U<1100;}).sort(function(a,b){return length(sub(a.pose.eye,e.pose.eye))-length(sub(b.pose.eye,e.pose.eye));})[0];
+                if(torpedo){opponent=torpedo.pose;if(e.targetId!==torpedo.id){e.decision=0;opponentPolicy.forget(e);}e.targetId=torpedo.id;e.mode='attack';}
                 var opponentSpace=opponent&&opponent.region||0,linkedTarget=opponent&&t.wormholes&&t.wormholes.find(function(link){return DW.wormholes.phase(t.time,link.lifecycle).traversable&&link.mouths.some(function(m){return m.space===(e.pose.region||0);})&&link.mouths.some(function(m){return m.space===opponentSpace;});});
                 var opticalRoute=opponent&&linkedTarget?DW.flightGuns.ballisticPath(e.pose.eye,opponent.eye,e.pose.region||0,opponent.region||0,shotSpace(t)):null;
                 var canShootAcross=opticalRoute&&opticalRoute.distance*U<Math.min(760,DW.retailWeapons[e.weaponIndex||0].speed*DW.retailWeapons[e.weaponIndex||0].lifetime);
@@ -621,6 +623,7 @@
                 e.decision -= dt;
                 if (e.decision <= 0 && opponent && !transit)
                     decide(t, e, opponent);
+                if(torpedo&&!transit){e.mode='attack';e.goal=e.gunGoal||torpedo.pose.eye;e.pose.throttle=.85;}
                 var goal = e.mode === 'attack' && (!e.opponentStyle || e.opponentStyle === 'baseline') ? (e.gunGoal || e.goal) : e.goal;
                 if(opponent&&t.wormholes&&(opponent.region||0)===(e.pose.region||0)&&e.gunValid===false){
                     const observed=opponent.eye;var obstacle=t.wormholes.flatMap(function(link){return DW.wormholes.phase(t.time,link.lifecycle).traversable?link.mouths.filter(function(m){return m.space===(e.pose.region||0)&&DW.wormholes.occluded(e.pose.eye,observed,[{position:m.position.map(function(v){return v/U;}),radius:m.radius/U}]);}):[];})[0];

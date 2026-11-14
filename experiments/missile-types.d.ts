@@ -11,6 +11,7 @@ export type MissileRack = {
     secondary:boolean; decoy:boolean; cycle:boolean; cycleHeld:boolean; salvo:number; salvoWait:number; salvoTarget:string|null;
 };
 export type Missile = {
+    torpedo?:boolean; hp?:number; targetPoint?:Vector;
     trailClock?:number;
     trail?:{position:Vector;region:number;age:number}[];
     curvature?:number;id:string;owner:string;team:string;targetId:string|null;originalTarget:string|null;weapon:MissileWeapon;
@@ -21,6 +22,9 @@ export type MissileState = {serial:number;rng:number;missiles:Missile[];decoys:D
 export type MissileProfile = {name:string;defaultBanks:string[];allowed:string[];capacities:number[];countermeasures:number};
 export type RetailMissiles = {missiles:MissileWeapon[];profiles:MissileProfile[];countermeasure:{name:string;lifetimeMin:number;lifetimeMax:number}};
 export type MissileApi = {
+    launchTorpedo(combat:Combat,owner:string,team:string,position:Vector,direction:Vector,target:Vector,region:number):void;
+    torpedoTargets(combat:Combat,team:string,region:number):Craft[];
+    interceptTorpedo(combat:Combat,a:Vector,b:Vector,bolt:import('./types').Bolt,team:string):Vector|null;
     rack(craft:Craft):MissileRack;
     equipBank(craft:Craft,index:number,name:string):boolean;
     weapon(craft:Craft):MissileWeapon|null;

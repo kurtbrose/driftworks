@@ -187,7 +187,10 @@
         });
         /** @type {{position:Vector;region:number;team:string}[]} */var decoyDetonations=[];
         s.missiles=s.missiles.filter(function(m){
-            var w=m.weapon,travel=Math.min(dt,m.life);if(w.homing!=='none')guide(t,m,roster,dt);
+            if(m.torpedo&&(m.hp||0)<=0)return false;
+            var w=m.weapon,travel=Math.min(dt,m.life);
+            if(m.torpedo&&m.targetPoint&&m.age>.6){m.speed=Math.min(w.speed,m.speed+80*dt);m.direction=turn(m.direction,norm(sub(m.targetPoint,m.position)),dt*.55);}
+            if(!m.torpedo&&w.homing!=='none')guide(t,m,roster,dt);
             var cm=s.decoys.find(function(d){return d.id===m.targetId&&d.region===m.region;});
             var start=m.position.slice();
             /** @type {{point:Vector;direction:Vector;region:number;segments:{start:Vector;end:Vector;region:number;direction:Vector}[]}} */var journey;
@@ -225,5 +228,35 @@
         s.missiles=s.missiles.filter(function(m){if(decoyDetonations.some(function(d){return d.region===m.region&&d.team!==m.team&&Math.hypot.apply(null,sub(d.position,m.position))*U<40;})){explode(t,m,roster,terrain);return false;}return true;});
         s.decoys=s.decoys.filter(function(d){d.pulses--;d.age+=dt;if(d.curvature){var speed=Math.hypot.apply(null,d.velocity),move=DW.flightHyperbolic.travel(d.position,norm(d.velocity),speed*dt/U,d.curvature);d.position=move.point;d.velocity=move.direction.map(function(v){return v*speed;});}else d.position=add(d.position,d.velocity,dt/U);return d.age<d.life;});
     }
-    DW.flightMissiles={equipBank:equipBank,rack:rack,weapon:weapon,reset:reset,input:input,step:step,state:state,incoming:incoming};
+    // Capital ordnance shares missile trajectories, rendering and environment impacts.
+    /** @param {Combat} t @param {string} owner @param {string} team @param {Vector} position @param {Vector} direction @param {Vector} target @param {number} region */
+    function launchTorpedo(t,owner,team,position,direction,target,region){
+        var s=state(t),base=find('Cyclops');if(!base)return;
+        var w=Object.assign({},base,{name:'Capital torpedo',speed:180,lifetime:45,damage:650,length:12,headRadius:1.8,tailRadius:1.1,shockwaveSpeed:0,innerRadius:30,outerRadius:90});
+        s.missiles.push({id:'torpedo-'+(++s.serial),owner:owner,team:team,targetId:null,originalTarget:null,weapon:w,position:position,direction:direction,region:region,age:0,life:w.lifetime,speed:65,locked:true,seen:[],zigAt:0,zig:[0,0,0],torpedo:true,hp:12,targetPoint:target.slice()});
+    }
+    /** @type {WeakMap<Missile,Craft>} */var torpedoContacts=new WeakMap();
+    /** @param {Combat} t @param {string} team @param {number} region */
+    function torpedoTargets(t,team,region){
+        return state(t).missiles.filter(function(m){return m.torpedo&&(m.hp||0)>0&&m.team!==team&&m.region===region;}).map(function(m){
+            var c=torpedoContacts.get(m);if(!c){c=DW.flightSim.createCraft(m.id,DW.arcade.create(0),m.team);c.shield=0;c.collision={kind:'sphere',radiusM:3};torpedoContacts.set(m,c);}
+            var pose=c.pose;pose.eye=m.position;pose.velocity=m.direction.map(function(v){return v*m.speed;});pose.back=m.direction.map(function(v){return -v;});pose.region=m.region;
+            c.hp=m.hp||0;return c;
+        });
+    }
+    /** Swept gun contact, clipped by the caller's nearest hull/environment hit.
+     * @param {Combat} t @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} bolt @param {string} team */
+    function interceptTorpedo(t,a,b,bolt,team){
+        /** @type {{fraction:number;point:Vector}|null} */var best=null;
+        /** @type {Missile|null} */var victim=null;
+        for(var m of state(t).missiles){if(!m.torpedo||(m.hp||0)<=0||m.team===team||m.region!==(bolt.region||0))continue;
+            var h=DW.flightCollision.sphereHit(a,b,m.position,(3+(bolt.weapon.headRadius||0))/U);
+            if(h&&(!best||h.fraction<best.fraction)){best=h;victim=m;}
+        }
+        if(!victim||!best)return null;
+        victim.hp=(victim.hp||0)-bolt.weapon.damage;
+        if(victim.hp<=0)t.flashes.push({position:victim.position.slice(),region:victim.region,age:0,scale:8,warhead:true,destruction:false});
+        return best.point;
+    }
+    DW.flightMissiles={launchTorpedo:launchTorpedo,torpedoTargets:torpedoTargets,interceptTorpedo:interceptTorpedo,equipBank:equipBank,rack:rack,weapon:weapon,reset:reset,input:input,step:step,state:state,incoming:incoming};
 }());

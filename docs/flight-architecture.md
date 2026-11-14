@@ -768,3 +768,35 @@ The duel harness defaults to that isolation and accepts `DuelOptions.missiles`
 for secondary-armed trials. Gameplay sessions enable missiles by default.
 See [missile reference](flight-missiles.md) for provenance, controls, exact table
 fields, behavioral adaptations and verification limits.
+
+### Capital torpedo salvos
+
+Paired Aegis battles launch six torpedoes at 320 ms spacing after an initial
+six-second delay, followed by a twenty-second reload. Three shared static tubes
+on each beam use local metre anchors X = -180/-90/0, Y = +/-62, Z = 12.
+The ship selects the beam facing its opponent; torpedoes clear the tube for
+0.6 seconds, then turn at 0.55 rad/s and accelerate from 65 to 180 m/s.
+Each carries a 650-damage warhead, 12 hit points and a 45-second lifetime.
+New launches require enabled combat/missiles and living capitals in the same
+region. Cross-region capital torpedo targeting is not implemented.
+
+`flightMissiles` owns torpedo flight, health and shared missile presentation.
+`aegisSim` updates each owner's target point and salvo clock. Point-defense
+mounts prefer eligible hostile torpedoes over fighters; nearby AI fighters
+pursue torpedoes within 1,100 m. Cached temporary craft contacts support aiming
+without adding ordnance to the fighter roster, kill accounting or wave rules.
+`flightCombat.trace` clips swept ordnance interception at the nearest existing
+hull/environment hit. Destroyed torpedoes flash and disappear without a damaging
+warhead blast. Surviving torpedoes use the normal environment impact callback to
+damage capitals. Battle reset removes capital-owned ordnance.
+
+Production-renderer review used a fixed 1400 x 900, DPR 1 camera with both
+capitals and twelve real torpedoes at nine simulation seconds. The six tubes
+per hull share immutable geometry: two additional draws and 576 triangles for
+the pair (269 to 271 draws, 81,484 to 82,060 triangles in that view).
+A 15-frame warmup and 50-sample ABBA comparison measured submission medians
+of 5.8/5.7/5.8/5.6 ms without/with/with/without tubes; median browser cadence
+was 13.3 ms throughout. These are browser submission/cadence measurements,
+not GPU timings or a full-mission performance result. Close views inspected
+actual tube mouths and torpedo bodies/trails. Evidence is under ignored
+`output/capital-torpedoes/`. Focused coverage is `tests/capital-torpedoes.cjs`.

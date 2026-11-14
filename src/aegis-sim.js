@@ -171,7 +171,7 @@
         }
         function components(){return parts.map(function(p){return {id:'capital-'+team+'-'+p.id,kind:p.kind,hp:p.hp,maxHp:p.maxHp,position:world(p.position)};});}
         /** @type {WeakMap<import('../experiments/types').FlightState,Vector>} */var contactEyes=new WeakMap();
-        var seconds=0,contacts=0,confirmedHits=0;
+        var seconds=0,contacts=0,confirmedHits=0,torpedoClock=6,torpedoRemaining=0,torpedoTube=0;
         /** @type {{point:Vector;time:number}[]} */var impactHits=[];
         /** @type {{point:Vector;time:number;heavy:boolean}[]} */var shieldHits=[];
         /** @param {Vector} p */function local(p){return rotate(p.map(function(v,i){return (v-origin[i])*U;}),true);}
@@ -191,7 +191,7 @@
             hangars.forEach(function(h){if(Math.abs(m.aimOffset[0]-h.position[0])<h.halfWidth&&Math.abs(m.aimOffset[2]-h.position[2])<h.halfHeight)m.aimOffset[0]=h.position[0]+h.halfWidth+10+random()*25;});
         }
         /** @param {import('../experiments/types').Combat} [combat] */
-        function reset(combat){batteryTargetId='';batterySearchAfter=0;batteryTargets=[];shieldHits=[];impactHits=[];lastSurface=null;parts.forEach(function(p){p.hp=p.maxHp;});launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}contactEyes=new WeakMap();seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.routeWait=-(i%12)*.01;m.route=null;m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
+        function reset(combat){torpedoClock=6;torpedoRemaining=0;torpedoTube=0;batteryTargetId='';batterySearchAfter=0;batteryTargets=[];shieldHits=[];impactHits=[];lastSurface=null;parts.forEach(function(p){p.hp=p.maxHp;});launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}contactEyes=new WeakMap();seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.routeWait=-(i%12)*.01;m.route=null;m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
         /** Main batteries engage the opposing hull, never the fighter roster.
          * @param {typeof mounts[number]} m @param {number} dt @param {FlightView} view */
         function stepHeavy(m,dt,view){
@@ -311,8 +311,21 @@
                 }
             }
             if(unarmed)return;
+            if(options&&options.opponentRig&&DW.flightMissiles){
+                var owner='capital-'+team,enemy=options.opponent,region=options.state.region||0;
+                DW.flightMissiles.state(combat).missiles.forEach(function(m){if(m.torpedo&&m.owner===owner)m.targetPoint=enemy.position.slice();});
+                torpedoClock-=dt;
+                if(weaponsEnabled(combat)&&combat.missilesEnabled!==false&&options.state.integrity>0&&enemy.integrity>0&&region===(enemy.region||0)&&torpedoClock<=0){
+                    if(!torpedoRemaining)torpedoRemaining=6;
+                    var side=local(enemy.position)[1]>=0?1:-1;
+                    DW.flightMissiles.launchTorpedo(combat,owner,team,world([-180+(torpedoTube%3)*90,side*62,12]),rotate([0,side,0]),enemy.position,region);
+                    torpedoTube++;torpedoRemaining--;torpedoClock=torpedoRemaining?.32:20;
+                }
+            }
+
             var roster=DW.flightSim.alive(combat);if(team==='enemy'&&combat.player.hp>0)roster=roster.concat([combat.player]);
             var targets=roster.filter(function(c){return (c.team||'enemy')!==team&&(c.pose.region||0)===(options&&options.state.region||0);}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
+            var incoming=DW.flightMissiles?DW.flightMissiles.torpedoTargets(combat,team,options&&options.state.region||0).map(function(c){return {craft:c,position:local(c.pose.eye)};}):[];
             DW.flightSim.collisionBatch(combat,function(){mounts.forEach(function(m){
                 var part=parts.find(function(p){return p.mount===m;});
                 if(part&&part.hp<=0){DW.flightGuns.step(m.guns,view.state,m.source.kind==='heavy'?heavyWeapon:weapon,false,dt,function(a,b,bolt){return traceRound(m,view,a,b,bolt);},undefined,undefined,undefined,shotMetric);return;}
@@ -322,9 +335,10 @@
                 var range2=weapon.speed*weapon.speed*weapon.lifetime*weapon.lifetime;
                 /** @param {{position:Vector}} candidate */
                 function eligible(candidate){var q=candidate.position,dx=q[0]-p[0],dy=q[1]-p[1],dz=q[2]-p[2];return dz*side>2&&dx*dx+dy*dy+dz*dz<range2;}
-                var retained=targets.find(function(candidate){return candidate.craft.id===m.targetId;});
+                var contacts=incoming.some(eligible)?incoming:targets;
+                var retained=contacts.find(function(candidate){return candidate.craft.id===m.targetId;});
                 var target=/** @type {import('../experiments/types').Craft|null} */(retained&&eligible(retained)?retained.craft:null),count=0;
-                if(!target)for(var candidate of targets){
+                if(!target)for(var candidate of contacts){
                     if(!eligible(candidate))continue;
                     count++;
                     // Seeded per-mount reservoir sampling avoids nearest-target dogpiles

@@ -35,6 +35,22 @@
     /** @type {Map<string,HTMLImageElement>} */var interiorTextures=new Map();
     /** @type {Promise<void>|null} */var surfaceLoad=null;
     /** @type {WeakMap<Float32Array,Float32Array>} */var surfaceBuffers=new WeakMap();
+    /** Six open broadside launch tubes, one immutable shared buffer in authored metres. */
+    /** @type {Float32Array|null} */var torpedoTubeVertices=null;
+    function torpedoTubes(){
+        if(torpedoTubeVertices)return torpedoTubeVertices;
+        /** @type {number[]} */var data=[];
+        /** @param {Vector} a @param {Vector} b @param {Vector} c */
+        function triangle(a,b,c){var u=b.map(function(v,i){return v-a[i];}),v=c.map(function(x,i){return x-a[i];}),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],size=Math.hypot(...n);n=n.map(function(x){return x/size;});[a,b,c].forEach(function(p){data.push(p[0]/U,p[1]/U,p[2]/U,...n);});}
+        [-1,1].forEach(function(side){for(var tube=0;tube<3;tube++)for(var i=0;i<8;i++){
+            var x=-180+tube*90,a=i*Math.PI/4,b=(i+1)*Math.PI/4;
+            /** @param {number} angle @param {number} r @param {number} y */
+            function point(angle,r,y){return [x+Math.cos(angle)*r,y*side,12+Math.sin(angle)*r];}
+            var outerA=point(a,5,62),outerB=point(b,5,62),innerA=point(a,3,62),innerB=point(b,3,62),backA=point(a,5,44),backB=point(b,5,44),boreA=point(a,3,44),boreB=point(b,3,44);
+            [[outerA,backA,backB,outerB],[outerA,outerB,innerB,innerA],[innerA,innerB,boreB,boreA]].forEach(function(q){if(side<0)q.reverse();triangle(q[0],q[1],q[2]);triangle(q[0],q[2],q[3]);});
+        }});
+        torpedoTubeVertices=new Float32Array(data);return torpedoTubeVertices;
+    }
     var cachedAsset=/** @type {import('../experiments/types').AegisFlightAsset|null} */(null);
     /** @type {Map<string,Float32Array>} */var vertexCache=new Map();
     /** Shared prepared resource, invalidated with its authored asset revision. */
@@ -125,6 +141,7 @@
                 surfaceStates.forEach(function(s){if(s&&s.part===part.state)applySurface(s);});
             }
         });}
+        if(!unarmed)staticBatches.push({vertices:torpedoTubes(),color:[.25,.28,.31],origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true});
         var renderBatches=staticBatches.concat(mounts.flatMap(function(m){return m.batches;}),engines.flatMap(function(e){return e.batches;}));
         /** @returns {Batch[]} */function geometry(){
             sync();
