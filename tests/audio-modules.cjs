@@ -41,6 +41,28 @@ assert.equal(cue(.016,{...tracking,locked:true}),'confirm');assert.equal(cue(.01
 assert.equal(cue(.016,{...tracking,tracking:false}),'lost');assert.equal(cue(.016,{...tracking,tracking:false}),'none');
 cue(.016,{...tracking,locked:true});assert.equal(cue(.016,{...tracking,active:false}),'none','pause clears quietly');
 assert.equal(cue(.016,{...tracking,key:'other/Harpoon'}),'tick','target changes start a fresh acquisition cue');
+
+// Lock audio owns one fixed-pitch voice, including during long held locks.
+const toneNodes=[];let toneContext;
+function toneParam(){return {value:0,setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},setTargetAtTime(v){this.value=v;},cancelScheduledValues(){}};}
+function toneNode(){return {connect(next){return next;},disconnect(){},start(){},stop(time){this.stopped=time;}};}
+class ToneContext {
+ constructor(){toneContext=this;this.state='running';this.currentTime=0;this.sampleRate=8000;this.destination=toneNode();}
+ createGain(){return {...toneNode(),gain:toneParam()};}
+ createBiquadFilter(){return {...toneNode(),frequency:toneParam(),Q:toneParam()};}
+ createOscillator(){const n={...toneNode(),frequency:toneParam()};toneNodes.push(n);return n;}
+ createBufferSource(){return toneNode();}
+ createBuffer(channels,length){return {getChannelData:()=>new Float32Array(length)};}
+}
+const toneSandbox={window:{AudioContext:ToneContext,localStorage:{getItem:()=>null,setItem(){}},Driftworks:{engineAudio:synth,audioMixer:{create:()=>({attach(){},channel:()=>toneContext.destination})}}}};
+vm.createContext(toneSandbox);vm.runInContext(fs.readFileSync(path.join(root,'src/audio.js'),'utf8'),toneSandbox);
+const toneApi=toneSandbox.window.Driftworks.audio;
+toneApi.setMissileLock(.016,tracking);const tone=toneNodes.find(n=>n.frequency.value===920);assert(tone);assert.equal(tone.type,'square');
+for(let i=0;i<600;i++){toneContext.currentTime+=1/60;toneApi.setMissileLock(1/60,{...tracking,locked:true,progress:1});}
+assert.equal(toneNodes.filter(n=>n.frequency.value===920).length,1,'held tone reuses one oscillator');assert.equal(tone.stopped,undefined);
+toneApi.setMissileLock(.016,{...tracking,tracking:false});assert(tone.stopped>toneContext.currentTime,'loss fades and stops the carrier');
+assert.equal(toneNodes.filter(n=>n.frequency.value===920).length,1,'loss creates no melodic notes');
+toneApi.setMissileLock(.016,tracking);toneApi.setMissileLock(.016,{...tracking,active:false});assert(toneNodes.filter(n=>n.frequency.value===920).every(n=>n.stopped!==undefined),'pause clears every seeker voice');
 for (const directory of ['', 'tests', 'experiments']) {
   for (const file of fs.readdirSync(path.join(root, directory)).filter(f => f.endsWith('.html'))) {
     const html = fs.readFileSync(path.join(root, directory, file), 'utf8');

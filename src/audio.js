@@ -191,10 +191,30 @@
   }
 
   var seekerCue={key:'',locked:false,wait:0};
-  var seekerVoices=/** @type {OscillatorNode[]} */([]);
-  function cancelSeeker(){seekerVoices.forEach(function(voice){try{voice.stop(context?context.currentTime:0);}catch(error){/* Already ended. */}});seekerVoices=[];}
-  /** @param {number} hz @param {number} duration @param {number} level @param {number} delay */
-  function seekerTone(hz,duration,level,delay){var voice=beep(hz,duration,level,'sine',delay,'weapons');if(voice){seekerVoices.push(voice);voice.onended=function(){seekerVoices=seekerVoices.filter(function(v){return v!==voice;});};}}
+  var seekerVoice=/** @type {{oscillator:OscillatorNode;filter:BiquadFilterNode;gain:GainNode}|null} */(null);
+  function cancelSeeker(){
+    if(!seekerVoice)return;var voice=seekerVoice;seekerVoice=null;
+    var now=context?context.currentTime:0;voice.gain.gain.cancelScheduledValues(now);voice.gain.gain.setTargetAtTime(0,now,.002);voice.oscillator.stop(now+.012);
+  }
+  function seekerSignal(){
+    if(!settings.sfx||!unlock()||!context){cancelSeeker();return null;}
+    if(!seekerVoice){
+      var oscillator=context.createOscillator(),filter=context.createBiquadFilter(),gain=context.createGain();
+      oscillator.type='square';oscillator.frequency.value=920;
+      filter.type='lowpass';filter.frequency.value=1900;filter.Q.value=.3;gain.gain.value=0;
+      oscillator.connect(filter).connect(gain).connect(mixer.channel('weapons')||sfxBus||context.destination);
+      oscillator.onended=function(){oscillator.disconnect();filter.disconnect();gain.disconnect();};oscillator.start();seekerVoice={oscillator:oscillator,filter:filter,gain:gain};
+    }
+    return seekerVoice;
+  }
+  /** Fixed-pitch instrument pulse, turning into an uninterrupted carrier on lock. @param {number} progress @param {boolean} held */
+  function seekerTone(progress,held){
+    var voice=seekerSignal();if(!voice||!context)return;
+    var now=context.currentTime,param=voice.gain.gain;param.cancelScheduledValues(now);
+    if(held){param.setTargetAtTime(.026,now,.004);return;}
+    var duration=.07+.07*progress;
+    param.setValueAtTime(0,now);param.linearRampToValueAtTime(.03,now+.003);param.setValueAtTime(.03,now+duration-.004);param.linearRampToValueAtTime(0,now+duration);
+  }
 
   /** Presentation clock only: no sound feeds back into simulation lock timing.
    * @param {number} dt @param {{active:boolean;tracking:boolean;locked:boolean;progress:number;key:string}} value */
@@ -204,15 +224,14 @@
     var wasLocked=seekerCue.locked;seekerCue.locked=value.locked;
     if(!value.tracking){
       seekerCue.wait=0;
-      if(wasLocked){cancelSeeker();seekerTone(540,.065,.035,0);seekerTone(360,.085,.025,.07);return 'lost';}
+      cancelSeeker();if(wasLocked)return 'lost';
       return 'none';
     }
     if(value.locked){
-      if(!wasLocked){cancelSeeker();seekerTone(1120,.09,.045,0);seekerTone(1490,.14,.04,.1);return 'confirm';}
-      return 'none';
+      seekerTone(1,true);return wasLocked?'none':'confirm';
     }
     var progress=Math.max(0,Math.min(1,value.progress));seekerCue.wait-=Math.max(0,Math.min(.1,dt));
-    if(seekerCue.wait<=0){seekerCue.wait=.46-.34*progress;seekerTone(680+progress*440,.045,.025,0);return 'tick';}
+    if(seekerCue.wait<=0){seekerCue.wait=.44-.29*progress;seekerTone(progress,false);return 'tick';}
     return 'none';
   }
 

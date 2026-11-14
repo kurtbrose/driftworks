@@ -538,15 +538,17 @@ hexagon. Catch-up travel is labeled TRACKING; reaching 100% alone does not
 confirm a lock. Cockpit-relative indicators remain suppressed in chase views.
 
 `audio.setMissileLock(dt, {active, tracking, locked, progress, key})` owns only
-presentation cadence. Acquisition sine ticks rise from 680 to 1120 Hz and speed
-from 0.46 to 0.12 seconds between ticks. Actual capture produces one ascending
-two-note chime; breaking an acquired lock gives a falling pair. Held lock is
-quiet. Keys identify target/bank/weapon; replacing the key cancels old voices.
-Pause, reset, death, watch, cinematic and overview suppress the cue and clear
-its scheduler. No missed-tick backlog is played after a stall. These short
-synthesized cues use the existing weapons mixer channel and respect SFX mute.
+presentation cadence. A fixed 920 Hz carrier uses a low-pass-filtered square
+wave with short, flat amplitude gates. Acquisition pulses last 0.07–0.14 s and
+speed from 0.44 to 0.15 s apart. Actual capture merges into a sustained tone at
+the same pitch; loss cuts the carrier. There are no melodic confirmation or
+loss flourishes. Keys identify target/bank/weapon; replacing the key fades and
+stops the old voice. Pause, reset, death, watch, cinematic and overview suppress
+the cue and clear its scheduler. No missed-pulse backlog is played after a
+stall. The single voice uses the existing weapons mixer and respects SFX mute.
 They add no audio assets or simulation state and do not alter lock timing.
 
 Production Chrome screenshots and an OfflineAudioContext render through the
-real audio facade live under ignored `output/missile-lock/`. The sound preview
-contains a Harpoon acquisition, confirmation, loss and a partial reacquisition.
+real audio facade live under ignored `output/missile-lock/`. The revised sound preview in
+`output/missile-tone/` contains a Harpoon acquisition, sustained lock, loss and
+a partial reacquisition.
