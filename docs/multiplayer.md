@@ -4,7 +4,7 @@
 
 Open `experiments/multiplayer.html` (redirects to `multiplayer-server.html`).
 
-1. Choose **Create server**. Keep this console tab open.
+1. Choose **Start server**. Keep this console tab open.
 2. Choose **Open flight client** to join yourself in a separate tab. Choose
    **Start flight** in that client to fly. The console does not occupy a seat.
 3. Open the **local join link** in another tab of the same browser profile and

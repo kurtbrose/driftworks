@@ -6,7 +6,7 @@
 </style></head><body>
 <p class="muted">DRIFTWORKS / MULTIPLAYER</p><h1>Your server, your flight crew.</h1>
 <p>Keep this console open. Join the flight in a separate tab, then invite a wingmate. Two pilot seats; this page uses no pilot seat.</p>
-<section><h2>1. Create server</h2><button id="create">Create server</button><button id="stop" disabled>Stop server</button><p id="server-status" role="status">No server running.</p><small>The server manages connections and relays co-flight updates. Shared combat is not enabled.</small></section>
+<section><h2>1. Start server</h2><button id="create">Start server</button><button id="stop" disabled>Stop server</button><p id="server-status" role="status">Server stopped.</p><small>The server manages connections and relays co-flight updates. Shared combat is not enabled.</small></section>
 <section id="running" hidden><h2>2. Join yourself as a client</h2><a id="join" class="button" target="_blank" rel="noopener">Open flight client</a>
 <p>Same-browser tabs connect automatically. Keep the same address, browser profile and site origin in every tab.</p>
 <h2>3. Share with another pilot</h2><label for="join-link">Local join link (same browser on this computer)</label><input id="join-link" readonly><button id="copy-local">Copy local link</button>
@@ -19,9 +19,9 @@
 <label for="invite-link">Remote invitation link</label><textarea id="invite-link" readonly></textarea><button id="copy-invite">Copy invitation</button>
 <label for="answer">Answer from your wingmate</label><textarea id="answer"></textarea><button id="apply">Apply answer</button><p id="remote-status" role="status">No pending invitation.</p>
 </details></section>
-<section><h2>Connected pilots <span id="count">0 / 2</span></h2><div class="roster"><table><thead><tr><th>Pilot / ID</th><th>Connection</th><th>Last heard</th><th>Updates / rejected</th><th>Controls</th></tr></thead><tbody id="roster"></tbody></table></div><p id="empty">No pilots connected. Join yourself after creating the server.</p></section>
+<section><h2>Connected pilots <span id="count">0 / 2</span></h2><div class="roster"><table><thead><tr><th>Pilot / ID</th><th>Connection</th><th>Last heard</th><th>Updates / rejected</th><th>Controls</th></tr></thead><tbody id="roster"></tbody></table></div><p id="empty">No pilots connected. Join yourself after starting the server.</p></section>
 <section><h2>Server activity</h2><div id="events" role="log">Ready.</div></section>
 <p><a href="multiplayer.html">Multiplayer entry</a> · <a href="flight.html?multiplayer=1">Original manual peer experiment</a></p>
 <script src="../src/asset-versions.js?v=585f00c7225d"></script>
-<script type="module" src="multiplayer-server.js?v=7eba0e07dd63"></script>
+<script type="module" src="multiplayer-server.js?v=c831ef54cce1"></script>
 </body></html>

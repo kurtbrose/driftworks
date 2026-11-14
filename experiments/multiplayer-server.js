@@ -36,7 +36,7 @@ function render(){
 }
 button('create').onclick=()=>{
   if(!window.BroadcastChannel){status('This browser does not support local tab connections. Use a current browser.');return;}
-  if(!crypto.randomUUID){status('Open this page over HTTPS or localhost to create a server.');return;}
+  if(!crypto.randomUUID){status('Open this page over HTTPS or localhost to start the server.');return;}
   roomId=crypto.randomUUID();local=new BroadcastChannel('driftworks-server-'+roomId);
   room=createRoom((id,m)=>{
     const remote=remotes.get(id);
@@ -52,7 +52,7 @@ button('create').onclick=()=>{
   input('join-link').value=url.href;/** @type {HTMLAnchorElement} */(el('join')).href=url.href;
   input('public-url').value=new URL('flight.html',location.href).href;
   el('running').hidden=false;button('create').disabled=true;button('stop').disabled=false;
-  status('Server running · '+roomId.slice(0,8)+' · keep this tab open.');log('Server created. Waiting for pilots.');
+  status('Server running · '+roomId.slice(0,8)+' · keep this tab open.');log('Server started. Waiting for pilots.');
 };
 button('stop').onclick=()=>{stop();log('Server stopped.');};
 button('copy-local').onclick=()=>copy(input('join-link'),status);
