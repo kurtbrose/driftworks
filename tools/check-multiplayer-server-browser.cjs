@@ -31,6 +31,30 @@ function probe(){const DW=window.Driftworks,create=DW.flightSession.create;DW.fl
   await two.waitForFunction(start=>Math.hypot(...multiplayerProbe.session.snapshot().combat.enemies[0].pose.eye.map((v,i)=>v-start[i]))>.01,start);
   assert.equal(await one.evaluate(()=>multiplayerProbe.session.snapshot().guns.fired),0,'Rime free flight retains disabled weapons');
   await two.bringToFront();await two.click('#fly');await two.screenshot({path:'output/multiplayer-server/client.png'});
+  // Each client can fly itself; explicitly hide one to exercise timer-driven
+  // physics while its render loop is suspended/skipped.
+  await one.bringToFront();await one.click('#net-autopilot');await two.bringToFront();await two.click('#net-autopilot');
+  const aiStart=await Promise.all([one,two].map(p=>p.evaluate(()=>multiplayerProbe.session.snapshot().state.eye.slice())));
+  await one.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('blur'));});
+  await two.waitForTimeout(2500);
+  for(const [i,page] of [one,two].entries()){
+    assert.equal(await page.getAttribute('#net-autopilot','aria-pressed'),'true');
+    const eye=await page.evaluate(()=>multiplayerProbe.session.snapshot().state.eye.slice());
+    assert(Math.hypot(...eye.map((v,n)=>v-aiStart[i][n]))>.01,'both AI pilots move, including hidden client');
+    assert(await page.evaluate(()=>document.body.classList.contains('flight-active')),'AI continues after blur');
+  }
+  await panel(two);await two.waitForFunction(()=>document.querySelector('#net-stats').textContent.includes('server RTT'));
+  const syncSamples=[];
+  for(let n=0;n<8;n++){
+    const own=await one.evaluate(()=>multiplayerProbe.session.snapshot().state.eye.slice());
+    const observed=await two.evaluate(()=>multiplayerProbe.session.snapshot().combat.enemies[0].pose.eye.slice());
+    const units=await two.evaluate(()=>Driftworks.sim.METERS_PER_UNIT);
+    syncSamples.push(Math.hypot(...own.map((v,i)=>v-observed[i]))*units);await two.waitForTimeout(100);
+  }
+  const syncReadout=await two.textContent('#net-stats');
+  await two.screenshot({path:'output/multiplayer-server/ai-sync.png'});
+  await one.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
+  for(const page of [one,two]){await page.click('#net-autopilot');assert.equal(await page.getAttribute('#net-autopilot','aria-pressed'),'false');}
   const third=await client();await third.waitForFunction(()=>document.querySelector('#net-status').textContent.includes('full'));await third.close();
   await server.locator('#roster button').first().click();
   await one.waitForFunction(()=>document.querySelector('#net-status').textContent.includes('Kicked'));
@@ -56,12 +80,14 @@ function probe(){const DW=window.Driftworks,create=DW.flightSession.create;DW.fl
   await server.click('#stop');
   assert(await server.locator('#level').isEnabled());
   for(const page of [two,remote])await page.waitForFunction(()=>document.querySelector('#net-summary').textContent==='offline');
-  assert(await two.evaluate(()=>document.body.classList.contains('flight-active')),'server stop leaves local flight active');
+  // Manual takeover pauses first; resume before testing server-stop behavior.
+  await two.bringToFront();await two.click('#fly');
+  assert(await two.evaluate(()=>document.body.classList.contains('flight-active')),'local flight can resume after server stop');
   // Stale link produces a useful diagnosis and does not block flight loading.
   const stale=await client();await stale.waitForFunction(()=>document.querySelector('#net-status').textContent.includes('No server answered'));
   await stale.screenshot({path:'output/multiplayer-server/stale-link.png'});
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  const result={selectedLevel:'jade-rime',levelPreserved:true,wrongLevelRejected:true,localJoin:true,twoPilots:true,movement:true,quietLevelWeaponsDisabled:true,capacity:true,kick:true,kickRetryRejected:true,webRTCSeparateContext:true,remoteMovement:true,serverStop:true,staleLink:true,errors,externalRequests:external};
+  const result={selectedLevel:'jade-rime',aiBothClients:true,aiHiddenClient:true,manualTakeover:true,syncReadout,observedPositionErrorMeters:syncSamples,levelPreserved:true,wrongLevelRejected:true,localJoin:true,twoPilots:true,movement:true,quietLevelWeaponsDisabled:true,capacity:true,kick:true,kickRetryRejected:true,webRTCSeparateContext:true,remoteMovement:true,serverStop:true,staleLink:true,errors,externalRequests:external};
   fs.writeFileSync('output/multiplayer-server/browser.json',JSON.stringify(result,null,2)+'\n');console.log(result);
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

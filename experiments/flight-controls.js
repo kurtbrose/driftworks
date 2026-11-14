@@ -460,10 +460,11 @@
                 actions.pause();
         });
         document.addEventListener('pointerlockerror', captureFallback);
-        window.addEventListener('blur', actions.pause);
+        function loseFocus(){clear();if(!actions.keepFlyingOnBlur||!actions.keepFlyingOnBlur())actions.pause();}
+        window.addEventListener('blur', loseFocus);
         document.addEventListener('visibilitychange', function () {
             if (document.hidden)
-                actions.pause();
+                loseFocus();
         });
         window.addEventListener('keydown', function (e) {
             // Leave browser and OS shortcuts alone; Shift by itself holds the tactical camera.

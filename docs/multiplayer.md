@@ -18,6 +18,27 @@ co-flight retains that mission's scenery/empty-space rules while disabling NPC
 combat. Scripted battles and wormhole missions are not offered because their
 simulation/crossings are not synchronized by this protocol.
 
+Each client has an always-visible **AI fly for me** button. It starts/resumes
+that client's ship on a gentle waypoint patrol using the existing flight AI and
+ordinary control inputs/physics. The patrol does not fire or boost. **Take manual
+control** disables AI and pauses so the pilot can resume with normal controls.
+Esc still pauses. AI mode retains flight through focus/visibility loss while
+clearing manual inputs; hidden clients step through a background timer without
+rendering. Browser throttling/suspension can still delay or stop a tab. Keep the
+server running; separate visible windows give the most consistent cadence.
+The multiplayer mount accepts `{resume,pause,ready}` callbacks and returns
+`aiActive()` and `pilotDemand(manual,elapsed)` alongside its network observer.
+The controls adapter's optional `keepFlyingOnBlur()` hook only suppresses
+automatic focus-loss pauses; explicit pause controls remain active.
+
+Clients are not lockstep. Each owns its ship's physics and sends snapshots up to
+20 Hz; the other client displays the latest validated pose, without interpolation,
+prediction, or a shared simulation clock. The guest follows the other pilot's
+asteroid rotation; scripted mission progress, combat and damage are not shared.
+The client panel shows round-trip time **to the server**, peer snapshot age **at
+the relay**, and time since receipt. These are separate observations, not an
+end-to-end one-way latency estimate; sender clock synchronization is not assumed.
+
 The console displays the two-seat roster, pilot IDs/names, connection type,
 last-heard age, accepted/rejected update counts, and join/disconnect activity.
 **Kick** removes a pilot and prevents that client tab's ID from rejoining the
@@ -130,6 +151,13 @@ Level selection was additionally verified with Rime on 2026-11-13: local and
 WebRTC links retained its mission ID, wrong-level clients were rejected, scenery
 and disabled weapons were preserved, and stopping unlocked the selector. The
 selected-level console and production Rime client screenshots were inspected.
+
+AI verification on 2026-11-13 covered both spawn roles in real headless sessions,
+non-mutating input generation, movement, no firing and asteroid clearance. The
+production browser probe ran two AI clients including a forced-hidden client,
+then checked manual takeover and viewed the AI/sync panel. Eight sequential local
+pose comparisons during patrol differed by about 1.9–2.3 m; this is a sampled
+observation from that run, including read timing, not a network accuracy budget.
 
 `node tests/multiplayer-room.cjs` checks the server roster, two-seat capacity,
 stable roles after departures, validated forwarding, sequence rejection, stale

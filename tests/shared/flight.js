@@ -564,6 +564,11 @@
     f.key('KeyW');f.key('Tab');assert(c.sample().throttleRate===0&&f.counts.target===1);
     f.setPaused(false);f.key('KeyW');f.win.emit('blur');assert(c.sample().throttleRate===0);
     f.setPaused(false);f.doc.hidden=true;f.doc.emit('visibilitychange');assert(f.counts.pause===3);
+    var auto=flightControlsFixture(undefined,false,{aiFlight:true});
+    auto.key('KeyW');auto.key('Space');auto.win.emit('blur');
+    assert(auto.counts.pause===0&&auto.controls.sample().throttleRate===0&&!auto.controls.sample().fire,'AI focus loss clears manual inputs without pausing');
+    auto.doc.hidden=true;auto.doc.emit('visibilitychange');assert(auto.counts.pause===0);
+    auto.key('Escape');assert(auto.counts.pause===1,'Escape still pauses AI flight');
   });
 
   test('flight', 'automatic flight starts enable cursor steering and fire immediately',function(){

@@ -485,6 +485,7 @@
     var controls = DW.flightControls.mount(host, {
         restart:function(){reset();resume();},
         pause: pause, resume: resume, captureFailure: captureFailure,
+        keepFlyingOnBlur:function(){return !!multiplayer&&multiplayer.aiActive();},
         isPaused: function () {
             return paused;
         }, isDead: function () {
@@ -509,8 +510,10 @@
     });
     var studies=DW.flightStudies.mount({get watch(){return watch;},get paused(){return paused;},get texturesReady(){return texturesReady;},
         activeMission:activeMission,aegis:aegis,diagnostics:diagnostics,get:get,host:host,pause:pause,presentation:presentation,resume:resume,shipStretching:shipStretching,view:view});
-    /** @param {number} t */
-    function frame(t) {
+    var backgroundPrevious=performance.now();
+    /** @param {number} t @param {boolean} [background] */
+    function frame(t,background) {
+        if(document.hidden&&multiplayer&&multiplayer.aiActive()&&!background)return;
         if(paused)updateMissileSettings();
         if(ohioMusic && !paused) ohioMusic.update();
         if(studies.benchmarking)return;
@@ -518,13 +521,15 @@
         if (!timing) {
             return;
         }
-        var elapsed = timing.elapsed;
+        var elapsed = background?Math.min(1,Math.max(0,(t-backgroundPrevious)/1000)):timing.elapsed;
+        backgroundPrevious=t;
         if(studies.enabled&&!paused&&watch&&watch.summary().done){reset();resume();}
         var appearance = presentation.appearance();
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
         var pilotDemand=controls.sample(view().state.throttle);
         var demand = cinematic||overviewMode?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:pilotDemand;
+        if(multiplayer)demand=multiplayer.pilotDemand(demand,elapsed);
         if(multiplayer)multiplayer.update(demand,paused);
         if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
@@ -574,6 +579,7 @@
             }
             if(ohioMusic)ohioMusic.updateMission(currentView.combat,function(){comms.pause();});
         }
+        if(background){DW.audio.setFlightEngine(0,0,false,false);return;}
         var comparison = diagnostics.settings();
         phaseStart=performance.now();
         studies.beforeRender(t);
@@ -611,7 +617,7 @@
     reset();
     if(multiplayerMode){
         const net=DW.multiplayerFlight;
-        multiplayer=net.mount(session,()=>({profile:Number(select.value),weapon:DW.retailWeapons.indexOf(weapon()),model:DW.shipCatalog.craftModel(session.snapshot().combat.player,presentation.appearance().allyArt,0).id}));
+        multiplayer=net.mount(session,()=>({profile:Number(select.value),weapon:DW.retailWeapons.indexOf(weapon()),model:DW.shipCatalog.craftModel(session.snapshot().combat.player,presentation.appearance().allyArt,0).id}),{resume:resume,pause:pause,ready:()=>texturesReady&&!flightError});
         get('watch-panel').hidden=true;get('combat-toggle').checked=false;get('combat-toggle').disabled=true;get('combat-mode').disabled=true;get('diameter').disabled=true;
         const networkHeading=document.querySelector('header h1');if(networkHeading)networkHeading.textContent='DRIFTWORKS / MULTIPLAYER FLIGHT';
         var hint=document.querySelector('#launch > p');if(hint)hint.textContent='Fly with a wingmate. Open Multiplayer to connect. Each pilot controls their own fighter; shared combat is not enabled yet.';
@@ -628,9 +634,10 @@
         }else updateStatus();
     });
     if(importError)status.textContent=importError;
-    presentation.setAnimationLoop(function(t){
+    /** @param {number} t @param {boolean} [background] */
+    function runFrame(t,background){
         if(flightError)return;
-        try{frame(t);}catch(error){
+        try{frame(t,background);}catch(error){
             console.error('Flight frame failed',error);
             flightError='Flight stopped: '+String(error)+'. Reload to retry; console has the full stack trace.';
             try{pause();}catch(pauseError){console.error('Flight cleanup failed',pauseError);}
@@ -640,7 +647,13 @@
             get('fly').disabled=true;get('fly').textContent='Flight stopped / reload';
             status.textContent=flightError;
         }
-    });
+    }
+    presentation.setAnimationLoop(function(t){runFrame(t);});
+    if(multiplayer){
+        document.addEventListener('visibilitychange',function(){backgroundPrevious=performance.now();diagnostics.resetSimulationClock();});
+        const backgroundTimer=setInterval(function(){if(document.hidden&&!paused&&multiplayer&&multiplayer.aiActive())runFrame(performance.now(),true);},100);
+        window.addEventListener('pagehide',function(){clearInterval(backgroundTimer);});
+    }
 }()).catch(/** @param {unknown} error */function(error){
     console.error(error);
     var status=document.getElementById('status'),button=document.getElementById('fly');

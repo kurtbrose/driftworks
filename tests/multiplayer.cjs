@@ -40,5 +40,19 @@ const copy=v=>JSON.parse(JSON.stringify(v));
  const filtered=m.pilot({...h,extra:{world:'untrusted'},pose:{...h.pose,curvature:300}});
  assert(!('extra' in filtered));assert(!('curvature' in filtered.pose));
  assert.equal(m.connectionTimeout,20000);
+ const autoSource=fs.readFileSync(path.join(__dirname,'../experiments/multiplayer-autopilot.js'),'utf8');
+ const {createAutopilot}=await import('data:text/javascript;base64,'+Buffer.from(autoSource).toString('base64'));
+ for(const mission of ['default','jade-rime'])for(const isGuest of [false,true]){
+  const f=createFlight({mission});f.session.prepareMultiplayer(isGuest);
+  const auto=createAutopilot(f.DW);auto.reset(isGuest);const initial=copy(f.snapshot().state);
+  const demand=auto.demand(f.snapshot(),dt,f.config.profile,f.config.weapon);
+  assert.deepEqual(copy(f.snapshot().state),initial,'AI produces inputs without mutating the pose');
+  assert.equal(demand.fire,false);assert.equal(demand.boost,false);
+  for(let n=0;n<1200;n++)f.advance(dt,auto.demand(f.snapshot(),dt,f.config.profile,f.config.weapon));
+  assert(f.snapshot().state.eye.every(Number.isFinite));
+  assert(Math.hypot(...f.snapshot().state.eye.map((v,i)=>v-initial.eye[i]))>.1,'AI flies through real simulation');
+  assert.equal(f.snapshot().guns.fired,0,'patrol never fires');
+  if(mission==='default')assert(Math.hypot(...f.snapshot().state.eye)>f.snapshot().asteroid.radius*1.12,'patrol stays above asteroid');
+ }
  console.log('Multiplayer: real sessions, independent flight, remote pose and weapons, disconnect/reset, packet validation and sequence checks passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

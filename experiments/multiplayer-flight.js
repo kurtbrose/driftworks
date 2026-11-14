@@ -2,9 +2,9 @@ import {protocol,connectionTimeout,decode,receiver} from './multiplayer-model.js
 import {mountClient} from './multiplayer-client.js';
 /** @typedef {ReturnType<import('./types').ExperimentModules['flightSession']['create']>} Session */
 /** @typedef {import('./multiplayer-model').RemotePilot} RemotePilot */
-/** @param {Session} session @param {()=>{profile:number,weapon:number,model:string}} loadout */
-export function mount(session,loadout) {
-  if(new URLSearchParams(location.search).has('server'))return mountClient(session,loadout);
+/** @param {Session} session @param {()=>{profile:number,weapon:number,model:string}} loadout @param {import('./multiplayer-client').FlightActions} [actions] */
+export function mount(session,loadout,actions) {
+  if(new URLSearchParams(location.search).has('server'))return mountClient(session,loadout,actions);
   const panel=document.createElement('details');panel.id='multiplayer-panel';panel.open=true;
   panel.innerHTML=`<summary>Multiplayer · <span id="net-summary">offline</span></summary>
     <p>Two real fighters in the flight game. Fly while connecting; Esc returns to these controls.</p>
@@ -123,7 +123,9 @@ export function mount(session,loadout) {
     catch{area('net-out').focus();area('net-out').select();status('Text selected. Press Ctrl+C to copy it.');}
   });
   window.addEventListener('pagehide',()=>reset());
-  return {isGuest:()=>role==='guest',
+  return {isGuest:()=>role==='guest',aiActive:()=>false,
+    /** @param {import('./types').Demand} demand @param {number} elapsed */
+    pilotDemand(demand,elapsed){return demand;},
     /** Network heartbeat uses wall time even while the simulation is paused.
      * @param {import('./types').Demand} demand @param {boolean} paused */
     update(demand,paused){

@@ -30,6 +30,7 @@
       root.querySelectorAll=function(){return root.buttons;};
     }
     controls=window.Driftworks.flightControls.mount(host,{
+      keepFlyingOnBlur:function(){return !!deviceOptions&&!!deviceOptions.aiFlight;},
       isPaused:function(){return paused;},isDead:function(){return dead;},
       pause:function(){counts.pause++;paused=true;controls.clear();controls.release();},
       resume:function(){counts.resume++;paused=false;controls.clear();controls.resetButtons();},

@@ -21,7 +21,8 @@ const moduleURL=text=>'data:text/javascript;base64,'+Buffer.from(text).toString(
  receive('alpha',{kind:'state',seq:2,pilot:{...p,pose:{...p.pose,eye:[NaN,0,0]}}});
  assert.equal(room.members.get('alpha').rejected,2);
  assert.equal(room.members.get('alpha').sequence,1);
- time=400;receive('alpha',{kind:'ping'});room.tick();assert.equal(last('bravo').pilot.fire,false,'heartbeats must not keep an old trigger pressed');
+ time=400;receive('alpha',{kind:'ping',echo:123});assert.equal(last('alpha').echo,123);room.tick();assert.equal(last('bravo').pilot.fire,false,'heartbeats must not keep an old trigger pressed');
+ assert.equal(last('bravo').peerAge,400,'peer age is measured at relay, independent of client clocks');
  room.kick('alpha');assert.equal(room.members.size,1);assert.equal(last('bravo').pilot,null);
  join('alpha');assert.equal(room.members.size,1);assert.match(last('alpha').reason,/Kicked/);
  assert.equal(room.members.get('bravo').slot,1,'surviving pilot keeps their spawn role');

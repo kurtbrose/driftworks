@@ -43,7 +43,7 @@ export function createRoom(send,now,level='default'){
     for(const member of members.values()){
       const other=[...members.values()].find(p=>p.id!==member.id);
       send(member.id,{kind:'world',level,revision,frame:frame++,slot:member.slot,
-        count:members.size,peer:other?other.name:null,
+        count:members.size,peer:other?other.name:null,peerAge:other?.pilot?Math.max(0,time-other.poseTime):0,
         pilot:other?.pilot?{...other.pilot,fire:time-other.poseTime<300&&other.pilot.fire,boost:time-other.poseTime<300&&other.pilot.boost}:null});
     }
   }
@@ -67,7 +67,7 @@ export function createRoom(send,now,level='default'){
       }
       const member=members.get(id);if(!member)return;
       if(m.kind==='leave'){remove(id,'Left server.');return;}
-      if(m.kind==='ping'){member.lastSeen=now();send(id,{kind:'pong'});return;}
+      if(m.kind==='ping'){member.lastSeen=now();send(id,{kind:'pong',echo:typeof m.echo==='number'&&Number.isFinite(m.echo)?m.echo:null});return;}
       if(m.kind!=='state')return;
       const p=pilot(m.pilot);
       if(!p||typeof m.seq!=='number'||!Number.isSafeInteger(m.seq)||m.seq<=member.sequence){member.rejected++;return;}
