@@ -11,6 +11,20 @@ function fixture(name='Harpoon',distance=400){
 function advance(t,seconds){for(let i=0;i<Math.round(seconds/dt);i++){t.time+=dt;M.step(t,dt);}}
 function shoot(t){M.rack(t.player).secondary=true;M.step(t,dt);M.rack(t.player).secondary=false;}
 function angle(a,b){return Math.acos(Math.max(-1,Math.min(1,a.reduce((s,v,i)=>s+v*b[i],0))));}
+{
+ for(const curved of [false,true]){
+  const t=fixture('Tempest',3000),pose=t.player.pose;
+  if(curved)pose.curvature=100;
+  // Roll the ship so world-down cannot accidentally pass as ship-down.
+  pose.right=[0,0,1];pose.up=[-1,0,0];
+  shoot(t);const first=M.state(t).missiles[0];
+  const path=curved?D.flightHyperbolic.path(pose.eye,first.position,pose.curvature):null,delta=path?path.direction.map(v=>v*path.distance):first.position.map((v,i)=>v-pose.eye[i]);
+  assert.ok(delta[0]>2/U,'missile starts below the rolled cockpit');
+  assert.ok(delta[2]<0,'first rail is on the left');
+  assert.ok(angle(first.direction,curved?D.flightHyperbolic.transport(pose.eye,first.position,[0,1,0],pose.curvature):[0,1,0])<.001,'launch bore stays forward');
+ }
+ const t=fixture('Tempest',3000);shoot(t);const first=M.state(t).missiles[0];advance(t,1);shoot(t);const second=M.state(t).missiles.find(m=>m!==first);assert.ok(second,'second shot exists');assert.ok(first.position[0]*second.position[0]<0,'successive shots alternate rails');
+}
 assert.equal(D.retailMissiles.missiles.length,21);
 const harpoon=D.retailMissiles.missiles.find(w=>w.name==='Harpoon');
 assert.deepEqual([harpoon.damage,harpoon.speed,harpoon.minLockTime,harpoon.turnTime],[100,250,2,1]);

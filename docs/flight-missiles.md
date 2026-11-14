@@ -202,3 +202,12 @@ in-flight seeker guidance retains its existing rules.
 Focused regressions cover the real Aegis hull, immediate lock break and timed
 reacquisition, AI, friendly hulls, region/target-endpoint filtering, transparent
 shields, read-only impact metadata and empty-space session forwarding.
+
+### Fighter launch rails
+
+Fighter missiles alternate between two ventral rails, 0.65 collision radii below
+the cockpit (at least 2 m) and 0.28 radii to either side. The muzzle remains one
+radius plus 2 m forward for hull clearance. The bore stays forward; homing steers
+after release. Offsets follow the ship basis, including roll, and curved-space
+launches transport the bore to the muzzle. Launch audio uses a dry latch, short
+mechanical impact and brief ignition crack, with no descending oscillator.

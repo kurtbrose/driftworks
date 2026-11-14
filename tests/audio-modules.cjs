@@ -64,8 +64,8 @@ toneApi.setMissileLock(.016,{...tracking,tracking:false});assert(tone.stopped>to
 assert.equal(toneNodes.filter(n=>n.frequency.value===920).length,1,'loss creates no melodic notes');
 toneApi.setMissileLock(.016,tracking);toneApi.setMissileLock(.016,{...tracking,active:false});assert(toneNodes.filter(n=>n.frequency.value===920).every(n=>n.stopped!==undefined),'pause clears every seeker voice');
 
-const beforeLaunch=toneNodes.length;toneApi.playMissileLaunch();assert.equal(toneNodes.length,beforeLaunch+1,'one launch thump voice per ejection');assert.equal(toneNodes.at(-1).type,'triangle');assert.equal(toneNodes.at(-1).frequency.value,48,'mechanical thump drops into a low body');
-toneApi.setSfxEnabled(false);const mutedLaunch=toneNodes.length;toneApi.playMissileLaunch();assert.equal(toneNodes.length,mutedLaunch,'muted launch allocates no voices');
+const beforeLaunch=toneNodes.length,beforeNoise=noiseNodes.length;toneApi.playMissileLaunch();assert.equal(toneNodes.length,beforeLaunch,'launch has no pitched downward wooomf');assert.equal(noiseNodes.length,beforeNoise+3,'release, impact and ignition share the weapon bus');
+toneApi.setSfxEnabled(false);const mutedLaunch=noiseNodes.length;toneApi.playMissileLaunch();assert.equal(noiseNodes.length,mutedLaunch,'muted launch allocates no voices');
 
 const U=10000/600,pose={eye:[0,0,0],region:0},round=()=>({region:0});
 const distance=toneApi._test.capitalDistance;

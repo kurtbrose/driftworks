@@ -96,10 +96,13 @@
     /** @param {Combat} t @param {Craft} c @param {Weapon} w @param {string|null} targetId @param {boolean} locked */
     function launch(t,c,w,targetId,locked){
         rack(c).fired++;
-        var s=state(t),direction=c.pose.back.map(function(v){return -v;}),launchM=DW.flightCollision.radius(c)*U+2;
-        var muzzle=c.pose.curvature?DW.flightHyperbolic.travel(c.pose.eye,direction,launchM/U,c.pose.curvature):null;
+        var s=state(t),direction=c.pose.back.map(function(v){return -v;}),radius=DW.flightCollision.radius(c)*U;
+        // Paired ventral rails: retain forward bore direction, below the cockpit.
+        var offset=add(add(direction.map(function(v){return v*(radius+2)/U;}),c.pose.up,-Math.max(2,radius*.65)/U),c.pose.right,(rack(c).fired%2?-1:1)*radius*.28/U);
+        var length=Math.hypot.apply(null,offset),position=c.pose.curvature?DW.flightHyperbolic.travel(c.pose.eye,norm(offset),length,c.pose.curvature).point:add(c.pose.eye,offset,1);
+        if(c.pose.curvature)direction=DW.flightHyperbolic.transport(c.pose.eye,position,direction,c.pose.curvature);
         s.missiles.push({curvature:c.pose.curvature,id:'missile-'+(++s.serial),owner:c.id,team:c.team||'enemy',targetId:targetId,originalTarget:targetId,weapon:w,
-            position:muzzle?muzzle.point:add(c.pose.eye,direction,launchM/U),direction:muzzle?muzzle.direction:direction,region:c.pose.region||0,age:0,life:w.lifetime,speed:w.homing==='none'?w.speed:Math.max(w.speed*.25,dot(c.pose.velocity,direction)+w.speed*.25),locked:locked,seen:[],zigAt:0,zig:[0,0,0]});
+            position:position,direction:direction,region:c.pose.region||0,age:0,life:w.lifetime,speed:w.homing==='none'?w.speed:Math.max(w.speed*.25,dot(c.pose.velocity,direction)+w.speed*.25),locked:locked,seen:[],zigAt:0,zig:[0,0,0]});
     }
     /** @param {Combat} t @param {Craft} c */function deploy(t,c){
         var r=rack(c);if(r.countermeasures<=0||r.cmCooldown>1e-8)return;
