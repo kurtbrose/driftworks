@@ -590,9 +590,12 @@ listener-region filtering and metre distances: heavy firing fades out at
 650 m firing / 450 m impact). Each round cues firing and flyby once, with
 separate category rate limits to bound overlapping salvos. Flybys measure the
 swept leg truncated at impact, including curved/link traversal segments.
-These synthesized cues use the weapons/impacts mixer channels and SFX mute.
+These cues use the weapons/impacts mixer channels and SFX mute.
 
-Capital firing and impacts layer a sharp broadband crack, midrange blast,
-low pressure boom and a longer filtered rumble. Their bass stays at a fixed
-frequency. Flybys use only turbulent filtered noise, without a tonal oscillator
-or pitch sweep. This keeps the presentation closer to heavy naval artillery.
+Capital audio loads three local WAV buffers when audio unlocks. The selected
+set is recorded cannon firing, the synthetic sub-pressure flyby and the
+one-second blast impact, documented in `assets/audio/capital/README.md`.
+They play at their reviewed pitch/rate, with proximity gain only. Failed or
+pending loads stay silent rather than replaying the rejected synthesis. No
+runtime external requests are used. Decoded buffers are shared across capitals;
+overlap is capped at 24 voices and each voice disconnects on completion.

@@ -34,6 +34,40 @@
   if (!Driftworks.engineAudio || !Driftworks.audioMixer) throw new Error('Load engine-audio.js and audio-mixer.js before audio.js');
   var engine = Driftworks.engineAudio;
   var mixer = Driftworks.audioMixer.create({getMaster:function(){return settings.sfxVolume;},setMaster:setSfxVolume});
+  var capitalRoot=global.document&&global.document.currentScript?new URL('../',new URL(global.document.currentScript.getAttribute('src')||'',global.document.baseURI)).href:'';
+  /** @type {Partial<Record<'fire'|'pass'|'hit',AudioBuffer>>} */
+  var capitalBuffers={};
+  /** @type {Promise<void>|null} */
+  var capitalLoading=null;
+  /** @type {AudioBufferSourceNode[]} */
+  var capitalVoices=[];
+  function loadCapitalSounds(){
+    if(capitalLoading)return capitalLoading;
+    if(!context||!capitalRoot||!global.fetch)return Promise.resolve();
+    var ctx=context;
+    capitalLoading=Promise.all(['fire','pass','hit'].map(async function(key){
+      var kind=/** @type {'fire'|'pass'|'hit'} */(key),file={fire:'fire',pass:'flyby',hit:'impact'}[kind];
+      var path='assets/audio/capital/'+file+'.wav';
+      var url=Driftworks.assetUrl?Driftworks.assetUrl(path,capitalRoot):new URL(path,capitalRoot).href;
+      try{
+        var response=await global.fetch(url);
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        capitalBuffers[kind]=await ctx.decodeAudioData(await response.arrayBuffer());
+      }catch(error){console.warn('Capital audio unavailable: '+file,error);}
+    })).then(function(){});
+    return capitalLoading;
+  }
+  /** @param {'fire'|'pass'|'hit'} kind @param {number} level */
+  function playCapitalSample(kind,level){
+    if(!context||!capitalBuffers[kind])return;
+    var source=context.createBufferSource(),gain=context.createGain();
+    source.buffer=capitalBuffers[kind];
+    gain.gain.value=level*(kind==='pass'?.65:.7);
+    source.connect(gain).connect(mixer.channel(kind==='hit'?'impacts':'weapons')||sfxBus||context.destination);
+    source.onended=function(){source.disconnect();gain.disconnect();var i=capitalVoices.indexOf(source);if(i>=0)capitalVoices.splice(i,1);};
+    if(capitalVoices.length>=24){var oldest=capitalVoices.shift();if(oldest)oldest.stop();}
+    capitalVoices.push(source);source.start();
+  }
   var lastGunshot = -Infinity;
   function commsChannel() {
     if(!unlock() || !context)return null;
@@ -88,6 +122,7 @@
       mixer.attach(context,sfxBus,master,context.destination);
       startEngineNoise();
       startMusicBed();
+      loadCapitalSounds();
     }
     return true;
   }
@@ -322,26 +357,9 @@
       var now=context.currentTime;if(now-capitalTimes[kind]<(kind==='fire'?.09:.07))return;
       capitalTimes[kind]=now;
       var level=Math.pow(1-distance/range,2)*(heavy?1:.45);
-      if(kind==='fire'){
-        // Propellant crack, pressure body and rolling blast; no laser pitch sweep.
-        noiseBurst(.035,.48*level,'highpass',1800,0,'weapons');
-        noiseBurst(.14,.4*level,'bandpass',430,.006,'weapons');
-        noiseBurst(.65,.6*level,'lowpass',210,.012,'weapons');
-        noiseBurst(1.35,.28*level,'lowpass',100,.045,'weapons');
-        beep(heavy?46:85,.42,.17*level,'sine',0,'weapons');
-      }else if(kind==='pass'){
-        // A shell ripping past: turbulent broadband air, without an electronic zap.
-        noiseBurst(.12,.32*level,'bandpass',950,0,'weapons');
-        noiseBurst(.055,.15*level,'highpass',2300,0,'weapons');
-        noiseBurst(.2,.2*level,'lowpass',420,.012,'weapons');
-      }else{
-        mixer.impact();
-        noiseBurst(.045,.48*level,'highpass',1400,0,'impacts');
-        noiseBurst(.22,.4*level,'bandpass',620,.005,'impacts');
-        noiseBurst(.85,.65*level,'lowpass',240,.012,'impacts');
-        noiseBurst(1.5,.3*level,'lowpass',110,.05,'impacts');
-        beep(38,.55,.2*level,'sine',0,'impacts');
-      }
+      if(!capitalBuffers[kind])return;
+      if(kind==='hit')mixer.impact();
+      playCapitalSample(kind,level);
     }
     if(first)cue('fire',capitalDistance(a,a,pose.eye),heavy?1800:650);
     var distance=capitalDistance(a,b,pose.eye);
@@ -469,7 +487,7 @@
     playWormhole: playWormhole,
     setEngineThrust: setEngineThrust,
     _test: {
-      capitalDistance:capitalDistance, loadSettings: loadSettings, normalizeMix:mixer.normalize, mixLevels:mixer.levels,
+      capitalReady:loadCapitalSounds, capitalDistance:capitalDistance, loadSettings: loadSettings, normalizeMix:mixer.normalize, mixLevels:mixer.levels,
       getLastEngineLevel: function () {
         return lastEngineLevel;
       }

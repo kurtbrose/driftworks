@@ -4,6 +4,9 @@
   var root = typeof document !== 'undefined' && document.currentScript ? new URL('../', new URL(document.currentScript.getAttribute('src') || '', document.baseURI)).href : '';
   /** @type {Record<string,string>} */
   var versions = {
+  "assets/audio/capital/fire.wav": "6b9fb3d0fe40",
+  "assets/audio/capital/flyby.wav": "7607ca317d4b",
+  "assets/audio/capital/impact.wav": "0bca65e3e773",
   "assets/audio/ohio/open-highway-spirit.m4a": "43515134f9d4",
   "assets/audio/ohio/radio-intro-source.wav": "9118644c2f57",
   "assets/audio/ohio/radio-intro.wav": "f1c29ea4d6f5",
