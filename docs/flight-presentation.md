@@ -526,3 +526,27 @@ refilling ammunition. Reset/profile reconfiguration rearms. Unsupported specialt
 defaults are labeled unavailable until replaced with a supported allowed type.
 Missiles use world-space swept paths and the shared production projectile effect
 renderer. These are original placeholder effects, not FreeSpace artwork.
+
+### Missile acquisition feedback
+
+Aspect-lock feedback reads the live missile rack, not a separate visual timer.
+The travelling indicator carries amber corner brackets shrinking from 42 to
+14 pixels with acquisition progress, plus a progress arc. Once the simulation
+confirms capture it closes into a 13-pixel mint outline marked MISSILE LOCK.
+Normal missiles use a square, swarm weapons a diamond and heavy weapons a
+hexagon. Catch-up travel is labeled TRACKING; reaching 100% alone does not
+confirm a lock. Cockpit-relative indicators remain suppressed in chase views.
+
+`audio.setMissileLock(dt, {active, tracking, locked, progress, key})` owns only
+presentation cadence. Acquisition sine ticks rise from 680 to 1120 Hz and speed
+from 0.46 to 0.12 seconds between ticks. Actual capture produces one ascending
+two-note chime; breaking an acquired lock gives a falling pair. Held lock is
+quiet. Keys identify target/bank/weapon; replacing the key cancels old voices.
+Pause, reset, death, watch, cinematic and overview suppress the cue and clear
+its scheduler. No missed-tick backlog is played after a stall. These short
+synthesized cues use the existing weapons mixer channel and respect SFX mute.
+They add no audio assets or simulation state and do not alter lock timing.
+
+Production Chrome screenshots and an OfflineAudioContext render through the
+real audio facade live under ignored `output/missile-lock/`. The sound preview
+contains a Harpoon acquisition, confirmation, loss and a partial reacquisition.

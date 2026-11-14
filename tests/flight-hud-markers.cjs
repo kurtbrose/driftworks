@@ -42,6 +42,20 @@ assert.equal(hostile.filter(c=>c.kind==='fill'&&c.points.length===3).length,2,'E
 assert.ok(calls.some(c=>c.kind==='rect'&&c.color==='#63f58d'&&c.w===24),'Allied contact remains distinct');
 assert.ok(calls.filter(c=>c.color==='#05090f'&&c.width===3.5).length>=5,'Contact outlines have dark contrast backing');
 console.log('PASS flight HUD markers: real session contacts, unselected enemies, rear/offscreen arrows, readable size/opacity and contrast');
+// Real rack state drives acquisition size, capture confirmation and shape.
+const savedLockPresentation=DW.flightPresentation;DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
+const savedRack=view.combat.player.missileRack;
+view.combat.player.missileRack={...DW.flightMissiles.rack(view.combat.player),banks:[{name:'Harpoon',ammo:10,capacity:100}],bank:0,targetId:enemies[0].id,indicator:[0,0,0],locked:false,lock:.2};
+view.combat.targetId=enemies[0].id;
+function lockFrame(){hud.render({...view,paint:{ally:[1,1,1],enemy:[1,1,1]},units:10,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
+function lockSize(){return Math.max(...calls.filter(c=>c.kind==='stroke'&&c.color==='#f5ac5c').flatMap(c=>c.points.map(p=>Math.hypot(p[0]-500,p[1]-350))));}
+lockFrame();const earlyLock=lockSize();view.combat.player.missileRack.lock=1.8;lockFrame();assert(lockSize()<earlyLock,'reticle shrinks as real acquisition advances');
+view.combat.player.missileRack.lock=2;lockFrame();assert(!calls.some(c=>c.kind==='text'&&c.text==='MISSILE LOCK'),'elapsed minimum alone cannot confirm a lock');
+view.combat.player.missileRack.locked=true;lockFrame();assert(calls.some(c=>c.kind==='text'&&c.text==='MISSILE LOCK'));assert(calls.some(c=>c.kind==='stroke'&&c.color==='#9cebd6'&&c.points.length===20),'confirmed square closes');
+view.combat.player.missileRack.banks[0].name='Cyclops';view.combat.player.missileRack.lock=5;lockFrame();assert(calls.some(c=>c.kind==='stroke'&&c.color==='#9cebd6'&&c.points.length===30),'torpedo uses a hexagonal reticle');
+view.combat.player.missileRack=savedRack;view.combat.targetId=null;DW.flightPresentation=savedLockPresentation;
+console.log('PASS missile lock HUD: actual rack progress, tightening reticle, true capture confirmation and torpedo shape');
+
 
 // Local chase keeps contact geometry while removing every cockpit instrument.
 const tacticalBodyContains=document.body.classList.contains;

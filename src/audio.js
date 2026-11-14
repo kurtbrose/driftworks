@@ -157,6 +157,7 @@
     oscillator.connect(envelope).connect(channel && mixer.channel(channel) || sfxBus);
     oscillator.start(start);
     oscillator.stop(start + duration + 0.02);
+    return oscillator;
   }
 
   /** @param {number} duration @param {number} gain @param {BiquadFilterType} filterType @param {number} filterFrequency @param {number} [delay] @param {'weapons'|'impacts'} [channel] */
@@ -187,6 +188,32 @@
       data[i] = Math.random() * 2 - 1;
     }
     return buffer;
+  }
+
+  var seekerCue={key:'',locked:false,wait:0};
+  var seekerVoices=/** @type {OscillatorNode[]} */([]);
+  function cancelSeeker(){seekerVoices.forEach(function(voice){try{voice.stop(context?context.currentTime:0);}catch(error){/* Already ended. */}});seekerVoices=[];}
+  /** @param {number} hz @param {number} duration @param {number} level @param {number} delay */
+  function seekerTone(hz,duration,level,delay){var voice=beep(hz,duration,level,'sine',delay,'weapons');if(voice){seekerVoices.push(voice);voice.onended=function(){seekerVoices=seekerVoices.filter(function(v){return v!==voice;});};}}
+
+  /** Presentation clock only: no sound feeds back into simulation lock timing.
+   * @param {number} dt @param {{active:boolean;tracking:boolean;locked:boolean;progress:number;key:string}} value */
+  function setMissileLock(dt,value){
+    if(!value.active){cancelSeeker();seekerCue={key:'',locked:false,wait:0};return 'none';}
+    if(value.key!==seekerCue.key){cancelSeeker();seekerCue={key:value.key,locked:false,wait:0};}
+    var wasLocked=seekerCue.locked;seekerCue.locked=value.locked;
+    if(!value.tracking){
+      seekerCue.wait=0;
+      if(wasLocked){cancelSeeker();seekerTone(540,.065,.035,0);seekerTone(360,.085,.025,.07);return 'lost';}
+      return 'none';
+    }
+    if(value.locked){
+      if(!wasLocked){cancelSeeker();seekerTone(1120,.09,.045,0);seekerTone(1490,.14,.04,.1);return 'confirm';}
+      return 'none';
+    }
+    var progress=Math.max(0,Math.min(1,value.progress));seekerCue.wait-=Math.max(0,Math.min(.1,dt));
+    if(seekerCue.wait<=0){seekerCue.wait=.46-.34*progress;seekerTone(680+progress*440,.045,.025,0);return 'tick';}
+    return 'none';
   }
 
   function playSelect() {
@@ -354,6 +381,7 @@
     setMusicEnabled: setMusicEnabled,
     setSfxVolume: setSfxVolume,
     setMusicVolume: setMusicVolume,
+    setMissileLock:setMissileLock,
     playSelect: playSelect,
     playMove: playMove,
     playInvalid: playInvalid,

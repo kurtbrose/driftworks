@@ -696,9 +696,23 @@
                 var seekerRack=DW.flightMissiles.rack(combat.player),seekerWeapon=DW.flightMissiles.weapon(combat.player);
                 if(seekerWeapon&&seekerWeapon.homing==='aspect'&&seekerRack.indicator&&seekerRack.targetId===combat.targetId){
                     var gaugeScale=h/(640*Math.tan(Math.PI/8)),gaugeX=w/2+seekerRack.indicator[0]*gaugeScale,gaugeY=h/2-seekerRack.indicator[1]*gaugeScale;
-                    combatHud.strokeStyle=seekerRack.locked?'#ffe7a3':'#f5ac5c';combatHud.lineWidth=1.5;
-                    combatHud.strokeRect(gaugeX-7,gaugeY-7,14,14);
-                    if(seekerRack.locked)combatHud.strokeRect(gaugeX-11,gaugeY-11,22,22);
+                    combatHud.save();
+                    var lockProgress=Math.max(0,Math.min(1,seekerRack.lock/seekerWeapon.minLockTime)),lockRadius=seekerRack.locked?13:42-28*lockProgress;
+                    var lockSides=seekerWeapon.cargoSize>=10?6:4,lockAngle=seekerWeapon.cargoSize>=10?Math.PI/6:seekerWeapon.swarm>1?0:Math.PI/4;
+                    combatHud.strokeStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';combatHud.lineWidth=seekerRack.locked?2:1.5;
+                    combatHud.beginPath();
+                    for(var side=0;side<lockSides;side++){
+                        var theta=lockAngle+side*Math.PI*2/lockSides,next=theta+Math.PI*2/lockSides;
+                        var ax=gaugeX+Math.cos(theta)*lockRadius,ay=gaugeY+Math.sin(theta)*lockRadius,bx=gaugeX+Math.cos(next)*lockRadius,by=gaugeY+Math.sin(next)*lockRadius;
+                        combatHud.moveTo(ax+(bx-ax)*.28,ay+(by-ay)*.28);combatHud.lineTo(ax,ay);combatHud.lineTo(ax+(gaugeX+Math.cos(theta-Math.PI*2/lockSides)*lockRadius-ax)*.28,ay+(gaugeY+Math.sin(theta-Math.PI*2/lockSides)*lockRadius-ay)*.28);
+                        if(seekerRack.locked){combatHud.moveTo(ax,ay);combatHud.lineTo(bx,by);}
+                    }
+                    combatHud.stroke();
+                    combatHud.beginPath();combatHud.arc(gaugeX,gaugeY,lockRadius+7,-Math.PI/2,-Math.PI/2+Math.PI*2*lockProgress);combatHud.stroke();
+                    combatHud.fillStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';combatHud.font='10px monospace';combatHud.textAlign='center';
+                    combatHud.fillText(seekerRack.locked?'MISSILE LOCK':seekerRack.catching?'TRACKING':Math.round(lockProgress*100)+'%',gaugeX,gaugeY+lockRadius+22);
+                    combatHud.restore();
+
                 }
             }
             if (!chase && targetBearing !== null) paintTargetBearing(bearingHud, w, h, targetBearing);

@@ -31,6 +31,16 @@ assert.equal(first.levels(base,false,false).engine,ordinary.engine,'Restore engi
 load('src/audio.js');
 assert.equal(sandbox.window.Driftworks.audio.engine, synth, 'Facade must share the synth, not duplicate it');
 assert.equal(sandbox.window.Driftworks.audio.status().available, false);
+
+const cue=sandbox.window.Driftworks.audio.setMissileLock;
+const tracking={active:true,tracking:true,locked:false,progress:.1,key:'target/Harpoon'};
+function ticks(progress){cue(0,{...tracking,active:false});let count=0;for(let i=0;i<400;i++)if(cue(.01,{...tracking,progress})==='tick')count++;return count;}
+assert(ticks(.9)>ticks(.1)*2,'acquisition cadence speeds up with progress');
+cue(0,{...tracking,active:false});assert.equal(cue(.016,{...tracking,progress:1}),'tick','full timer without capture is still acquisition');
+assert.equal(cue(.016,{...tracking,locked:true}),'confirm');assert.equal(cue(.016,{...tracking,locked:true}),'none','held lock never repeats confirmation');
+assert.equal(cue(.016,{...tracking,tracking:false}),'lost');assert.equal(cue(.016,{...tracking,tracking:false}),'none');
+cue(.016,{...tracking,locked:true});assert.equal(cue(.016,{...tracking,active:false}),'none','pause clears quietly');
+assert.equal(cue(.016,{...tracking,key:'other/Harpoon'}),'tick','target changes start a fresh acquisition cue');
 for (const directory of ['', 'tests', 'experiments']) {
   for (const file of fs.readdirSync(path.join(root, directory)).filter(f => f.endsWith('.html'))) {
     const html = fs.readFileSync(path.join(root, directory, file), 'utf8');

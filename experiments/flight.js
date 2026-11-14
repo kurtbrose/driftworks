@@ -277,6 +277,7 @@
         stats.textContent = (p.species || '') + ' · ' + p.role + '\nHull / shields ' + p.hull + ' / ' + p.shield + '\nCruise / boost ' + Math.round(p.maxVelocity[2]*displayUnits.speedScale) + ' / ' + Math.round(p.afterburnerVelocity[2]*displayUnits.speedScale)+' '+displayUnits.speedLabel + '\nAccel / decel ' + p.forwardAccel + ' / ' + p.forwardDecel + ' s\nPitch / yaw / roll (s/360°)\n' + p.rotationTime.join(' / ') + '\nDamp / rotdamp ' + p.damp + ' / ' + p.rotdamp;
     }
     function clear() {
+        DW.audio.setMissileLock(0,{active:false,tracking:false,locked:false,progress:0,key:''});
         DW.audio.setFlightEngine(0, 0, false, false);
         controls.clear();
     }
@@ -547,6 +548,8 @@
             pose();
             updateStatus();
         }
+        var seekerView=view(),seekerRack=DW.flightMissiles.rack(seekerView.combat.player),seekerWeapon=DW.flightMissiles.weapon(seekerView.combat.player);
+        DW.audio.setMissileLock(elapsed,{active:!paused&&!watch&&!cinematic&&!overviewMode&&!seekerView.combat.dead&&!!seekerWeapon&&seekerWeapon.homing==='aspect',tracking:!!seekerRack.indicator,locked:seekerRack.locked,progress:seekerWeapon&&seekerWeapon.minLockTime?seekerRack.lock/seekerWeapon.minLockTime:0,key:seekerRack.targetId+'/'+seekerRack.bank+'/'+(seekerWeapon?seekerWeapon.name:'')});
         if(cinematic&&director){var captionNode=document.querySelector('.cinema-caption');if(captionNode)captionNode.textContent='DRIFTWORKS / '+director.label().toUpperCase()+' / C NEXT / ESC PAUSE';}
         var currentView = view();
         if (!watch && !cinematic && !overviewMode && !(DW.flightVr&&DW.flightVr.forHost(host)?.active())) {
