@@ -4,11 +4,19 @@
 
 Open `experiments/multiplayer.html` (redirects to `multiplayer-server.html`).
 
-1. Choose **Start server**. Keep this console tab open.
+1. Pick a **Level**, then choose **Start server**. Keep this console tab open.
 2. Choose **Open flight client** to join yourself in a separate tab. Choose
    **Start flight** in that client to fly. The console does not occupy a seat.
 3. Open the **local join link** in another tab of the same browser profile and
    site origin to join a second pilot, without connection-text exchange.
+
+Available co-flight locations are Asteroid range, Jade weather, Rime approach,
+Planet backdrop and Orbital planet. The selected level is fixed while running;
+stop the server to choose another. Both local and remote invitation links carry
+the mission ID, and the room rejects clients loading a different level. Preparing
+co-flight retains that mission's scenery/empty-space rules while disabling NPC
+combat. Scripted battles and wormhole missions are not offered because their
+simulation/crossings are not synchronized by this protocol.
 
 The console displays the two-seat roster, pilot IDs/names, connection type,
 last-heard age, accepted/rejected update counts, and join/disconnect activity.
@@ -118,13 +126,19 @@ stale-link diagnosis. The roster, production client view, mixed-transport consol
 and stale-link screenshots were visually inspected. Cross-device and cross-network
 connectivity remain unverified.
 
+Level selection was additionally verified with Rime on 2026-11-13: local and
+WebRTC links retained its mission ID, wrong-level clients were rejected, scenery
+and disabled weapons were preserved, and stopping unlocked the selector. The
+selected-level console and production Rime client screenshots were inspected.
+
 `node tests/multiplayer-room.cjs` checks the server roster, two-seat capacity,
 stable roles after departures, validated forwarding, sequence rejection, stale
 triggers with continuing heartbeats, kick/rejoin rejection, expiry and shutdown.
 
 `node tools/check-multiplayer-server-browser.cjs` uses the production scene and
-controls. It exercises a console plus local client tabs, movement/gun firing,
-capacity rejection, kicks, and server stop. It also connects a client in a separate
+controls on Rime. It checks level selection/locking, preserved empty-space scenery,
+wrong-level rejection, movement, the quiet level's disabled weapons, capacity
+rejection, kicks, and server stop. It also connects a client in a separate
 browser context through a real WebRTC invitation/answer and checks movement
 through the mixed local/WebRTC server. Evidence goes under
 `output/multiplayer-server/`. Same-machine browser checks do not prove connectivity

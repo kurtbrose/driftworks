@@ -1,4 +1,4 @@
-import {createRoom,wire} from './multiplayer-room.js';
+import {createRoom,wire,levels} from './multiplayer-room.js';
 import {gather,iceServers,description,copy} from './multiplayer-link.js';
 
 /** @param {string} id */const el=id=>{const e=document.getElementById(id);if(!e)throw new Error(id);return e;};
@@ -11,11 +11,13 @@ import {gather,iceServers,description,copy} from './multiplayer-link.js';
 /** @type {BroadcastChannel|null} */let local=null;
 /** @type {Map<string,{peer:RTCPeerConnection,channel:RTCDataChannel}>} */const remotes=new Map();
 /** @type {{id:string,peer:RTCPeerConnection,timer:ReturnType<typeof setTimeout>}|null} */let pending=null;
-let roomId='',generation=0;
+let roomId='',generation=0,selectedLevel='default';
+const levelSelect=/** @type {HTMLSelectElement} */(el('level'));
+for(const level of levels){const option=document.createElement('option');option.value=level.id;option.textContent=level.name;levelSelect.appendChild(option);}
 /** @type {Set<string>} */const previous=new Set();
 /** @param {string} id */function closeRemote(id){const r=remotes.get(id);remotes.delete(id);r?.peer.close();}
 function cancel(){generation++;if(pending){clearTimeout(pending.timer);const id=pending.id;pending=null;closeRemote(id);}input('invite-link').value='';button('invite').disabled=false;}
-function stop(){generation++;room?.stop();room=null;local?.close();local=null;cancel();for(const id of remotes.keys())closeRemote(id);previous.clear();el('running').hidden=true;button('create').disabled=false;button('stop').disabled=true;status('Server stopped.');render();}
+function stop(){generation++;room?.stop();room=null;local?.close();local=null;cancel();for(const id of remotes.keys())closeRemote(id);previous.clear();el('running').hidden=true;button('create').disabled=false;button('stop').disabled=true;levelSelect.disabled=false;status('Server stopped.');render();}
 function render(){
   const body=el('roster');
   const members=room?.members;
@@ -37,22 +39,25 @@ function render(){
 button('create').onclick=()=>{
   if(!window.BroadcastChannel){status('This browser does not support local tab connections. Use a current browser.');return;}
   if(!crypto.randomUUID){status('Open this page over HTTPS or localhost to start the server.');return;}
+  selectedLevel=levelSelect.value;
   roomId=crypto.randomUUID();local=new BroadcastChannel('driftworks-server-'+roomId);
   room=createRoom((id,m)=>{
     const remote=remotes.get(id);
     if(remote){if(remote.channel.readyState==='open'&&remote.channel.bufferedAmount<131072)remote.channel.send(wire(m));}
     else local?.postMessage({to:id,text:wire(m)});
-  },()=>performance.now());
+  },()=>performance.now(),selectedLevel);
   local.onmessage=/** @param {MessageEvent<unknown>} e */e=>{
     const m=/** @type {unknown} */(e.data);if(!m||typeof m!=='object')return;
     const v=/** @type {Record<string,unknown>} */(m);
     if(typeof v.from==='string')room?.receive(v.from,v.text,'Local tab');
   };
   const url=new URL('flight.html',location.href);url.searchParams.set('multiplayer','1');url.searchParams.set('server',roomId);
+  url.searchParams.set('mission',selectedLevel);
   input('join-link').value=url.href;/** @type {HTMLAnchorElement} */(el('join')).href=url.href;
   input('public-url').value=new URL('flight.html',location.href).href;
-  el('running').hidden=false;button('create').disabled=true;button('stop').disabled=false;
-  status('Server running · '+roomId.slice(0,8)+' · keep this tab open.');log('Server started. Waiting for pilots.');
+  el('running').hidden=false;button('create').disabled=true;button('stop').disabled=false;levelSelect.disabled=true;
+  const levelName=levels.find(level=>level.id===selectedLevel)?.name||selectedLevel;
+  status('Server running · '+levelName+' · '+roomId.slice(0,8)+' · keep this tab open.');log('Server started on '+levelName+'. Waiting for pilots.');
 };
 button('stop').onclick=()=>{stop();log('Server stopped.');};
 button('copy-local').onclick=()=>copy(input('join-link'),status);
@@ -76,6 +81,7 @@ button('invite').onclick=async()=>{
     const offer=await gather(peer,await peer.createOffer());
     if(token!==generation||pending?.id!==id)return;
     url.search='';url.searchParams.set('multiplayer','1');url.searchParams.set('server',roomId);
+    url.searchParams.set('mission',selectedLevel);
     url.hash=new URLSearchParams({roomInvite:JSON.stringify({id,offer,ice})}).toString();
     input('invite-link').value=url.href;remoteStatus('Send this private invitation link. Paste the pilot’s answer below within two minutes.');
   }catch(e){if(token===generation){cancel();remoteStatus(e instanceof Error?e.message:String(e));}}

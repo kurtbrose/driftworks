@@ -10,12 +10,18 @@ function probe(){const DW=window.Driftworks,create=DW.flightSession.create;DW.fl
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   await context.route('**/flight.js?*',async route=>{const response=await route.fetch();await route.fulfill({response,body:'('+probe.toString()+')();\n'+await response.text()});});
   context.on('page',page=>{page.on('pageerror',e=>errors.push(String(e)));page.on('request',r=>{if(!r.url().startsWith('http://localhost:8000/')&&!r.url().startsWith('data:'))external.push(r.url());});});
-  const server=await context.newPage();await server.goto('http://localhost:8000/experiments/multiplayer.html');await server.waitForURL('**/multiplayer-server.html');await server.click('#create');
+  const server=await context.newPage();await server.goto('http://localhost:8000/experiments/multiplayer.html');await server.waitForURL('**/multiplayer-server.html');await server.selectOption('#level','jade-rime');await server.click('#create');
+  assert(await server.locator('#level').isDisabled());
   const joinURL=await server.inputValue('#join-link');
+  assert.equal(new URL(joinURL).searchParams.get('mission'),'jade-rime');
   async function client(url=joinURL,ctx=context){const page=await ctx.newPage();await page.goto(url);await page.waitForFunction(()=>window.multiplayerProbe&&!document.querySelector('#fly').disabled,null,{timeout:120000});await page.selectOption('#input-mode','controller');return page;}
   async function connected(page){await page.waitForFunction(()=>document.querySelector('#net-summary').textContent==='connected');}
   async function panel(page){await page.locator('#multiplayer-panel').evaluate(e=>{e.open=true;});}
   const one=await client();await connected(one);
+  assert.equal(await one.evaluate(()=>multiplayerProbe.session.snapshot().combat.mode),'jade-rime');
+  assert.equal(await one.evaluate(()=>multiplayerProbe.session.snapshot().world.asteroids.length),0);
+  const wrongURL=new URL(joinURL);wrongURL.searchParams.set('mission','default');const wrong=await client(wrongURL.href);
+  await wrong.waitForFunction(()=>document.querySelector('#net-status').textContent.includes('Level does not match'));await wrong.close();
   const two=await client();await connected(two);
   await server.waitForFunction(()=>document.querySelector('#count').textContent==='2 / 2');
   for(const page of [one,two])await page.waitForFunction(()=>multiplayerProbe.session.snapshot().combat.enemies.some(c=>c.id==='remote-pilot'));
@@ -23,7 +29,7 @@ function probe(){const DW=window.Driftworks,create=DW.flightSession.create;DW.fl
   const start=await one.evaluate(()=>multiplayerProbe.session.snapshot().state.eye.slice());
   await one.bringToFront();await one.click('#fly');await one.keyboard.down('w');await one.keyboard.down('Space');await one.waitForTimeout(1200);await one.keyboard.up('w');await one.keyboard.up('Space');
   await two.waitForFunction(start=>Math.hypot(...multiplayerProbe.session.snapshot().combat.enemies[0].pose.eye.map((v,i)=>v-start[i]))>.01,start);
-  assert(await one.evaluate(()=>multiplayerProbe.session.snapshot().guns.fired>0));
+  assert.equal(await one.evaluate(()=>multiplayerProbe.session.snapshot().guns.fired),0,'Rime free flight retains disabled weapons');
   await two.bringToFront();await two.click('#fly');await two.screenshot({path:'output/multiplayer-server/client.png'});
   const third=await client();await third.waitForFunction(()=>document.querySelector('#net-status').textContent.includes('full'));await third.close();
   await server.locator('#roster button').first().click();
@@ -35,6 +41,7 @@ function probe(){const DW=window.Driftworks,create=DW.flightSession.create;DW.fl
   await server.locator('#remote').evaluate(e=>{e.open=true;});await server.click('#invite');
   await server.waitForFunction(()=>document.querySelector('#invite-link').value.length>0);
   const remoteURL=await server.inputValue('#invite-link');
+  assert.equal(new URL(remoteURL).searchParams.get('mission'),'jade-rime');
   const remoteContext=await browser.newContext({viewport:{width:1440,height:1000}});
   await remoteContext.route('**/flight.js?*',async route=>{const response=await route.fetch();await route.fulfill({response,body:'('+probe.toString()+')();\n'+await response.text()});});
   const remote=await client(remoteURL,remoteContext);remote.on('pageerror',e=>errors.push(String(e)));
@@ -47,13 +54,14 @@ function probe(){const DW=window.Driftworks,create=DW.flightSession.create;DW.fl
   await two.waitForFunction(start=>Math.hypot(...multiplayerProbe.session.snapshot().combat.enemies[0].pose.eye.map((v,i)=>v-start[i]))>.01,remoteStart);
   await server.screenshot({path:'output/multiplayer-server/mixed-transports.png',fullPage:true});
   await server.click('#stop');
+  assert(await server.locator('#level').isEnabled());
   for(const page of [two,remote])await page.waitForFunction(()=>document.querySelector('#net-summary').textContent==='offline');
   assert(await two.evaluate(()=>document.body.classList.contains('flight-active')),'server stop leaves local flight active');
   // Stale link produces a useful diagnosis and does not block flight loading.
   const stale=await client();await stale.waitForFunction(()=>document.querySelector('#net-status').textContent.includes('No server answered'));
   await stale.screenshot({path:'output/multiplayer-server/stale-link.png'});
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  const result={localJoin:true,twoPilots:true,movement:true,firing:true,capacity:true,kick:true,kickRetryRejected:true,webRTCSeparateContext:true,remoteMovement:true,serverStop:true,staleLink:true,errors,externalRequests:external};
+  const result={selectedLevel:'jade-rime',levelPreserved:true,wrongLevelRejected:true,localJoin:true,twoPilots:true,movement:true,quietLevelWeaponsDisabled:true,capacity:true,kick:true,kickRetryRejected:true,webRTCSeparateContext:true,remoteMovement:true,serverStop:true,staleLink:true,errors,externalRequests:external};
   fs.writeFileSync('output/multiplayer-server/browser.json',JSON.stringify(result,null,2)+'\n');console.log(result);
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

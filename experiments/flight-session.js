@@ -51,7 +51,7 @@
         /** @type {import('./types').Craft|null} */var remotePilot=null;
         /** @param {boolean} guest */
         function prepareMultiplayer(guest){
-            setCombat('training',false);remotePilot=null;
+            setCombat(combat.mode,false);remotePilot=null;
             setStartPosition([(guest?45:-45)/units,-asteroid.radius*1.6,asteroid.radius*.9]);
             state.right=[0,guest?1:-1,0];state.up=[0,0,1];state.back=[guest?1:-1,0,0];
             state.ramp=[0,0,0];state.rates=[0,0,0];state.throttle=0;

@@ -5,7 +5,7 @@ const source=name=>fs.readFileSync(path.join(__dirname,'../experiments/'+name+'.
 const moduleURL=text=>'data:text/javascript;base64,'+Buffer.from(text).toString('base64');
 (async()=>{
  const modelURL=moduleURL(source('multiplayer-model'));
- const {createRoom,wire,message,expiry}=await import(moduleURL(source('multiplayer-room').replace("'./multiplayer-model.js'",JSON.stringify(modelURL))));
+ const {createRoom,wire,message,expiry,levels}=await import(moduleURL(source('multiplayer-room').replace("'./multiplayer-model.js'",JSON.stringify(modelURL))));
  let time=0;const sent=[];
  const room=createRoom((id,m)=>sent.push({id,...m}),()=>time);
  const receive=(id,m)=>room.receive(id,wire(m),'Local tab');
@@ -29,5 +29,20 @@ const moduleURL=text=>'data:text/javascript;base64,'+Buffer.from(text).toString(
  time+=expiry+1;room.tick();assert.equal(room.members.size,0);
  join('delta');room.stop();assert.match(last('delta').reason,/stopped/);join('echo');assert.equal(room.members.size,0);
  for(const raw of ['{','null','[]',wire({kind:'ping'}).repeat(10000)])assert.equal(message(raw),null);
+ assert.throws(()=>createRoom(()=>{},()=>0,'cinematic'),/Unsupported/);
+ const selected=createRoom((id,m)=>sent.push({id,...m}),()=>time,'jade-rime');
+ selected.receive('wrong',wire({kind:'join',level:'default'}),'Local tab');
+ assert.equal(selected.members.size,0);assert.match(last('wrong').reason,/Level does not match/);
+ selected.receive('rime',wire({kind:'join',level:'jade-rime'}),'Local tab');
+ assert.equal(selected.members.size,1);assert.equal(last('rime').level,'jade-rime');
+ for(const level of levels){
+  const f=createFlight({mission:level.id});
+  const before=f.snapshot().world.asteroids.length;
+  f.session.prepareMultiplayer(false);
+  assert.equal(f.snapshot().combat.mode,level.id,'co-flight preserves '+level.id);
+  assert.equal(f.snapshot().world.asteroids.length,before,'co-flight preserves scenery for '+level.id);
+  assert.equal(f.snapshot().combat.enabled,false);assert.equal(f.snapshot().combat.enemies.length,0);
+  f.advance(.1,{throttle:1});
+ }
  console.log('Multiplayer server: roster, capacity, stable slots, relay, validation, sequence, stale triggers, kick, timeout and shutdown passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -3,6 +3,15 @@ import {pilot} from './multiplayer-model.js';
 export const roomProtocol='driftworks-room-v1';
 export const capacity=2;
 export const expiry=8000;
+// Locations whose static scenery works with client-owned co-flight. Scripted
+// combat and cross-space missions require shared simulation before inclusion.
+export const levels=[
+  {id:'default',name:'Asteroid range'},
+  {id:'gas-giant',name:'Jade weather'},
+  {id:'jade-rime',name:'Rime approach'},
+  {id:'planet-hero',name:'Planet backdrop'},
+  {id:'planet-orbital-static',name:'Orbital planet'},
+];
 /** @typedef {import('./multiplayer-model').RemotePilot} Pilot */
 /** @typedef {{kind:string, [key:string]:unknown}} Message */
 /** @typedef {{id:string,name:string,slot:number,transport:string,lastSeen:number,poseTime:number,packets:number,rejected:number,sequence:number,pilot:Pilot|null}} Member */
@@ -18,8 +27,9 @@ export function message(raw){
 /** @param {Message} m */
 export const wire=m=>JSON.stringify({...m,protocol:roomProtocol});
 /** Server owns membership and forwarding. Simulation remains client-owned co-flight.
- * @param {(id:string,m:Message)=>void} send @param {()=>number} now */
-export function createRoom(send,now){
+ * @param {(id:string,m:Message)=>void} send @param {()=>number} now @param {string} [level] */
+export function createRoom(send,now,level='default'){
+  if(!levels.some(p=>p.id===level))throw new Error('Unsupported multiplayer level.');
   /** @type {Map<string,Member>} */const members=new Map();
   /** @type {Set<string>} */const banned=new Set();let running=true,revision=0,frame=0;
   /** @param {string} id @param {string} reason */
@@ -32,7 +42,7 @@ export function createRoom(send,now){
     const time=now();
     for(const member of members.values()){
       const other=[...members.values()].find(p=>p.id!==member.id);
-      send(member.id,{kind:'world',revision,frame:frame++,slot:member.slot,
+      send(member.id,{kind:'world',level,revision,frame:frame++,slot:member.slot,
         count:members.size,peer:other?other.name:null,
         pilot:other?.pilot?{...other.pilot,fire:time-other.poseTime<300&&other.pilot.fire,boost:time-other.poseTime<300&&other.pilot.boost}:null});
     }
@@ -44,6 +54,7 @@ export function createRoom(send,now){
       const m=message(raw);if(!m)return;
       if(banned.has(id)){send(id,{kind:'removed',reason:'Kicked by the server. Open a new client to request another seat.'});return;}
       if(m.kind==='join'){
+        if((m.level||'default')!==level){send(id,{kind:'removed',reason:'Level does not match the server. Open the current join link from its console.'});return;}
         if(!members.has(id)){
           if(members.size>=capacity){send(id,{kind:'removed',reason:'Server is full (two pilots). Ask the server operator to free a seat.'});return;}
           const name=typeof m.name==='string'?m.name.trim().slice(0,32):'';
