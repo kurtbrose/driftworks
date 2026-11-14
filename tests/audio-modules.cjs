@@ -43,7 +43,7 @@ cue(.016,{...tracking,locked:true});assert.equal(cue(.016,{...tracking,active:fa
 assert.equal(cue(.016,{...tracking,key:'other/Harpoon'}),'tick','target changes start a fresh acquisition cue');
 
 // Lock audio owns one fixed-pitch voice, including during long held locks.
-const toneNodes=[];let toneContext;
+const noiseNodes=[],toneNodes=[];let toneContext;
 function toneParam(){return {value:0,setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},setTargetAtTime(v){this.value=v;},cancelScheduledValues(){}};}
 function toneNode(){return {connect(next){return next;},disconnect(){},start(){},stop(time){this.stopped=time;}};}
 class ToneContext {
@@ -51,7 +51,7 @@ class ToneContext {
  createGain(){return {...toneNode(),gain:toneParam()};}
  createBiquadFilter(){return {...toneNode(),frequency:toneParam(),Q:toneParam()};}
  createOscillator(){const n={...toneNode(),frequency:toneParam()};toneNodes.push(n);return n;}
- createBufferSource(){return toneNode();}
+ createBufferSource(){const n=toneNode();noiseNodes.push(n);return n;}
  createBuffer(channels,length){return {getChannelData:()=>new Float32Array(length)};}
 }
 const toneSandbox={window:{AudioContext:ToneContext,localStorage:{getItem:()=>null,setItem(){}},Driftworks:{engineAudio:synth,audioMixer:{create:()=>({attach(){},impact(){},channel:()=>toneContext.destination})}}}};
@@ -80,7 +80,9 @@ function capital(a,b,bolt,hit=null){toneContext.currentTime+=1;toneApi.capitalRo
 capital([200,0,0],[210,0,0],round());assert.equal(toneNodes.length,count,'distant fire is silent');
 capital([0,0,0],[0,0,0],{region:1},[0,0,0]);assert.equal(toneNodes.length,count,'other region is silent');
 const bolt=round();capital([30,0,0],[20,0,0],bolt);assert.equal(toneNodes.length,++count,'nearby gun has one bass voice');
-capital([20,0,0],[-20,0,0],bolt);assert.equal(toneNodes.length,++count,'swept fast flyby sounds even with distant endpoints');
+const beforePass=noiseNodes.length;
+capital([20,0,0],[-20,0,0],bolt);assert.equal(noiseNodes.length,beforePass+3,'swept fast flyby emits turbulent noise with distant endpoints');
+assert.equal(toneNodes.length,count,'flyby has no pitched zap oscillator');
 capital([-20,0,0],[20,0,0],bolt);assert.equal(toneNodes.length,count,'same shot never repeats fire or flyby');
 capital([20,0,0],[25,0,0],bolt,[25,0,0]);assert.equal(toneNodes.length,++count,'near finalized impact has its own bass voice');
 capital([20,0,0],[200,0,0],bolt,[200,0,0]);assert.equal(toneNodes.length,count,'distant impact is silent');

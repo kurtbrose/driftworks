@@ -591,3 +591,8 @@ listener-region filtering and metre distances: heavy firing fades out at
 separate category rate limits to bound overlapping salvos. Flybys measure the
 swept leg truncated at impact, including curved/link traversal segments.
 These synthesized cues use the weapons/impacts mixer channels and SFX mute.
+
+Capital firing and impacts layer a sharp broadband crack, midrange blast,
+low pressure boom and a longer filtered rumble. Their bass stays at a fixed
+frequency. Flybys use only turbulent filtered noise, without a tonal oscillator
+or pitch sweep. This keeps the presentation closer to heavy naval artillery.

@@ -328,16 +328,24 @@
       capitalTimes[kind]=now;
       var level=Math.pow(1-distance/range,2)*(heavy?1:.45);
       if(kind==='fire'){
-        noiseBurst(.32,.15*level,'lowpass',650,0,'weapons');
-        var body=beep(heavy?62:115,.38,.1*level,'triangle',0,'weapons');
-        if(body)body.frequency.exponentialRampToValueAtTime(28,now+.3);
+        // Propellant crack, pressure body and rolling blast; no laser pitch sweep.
+        noiseBurst(.035,.48*level,'highpass',1800,0,'weapons');
+        noiseBurst(.14,.4*level,'bandpass',430,.006,'weapons');
+        noiseBurst(.65,.6*level,'lowpass',210,.012,'weapons');
+        noiseBurst(1.35,.28*level,'lowpass',100,.045,'weapons');
+        beep(heavy?46:85,.42,.17*level,'sine',0,'weapons');
       }else if(kind==='pass'){
-        noiseBurst(.19,.18*level,'bandpass',1800,0,'weapons');
-        var zip=beep(1100,.16,.035*level,'sine',0,'weapons');
-        if(zip)zip.frequency.exponentialRampToValueAtTime(260,now+.16);
+        // A shell ripping past: turbulent broadband air, without an electronic zap.
+        noiseBurst(.12,.32*level,'bandpass',950,0,'weapons');
+        noiseBurst(.055,.15*level,'highpass',2300,0,'weapons');
+        noiseBurst(.2,.2*level,'lowpass',420,.012,'weapons');
       }else{
-        mixer.impact();noiseBurst(.4,.19*level,'lowpass',950,0,'impacts');
-        beep(42,.45,.13*level,'sine',0,'impacts');
+        mixer.impact();
+        noiseBurst(.045,.48*level,'highpass',1400,0,'impacts');
+        noiseBurst(.22,.4*level,'bandpass',620,.005,'impacts');
+        noiseBurst(.85,.65*level,'lowpass',240,.012,'impacts');
+        noiseBurst(1.5,.3*level,'lowpass',110,.05,'impacts');
+        beep(38,.55,.2*level,'sine',0,'impacts');
       }
     }
     if(first)cue('fire',capitalDistance(a,a,pose.eye),heavy?1800:650);
