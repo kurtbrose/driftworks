@@ -700,16 +700,16 @@
                     if(lockImage&&Math.abs(lockImage.x)<.9&&Math.abs(lockImage.y)<.78){
                         var lockX=w*(lockImage.x+1)/2,lockY=h*(1-lockImage.y)/2;
                         var lockProgress=Math.max(0,Math.min(1,seekerRack.lock/seekerWeapon.minLockTime));
-                        // Four fixed-size, solid L pieces translate inward. Their ends
-                        // remain separated until the actual seeker captures the target.
-                        var arm=28,gap=seekerRack.locked?0:Math.max(4,42*(1-lockProgress)),extent=arm+gap,thickness=3;
-                        combatHud.save();combatHud.fillStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';
-                        [-1,1].forEach(function(sx){[-1,1].forEach(function(sy){
-                            var x=lockX+sx*extent,y=lockY+sy*extent;
-                            combatHud.beginPath();combatHud.moveTo(x,y);combatHud.lineTo(x-sx*arm,y);
-                            combatHud.lineTo(x-sx*arm,y-sy*thickness);combatHud.lineTo(x-sx*thickness,y-sy*thickness);
-                            combatHud.lineTo(x-sx*thickness,y-sy*arm);combatHud.lineTo(x,y-sy*arm);combatHud.closePath();combatHud.fill();
-                        });});
+                        // Four inward-facing Ys meet as a diamond outside the target box.
+                        // A small gap persists until actual capture, even at full timer.
+                        var half=32,gap=seekerRack.locked?0:Math.max(4,42*(1-lockProgress)),radius=half*2+gap,stem=14;
+                        combatHud.save();combatHud.strokeStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';combatHud.lineWidth=2;
+                        [[0,-1],[1,0],[0,1],[-1,0]].forEach(function(axis){
+                            var dx=axis[0],dy=axis[1],x=lockX+dx*radius,y=lockY+dy*radius;
+                            combatHud.beginPath();combatHud.moveTo(x+dx*stem,y+dy*stem);combatHud.lineTo(x,y);
+                            combatHud.lineTo(x-dx*half-dy*half,y-dy*half+dx*half);
+                            combatHud.moveTo(x,y);combatHud.lineTo(x-dx*half+dy*half,y-dy*half-dx*half);combatHud.stroke();
+                        });
                         combatHud.restore();
                     }
                 }
