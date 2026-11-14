@@ -48,13 +48,18 @@ const savedRack=view.combat.player.missileRack;
 view.combat.player.missileRack={...DW.flightMissiles.rack(view.combat.player),banks:[{name:'Harpoon',ammo:10,capacity:100}],bank:0,targetId:enemies[0].id,indicator:[0,0,0],locked:false,lock:.2};
 view.combat.targetId=enemies[0].id;
 function lockFrame(){hud.render({...view,paint:{ally:[1,1,1],enemy:[1,1,1]},units:10,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
-function lockSize(){return Math.max(...calls.filter(c=>c.kind==='stroke'&&c.color==='#f5ac5c').flatMap(c=>c.points.map(p=>Math.hypot(p[0]-500,p[1]-350))));}
-lockFrame();const earlyLock=lockSize();view.combat.player.missileRack.lock=1.8;lockFrame();assert(lockSize()<earlyLock,'reticle shrinks as real acquisition advances');
-view.combat.player.missileRack.lock=2;lockFrame();assert(!calls.some(c=>c.kind==='text'&&c.text==='MISSILE LOCK'),'elapsed minimum alone cannot confirm a lock');
-view.combat.player.missileRack.locked=true;lockFrame();assert(calls.some(c=>c.kind==='text'&&c.text==='MISSILE LOCK'));assert(calls.some(c=>c.kind==='stroke'&&c.color==='#9cebd6'&&c.points.length===20),'confirmed square closes');
-view.combat.player.missileRack.banks[0].name='Cyclops';view.combat.player.missileRack.lock=5;lockFrame();assert(calls.some(c=>c.kind==='stroke'&&c.color==='#9cebd6'&&c.points.length===30),'torpedo uses a hexagonal reticle');
+function lockPieces(){return calls.filter(c=>c.kind==='fill'&&(c.color==='#f5ac5c'||c.color==='#9cebd6'));}
+function pieceExtent(){const pieces=lockPieces(),xs=pieces.flatMap(p=>p.points.map(v=>v[0]));return (Math.max(...xs)-Math.min(...xs))/2;}
+lockFrame();const earlyLock=pieceExtent();assert.equal(lockPieces().length,4,'four solid bracket pieces enclose the selected target');
+const expectedLockCenter=DW.flightSkybox.project(enemies[0].pose.eye,view.state,1000/700);
+assert(Math.abs(lockPieces().flatMap(p=>p.points).reduce((n,p)=>n+p[0],0)/24-1000*(expectedLockCenter.x+1)/2)<1e-6,'brackets track target image rather than moving seeker cursor');
+view.combat.player.missileRack.lock=1.8;lockFrame();assert(pieceExtent()<earlyLock,'bracket pieces move inward as lock advances');
+view.combat.player.missileRack.lock=2;lockFrame();assert(pieceExtent()>28,'four pieces stay separated if timer is complete but capture is not');
+assert(!calls.some(c=>c.kind==='text'&&c.text==='MISSILE LOCK'),'no redundant reticle label');
+view.combat.player.missileRack.locked=true;lockFrame();assert.equal(pieceExtent(),28,'piece ends meet exactly on confirmed lock');assert(lockPieces().every(c=>c.color==='#9cebd6'&&c.points.length===6),'confirmed lock is formed by the same four solid L pieces');
+view.combat.player.missileRack.banks[0].name='Cyclops';view.combat.player.missileRack.lock=5;lockFrame();assert.equal(lockPieces().length,4,'all seekers use the four-piece closing grammar');assert.equal(pieceExtent(),28);
 view.combat.player.missileRack=savedRack;view.combat.targetId=null;DW.flightPresentation=savedLockPresentation;
-console.log('PASS missile lock HUD: actual rack progress, tightening reticle, true capture confirmation and torpedo shape');
+console.log('PASS missile lock HUD: four target-centered solid pieces, inward translation and ends meeting only on true capture');
 
 
 // Local chase keeps contact geometry while removing every cockpit instrument.

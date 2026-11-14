@@ -694,25 +694,23 @@
             instruments(view, selected, w, h);
             if(!chase&&DW.flightMissiles){
                 var seekerRack=DW.flightMissiles.rack(combat.player),seekerWeapon=DW.flightMissiles.weapon(combat.player);
-                if(seekerWeapon&&seekerWeapon.homing==='aspect'&&seekerRack.indicator&&seekerRack.targetId===combat.targetId){
-                    var gaugeScale=h/(640*Math.tan(Math.PI/8)),gaugeX=w/2+seekerRack.indicator[0]*gaugeScale,gaugeY=h/2-seekerRack.indicator[1]*gaugeScale;
-                    combatHud.save();
-                    var lockProgress=Math.max(0,Math.min(1,seekerRack.lock/seekerWeapon.minLockTime)),lockRadius=seekerRack.locked?13:42-28*lockProgress;
-                    var lockSides=seekerWeapon.cargoSize>=10?6:4,lockAngle=seekerWeapon.cargoSize>=10?Math.PI/6:seekerWeapon.swarm>1?0:Math.PI/4;
-                    combatHud.strokeStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';combatHud.lineWidth=seekerRack.locked?2:1.5;
-                    combatHud.beginPath();
-                    for(var side=0;side<lockSides;side++){
-                        var theta=lockAngle+side*Math.PI*2/lockSides,next=theta+Math.PI*2/lockSides;
-                        var ax=gaugeX+Math.cos(theta)*lockRadius,ay=gaugeY+Math.sin(theta)*lockRadius,bx=gaugeX+Math.cos(next)*lockRadius,by=gaugeY+Math.sin(next)*lockRadius;
-                        combatHud.moveTo(ax+(bx-ax)*.28,ay+(by-ay)*.28);combatHud.lineTo(ax,ay);combatHud.lineTo(ax+(gaugeX+Math.cos(theta-Math.PI*2/lockSides)*lockRadius-ax)*.28,ay+(gaugeY+Math.sin(theta-Math.PI*2/lockSides)*lockRadius-ay)*.28);
-                        if(seekerRack.locked){combatHud.moveTo(ax,ay);combatHud.lineTo(bx,by);}
+                if(selected&&seekerWeapon&&seekerWeapon.homing==='aspect'&&seekerRack.indicator&&seekerRack.targetId===combat.targetId){
+                    var lockDirection=visualDirection(selected.pose.eye,selected.pose.region||0),lockImage=lockDirection?DW.flightSkybox.project(lockDirection,state,w/h):null;
+                    if(lockImage&&Math.abs(lockImage.x)<.9&&Math.abs(lockImage.y)<.78){
+                        var lockX=w*(lockImage.x+1)/2,lockY=h*(1-lockImage.y)/2;
+                        var lockProgress=Math.max(0,Math.min(1,seekerRack.lock/seekerWeapon.minLockTime));
+                        // Four fixed-size, solid L pieces translate inward. Their ends
+                        // remain separated until the actual seeker captures the target.
+                        var arm=28,gap=seekerRack.locked?0:Math.max(4,42*(1-lockProgress)),extent=arm+gap,thickness=3;
+                        combatHud.save();combatHud.fillStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';
+                        [-1,1].forEach(function(sx){[-1,1].forEach(function(sy){
+                            var x=lockX+sx*extent,y=lockY+sy*extent;
+                            combatHud.beginPath();combatHud.moveTo(x,y);combatHud.lineTo(x-sx*arm,y);
+                            combatHud.lineTo(x-sx*arm,y-sy*thickness);combatHud.lineTo(x-sx*thickness,y-sy*thickness);
+                            combatHud.lineTo(x-sx*thickness,y-sy*arm);combatHud.lineTo(x,y-sy*arm);combatHud.closePath();combatHud.fill();
+                        });});
+                        combatHud.restore();
                     }
-                    combatHud.stroke();
-                    combatHud.beginPath();combatHud.arc(gaugeX,gaugeY,lockRadius+7,-Math.PI/2,-Math.PI/2+Math.PI*2*lockProgress);combatHud.stroke();
-                    combatHud.fillStyle=seekerRack.locked?'#9cebd6':'#f5ac5c';combatHud.font='10px monospace';combatHud.textAlign='center';
-                    combatHud.fillText(seekerRack.locked?'MISSILE LOCK':seekerRack.catching?'TRACKING':Math.round(lockProgress*100)+'%',gaugeX,gaugeY+lockRadius+22);
-                    combatHud.restore();
-
                 }
             }
             if (!chase && targetBearing !== null) paintTargetBearing(bearingHud, w, h, targetBearing);
@@ -756,7 +754,7 @@
             label(view.weapon.name.slice(0,Math.floor((pw-28)/6.7)),margin+14,leftY+158,10,muted);
             if(DW.flightMissiles){
                 var rack=DW.flightMissiles.rack(combat.player),missile=DW.flightMissiles.weapon(combat.player),bank=rack.banks[rack.bank];
-                var missileLabel=missile?missile.name+' '+bank.ammo+(missile.homing==='aspect'?(rack.locked?' LOCK':' '+Math.round(rack.lock/missile.minLockTime*100)+'%'):''):bank?bank.name+' unavailable':'NO MISSILES';
+                var missileLabel=missile?missile.name+' '+bank.ammo+(missile.homing==='aspect'?(rack.locked?' LOCK':rack.indicator?' ACQUIRING':''):''):bank?bank.name+' unavailable':'NO MISSILES';
                 label(missileLabel+' / CM '+rack.countermeasures,margin+14,leftY+174,10,rack.locked?gold:muted);
                 var threats=DW.flightMissiles.incoming(combat,combat.player);
                 if(threats.length)label('MISSILE INBOUND '+threats.length+' / H: DECOY',w/2-130,198,14,'#ff776b');

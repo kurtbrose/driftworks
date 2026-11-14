@@ -530,12 +530,14 @@ renderer. These are original placeholder effects, not FreeSpace artwork.
 ### Missile acquisition feedback
 
 Aspect-lock feedback reads the live missile rack, not a separate visual timer.
-The travelling indicator carries amber corner brackets shrinking from 42 to
-14 pixels with acquisition progress, plus a progress arc. Once the simulation
-confirms capture it closes into a 13-pixel mint outline marked MISSILE LOCK.
-Normal missiles use a square, swarm weapons a diamond and heavy weapons a
-hexagon. Catch-up travel is labeled TRACKING; reaching 100% alone does not
-confirm a lock. Cockpit-relative indicators remain suppressed in chase views.
+Four solid amber L-shaped bracket pieces enclose the selected target's actual
+projected image. Their 28-pixel arms retain their size while translating inward
+from a 70-pixel half-extent. A minimum gap remains even at 100% acquisition
+until the simulation confirms capture. On capture the four pieces join into a
+56-pixel square mint frame. All seekers use this same four-piece grammar;
+there is no progress arc, numeric reticle percentage or missile-lock label.
+The status panel says ACQUIRING or LOCK. Cockpit-relative indicators remain
+suppressed in chase views.
 
 `audio.setMissileLock(dt, {active, tracking, locked, progress, key})` owns only
 presentation cadence. A fixed 920 Hz carrier uses a low-pass-filtered square
