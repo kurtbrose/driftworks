@@ -17,6 +17,10 @@ Changes apply immediately to player, fighter and capital guns. Preferences are
 session-only and default to the current production bolts. The former
 `studies/plasma-motion.html` comparison now links to the actual battle.
 
+Capital muzzle illumination and heavy impact hull illumination are standard in
+all modes, including Current. Barrel heat glow has been removed from the
+experimental controls.
+
 Only gun artwork changes. The production scene, HUD, skybox, input, AI, shot
 positions, collision, damage and weapon timing retain their existing ownership.
 The current mode uses the original tracer geometry. Experimental modes place

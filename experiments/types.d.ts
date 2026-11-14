@@ -223,7 +223,7 @@ export type Impact = {
     age: number;
     scale?: number;
 };
-export type GunVisualOptions={mode:string;radius:number;exposure:number;compactHeads?:boolean;wakes?:boolean;muzzleLight?:boolean;layeredImpacts?:boolean;barrelHeat?:boolean;impactLight?:boolean};
+export type GunVisualOptions={mode:string;radius:number;exposure:number;compactHeads?:boolean;wakes?:boolean;layeredImpacts?:boolean;barrelHeat?:boolean;impactLight?:boolean};
 export type Guns = {
     bolts: Bolt[];
     impacts: Impact[];

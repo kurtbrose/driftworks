@@ -154,14 +154,12 @@
                 // Column-major Rz(yaw) * Ry(elevation), shared by all material batches.
                 b[0]=cy*ce;b[1]=sy*ce;b[2]=-se;b[3]=-sy;b[4]=cy;b[5]=0;b[6]=cy*se;b[7]=sy*se;b[8]=ce;
             });
-            var preferences=DW.flightGuns.getVisualOptions();
             /** @type {{position:number[];power:number}[]} */var flashes=[];
             mounts.forEach(function(m,index){
                 var pulse=DW.flightGuns.muzzlePulse(m.state.guns),alive=parts[index].hp>0;
-                m.batches.forEach(function(b){b.gunHeat=alive&&preferences.barrelHeat&&m.source.kind==='heavy'?pulse.heat:0;});
-                if(alive&&preferences.muzzleLight&&pulse.age<.16){var b=m.basis,p=m.batches[0].origin;flashes.push({position:p.map(function(v,i){return v-b[i]*(m.source.kind==='heavy'?45.09:9.9)/U;}),power:Math.exp(-pulse.age/.045)*(m.source.kind==='heavy'?1:.25)});}
+                if(alive&&pulse.age<.16){var b=m.basis,p=m.batches[0].origin;flashes.push({position:p.map(function(v,i){return v-b[i]*(m.source.kind==='heavy'?45.09:9.9)/U;}),power:Math.exp(-pulse.age/.045)*(m.source.kind==='heavy'?1:.25)});}
             });
-            if(preferences.impactLight){
+            {
                 var impactView=simulation.visualState();
                 impactView.impactHits.forEach(function(hit){var age=impactView.seconds-hit.time;if(age<0||age>=.7)return;flashes.push({position:world(hit.point),power:1.25*Math.exp(-age/.18)*Math.max(0,1-age/.7)});});
             }
