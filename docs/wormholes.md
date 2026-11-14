@@ -201,3 +201,18 @@ Static faces include stars and haze. Background sampling uses the established
 Ellis lookup even when physical traversal and foreground ships use thin-shell
 optics. The offline compositor lives in tools/skybox-source.js; gameplay never
 loads its source images, reconstructs sky layers or captures an environment.
+
+## Finite hull aperture clipping
+
+Thin-shell foreground patches may span the throat, so the ship center cannot
+select a whole-hull mask. Each remote fragment must pass both physical source
+visibility and the observer's screen-space mouth silhouette. A large capital's
+readability projection must never paint destination geometry outside that mouth.
+
+`node tools/check-cinematic-wormhole-browser.cjs` freezes the production cinematic
+capitals and seven director cameras, captures both spaces, and compares remote-only
+GPU pixels against each mouth silhouette (one pixel of antialiasing margin
+and up to 12 residual edge/noise pixels per 1280 by 720 view).
+`--negative-control` removes the screen-aperture check and must fail. This check
+covers those fixed foreground views; it does not certify sky optics, XR or moving
+throat crossings. Captures and measurements are in `output/cinematic-wormhole/`.

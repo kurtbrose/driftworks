@@ -412,6 +412,11 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
           float along=-dot(observer,ray),disc=along*along-R*R+a*a;
           if(along>0.&&disc>0.&&along-sqrt(disc)<distance-.00001)discard;
         }else{
+          // Remote sections still belong inside the projected mouth. Source-ray
+          // visibility alone cannot constrain the finite-hull presentation patch.
+          vec3 sight=normalize(vRelative-uBack*uView.x);
+          float along=dot(uLensMouth,sight),disc=along*along-dot(uLensMouth,uLensMouth)+a*a;
+          if(along<=0.||disc<0.)discard;
           float r=clamp(a/max(a,R),0.,1.),s=clamp(a/max(a,S),0.,1.);
           float limit=r*s-sqrt(max(0.,1.-r*r))*sqrt(max(0.,1.-s*s));
           if(-dot(observer,source)/max(.000001,R*S)<limit-.000001)discard;
